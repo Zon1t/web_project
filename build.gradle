@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.2'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.sseukbap'
+version = '0.0.1-SNAPSHOT'
+description = 'sseukbap'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Oracle 11g용 드라이버 (19.x로 고정. Boot 기본 23.x는 11g 미지원)
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc8:19.33.0.0'
+    // Oracle 11g용 Hibernate 방언 (버전은 Spring Boot가 관리)
+    implementation 'org.hibernate.orm:hibernate-community-dialects'
+
+    // 구내식당 메뉴 크롤링
+    implementation 'org.jsoup:jsoup:1.18.1'
+    // 비밀번호 BCrypt 암호화 (Spring Security 전체가 아니라 암호화 모듈만)
+    implementation 'org.springframework.security:spring-security-crypto'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testCompileOnly 'org.projectlombok:lombok'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

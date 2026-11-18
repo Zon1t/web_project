@@ -1,0 +1,12 @@
+# 이 파일을 복사해서 application-local.yml로 이름을 바꾸고 본인 값을 입력하세요.
+# application-local.yml은 .gitignore에 등록되어 Git에 올라가지 않아요.
+spring:
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: jdbc:oracle:thin:@localhost:1521:XE
+    username: 본인_DB_계정
+    password: 본인_DB_비밀번호
+
+naver:
+  client-id: 발급받은_ID
+  client-secret: 발급받은_SECRET

@@ -36,4 +36,12 @@ public interface MealPartyRepository extends JpaRepository<MealParty, Long> {
             + "where p.partyDate = :partyDate and p.status not in :excludedStatuses")
     List<MealParty> findAllByPartyDateExcludingStatuses(@Param("partyDate") LocalDate partyDate,
                                                         @Param("excludedStatuses") Collection<PartyStatus> excludedStatuses);
+
+    /**
+     * 식사 완료 처리 후보: 식사 날짜가 untilDate 이하이고 statuses(진행 중 상태)인 팟
+     * 기준 시간이 지났는지는 자바에서 거른다. (시간이 'HH:mm' 문자열이라 날짜+시간 비교를 SQL로 하기 번거로움)
+     */
+    @Query("select p from MealParty p where p.partyDate <= :untilDate and p.status in :statuses")
+    List<MealParty> findAllByPartyDateUntilAndStatusIn(@Param("untilDate") LocalDate untilDate,
+                                                       @Param("statuses") Collection<PartyStatus> statuses);
 }

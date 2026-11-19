@@ -9,7 +9,10 @@ import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyListItemResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
+import com.sseukbap.party.dto.PartyScheduleUpdateRequest;
+import com.sseukbap.party.dto.PartyStatusUpdateRequest;
 import com.sseukbap.party.entity.PartyStatus;
+import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -31,31 +35,86 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 식사팟 목록·내 오늘 식사팟 확인 (실제 DB, 끝나면 롤백)
  *
- * 기대값은 docs/sql/04_dummy_data.sql 기준 (오늘 날짜로 들어간 팟, DELETED 제외)
- *   점심: 계절밥상 11:00 RECRUITING(user04) / 한솥가득 백반 11:30 RECRUITING(user01 방장, user02)
- *         스시하루 12:00 SCHEDULED(user03 방장·확정, user04 확정, user05)
- *   저녁: 파스타앤코 17:30 CLOSED(user04 방장, user03) / 홍반점 18:00 FULL(user02 방장, user01, user05)
- * 더미데이터를 넣은 날이 지나면 00 → 04를 다시 실행해야 맞는다.
+ * 스케줄러가 시간이 지난 더미 팟을 FINISHED로 바꾸기 때문에 더미 팟 상태에 기대지 않는다.
+ * 테스트마다 오늘 날짜의 기존 팟을 잠시 DELETED로 숨기고(롤백됨), 아래 팟을 직접 만든다. "지금 = 오늘 09:00"
+ *   점심: cafe  11:00 RECRUITING (user04)
+ *         hansot 11:30 RECRUITING (user01 방장, user02)
+ *         sushi 12:00 SCHEDULED  (user03 방장·확정, user04 확정, user05) 만날 장소 "본관 1층 로비"
+ *         burger 12:30 DELETED    (user05)
+ *   저녁: pasta 17:30 CLOSED     (user04 방장, user03)
+ *         hong  18:00 FULL       (user02 방장, user01, user05) 정원 3
  */
 @SpringBootTest
 @Transactional
 class PartyListServiceTest {
 
     @Autowired PartyService partyService;
+    @Autowired PartyMemberService partyMemberService;
+    @Autowired PartyHostService partyHostService;
     @Autowired MemberRepository memberRepository;
     @Autowired RestaurantRepository restaurantRepository;
     @Autowired EntityManager em;
     @Autowired JsonMapper jsonMapper;
 
+    private static final LocalDate TODAY = LocalDate.now();
+    private static final LocalDateTime NINE_AM = TODAY.atTime(9, 0);
+
     private Member user01;
+    private Member user02;
     private Member user03;
+    private Member user04;
     private Member user05;
+    private Restaurant restaurant;
+
+    private Long cafe;
+    private Long hansot;
+    private Long sushi;
+    private Long burger;
+    private Long pasta;
+    private Long hong;
 
     @BeforeEach
     void setUp() {
-        user01 = memberRepository.findByLoginId("user01").orElseThrow();
-        user03 = memberRepository.findByLoginId("user03").orElseThrow();
-        user05 = memberRepository.findByLoginId("user05").orElseThrow();
+        user01 = member("user01");
+        user02 = member("user02");
+        user03 = member("user03");
+        user04 = member("user04");
+        user05 = member("user05");
+        restaurant = restaurantRepository.findAll().get(0);
+
+        // 오늘 날짜의 기존 팟(더미 등)을 숨긴다. 테스트가 끝나면 롤백되어 원래대로 돌아온다.
+        em.createQuery("update MealParty p set p.status = :deleted where p.partyDate = :today")
+                .setParameter("deleted", PartyStatus.DELETED)
+                .setParameter("today", TODAY)
+                .executeUpdate();
+        em.clear();
+
+        cafe = create(user04, MealType.LUNCH, "11:00", 4);
+
+        hansot = create(user01, MealType.LUNCH, "11:30", 4);
+        join(hansot, user02);
+
+        sushi = create(user03, MealType.LUNCH, "12:00", 4);
+        join(sushi, user04);
+        join(sushi, user05);
+        partyHostService.updateSchedule(sushi, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "본관 1층 로비", null),
+                user03.getMemberId(), NINE_AM);
+        partyMemberService.confirmParty(sushi, user03.getMemberId());
+        partyMemberService.confirmParty(sushi, user04.getMemberId());
+
+        burger = create(user05, MealType.LUNCH, "12:30", 4);
+        partyService.deleteParty(burger, user05.getMemberId());
+
+        pasta = create(user04, MealType.DINNER, "17:30", 6);
+        join(pasta, user03);
+        partyHostService.updateStatus(pasta, new PartyStatusUpdateRequest("CLOSE"), user04.getMemberId());
+
+        hong = create(user02, MealType.DINNER, "18:00", 3);
+        join(hong, user01);
+        join(hong, user05);   // 정원 도달 → FULL
+
+        em.flush();
+        em.clear();
     }
 
     // ===== 목록 =====
@@ -66,30 +125,32 @@ class PartyListServiceTest {
 
         assertThat(response.lunchCount()).isEqualTo(3);
         assertThat(response.dinnerCount()).isEqualTo(2);
-        assertThat(names(response)).containsExactly("계절밥상", "한솥가득 백반", "스시하루", "파스타앤코", "홍반점");
+        assertThat(ids(response)).containsExactly(cafe, hansot, sushi, pasta, hong);   // burger(DELETED) 제외
         assertThat(response.parties()).extracting(PartyListItemResponse::status)
-                .doesNotContain(PartyStatus.FINISHED, PartyStatus.DELETED);
+                .containsExactly(PartyStatus.RECRUITING, PartyStatus.RECRUITING, PartyStatus.SCHEDULED,
+                        PartyStatus.CLOSED, PartyStatus.FULL);
     }
 
     @Test
     void 인원수와_내_참여여부가_나온다() {
         PartyListResponse response = partyService.getPartyList(null, null, null, null, user01.getMemberId());
 
-        PartyListItemResponse hansot = find(response, "한솥가득 백반");
-        assertThat(hansot.memberCount()).isEqualTo(2);
-        assertThat(hansot.joined()).isTrue();
+        PartyListItemResponse hansotItem = find(response, hansot);
+        assertThat(hansotItem.memberCount()).isEqualTo(2);
+        assertThat(hansotItem.joined()).isTrue();
+        assertThat(hansotItem.restaurantName()).isEqualTo(restaurant.getName());
 
-        PartyListItemResponse sushi = find(response, "스시하루");
-        assertThat(sushi.memberCount()).isEqualTo(3);
-        assertThat(sushi.joined()).isFalse();
-        assertThat(sushi.time()).isEqualTo(LocalTime.of(12, 0));   // 확정 시간
+        PartyListItemResponse sushiItem = find(response, sushi);
+        assertThat(sushiItem.memberCount()).isEqualTo(3);
+        assertThat(sushiItem.joined()).isFalse();
+        assertThat(sushiItem.time()).isEqualTo(LocalTime.of(12, 0));   // 확정 시간
     }
 
     @Test
     void 끼니_필터를_걸어도_탭_숫자는_그대로() {
         PartyListResponse response = partyService.getPartyList("LUNCH", null, null, null, user01.getMemberId());
 
-        assertThat(names(response)).containsExactly("계절밥상", "한솥가득 백반", "스시하루");
+        assertThat(ids(response)).containsExactly(cafe, hansot, sushi);
         assertThat(response.lunchCount()).isEqualTo(3);
         assertThat(response.dinnerCount()).isEqualTo(2);
     }
@@ -98,17 +159,17 @@ class PartyListServiceTest {
     void 상태_필터는_탭_숫자에도_적용된다() {
         PartyListResponse response = partyService.getPartyList(null, "RECRUITING", null, null, user01.getMemberId());
 
-        assertThat(names(response)).containsExactly("계절밥상", "한솥가득 백반");
+        assertThat(ids(response)).containsExactly(cafe, hansot);
         assertThat(response.lunchCount()).isEqualTo(2);
         assertThat(response.dinnerCount()).isZero();
     }
 
     @Test
     void 내가_참여한_팟_제외() {
-        // user01은 한솥가득 백반(방장), 홍반점에 참여 중
+        // user01은 hansot(방장), hong에 참여 중
         PartyListResponse response = partyService.getPartyList(null, null, "true", null, user01.getMemberId());
 
-        assertThat(names(response)).containsExactly("계절밥상", "스시하루", "파스타앤코");
+        assertThat(ids(response)).containsExactly(cafe, sushi, pasta);
         assertThat(response.parties()).noneMatch(PartyListItemResponse::joined);
         assertThat(response.lunchCount()).isEqualTo(2);
         assertThat(response.dinnerCount()).isEqualTo(1);
@@ -119,28 +180,26 @@ class PartyListServiceTest {
         // 메인: excludeJoined=true, status=RECRUITING, limit=3
         PartyListResponse response = partyService.getPartyList(null, "RECRUITING", "true", "3", user01.getMemberId());
 
-        assertThat(names(response)).containsExactly("계절밥상");
+        assertThat(ids(response)).containsExactly(cafe);
     }
 
     @Test
     void limit만큼_자르고_탭_숫자는_그대로() {
         PartyListResponse response = partyService.getPartyList(null, null, null, "2", user01.getMemberId());
 
-        assertThat(response.parties()).hasSize(2);
+        assertThat(ids(response)).containsExactly(cafe, hansot);
         assertThat(response.lunchCount()).isEqualTo(3);
         assertThat(response.dinnerCount()).isEqualTo(2);
     }
 
     @Test
-    void 삭제한_팟은_목록에_안_나온다() {
-        Long partyId = createParty(user01, MealType.DINNER, LocalTime.of(19, 0));
-        assertThat(ids(partyService.getPartyList(null, null, null, null, user01.getMemberId()))).contains(partyId);
+    void 식사_완료된_팟은_목록에_안_나온다() {
+        setStatus(cafe, PartyStatus.FINISHED);
 
-        partyService.deleteParty(partyId, user01.getMemberId());
-        em.flush();
-        em.clear();
+        PartyListResponse response = partyService.getPartyList(null, null, null, null, user01.getMemberId());
 
-        assertThat(ids(partyService.getPartyList(null, null, null, null, user01.getMemberId()))).doesNotContain(partyId);
+        assertThat(ids(response)).doesNotContain(cafe);
+        assertThat(response.lunchCount()).isEqualTo(2);
     }
 
     @ParameterizedTest(name = "mealType={0}, status={1}, excludeJoined={2}, limit={3}")
@@ -176,7 +235,7 @@ class PartyListServiceTest {
     void 내_오늘_식사팟은_기준시간순_최대_2개() {
         List<PartyMyTodayResponse> mine = partyService.getMyTodayPartyList(user01.getMemberId());
 
-        assertThat(mine).extracting(PartyMyTodayResponse::restaurantName).containsExactly("한솥가득 백반", "홍반점");
+        assertThat(mine).extracting(PartyMyTodayResponse::partyId).containsExactly(hansot, hong);
         assertThat(mine.get(1).memberCount()).isEqualTo(3);
         assertThat(mine.get(1).status()).isEqualTo(PartyStatus.FULL);
         assertThat(mine.get(0).meetPlace()).isNull();   // 일정 미확정
@@ -186,36 +245,34 @@ class PartyListServiceTest {
     void 확정_인원과_내_확정여부_만날장소가_나온다() {
         List<PartyMyTodayResponse> mine = partyService.getMyTodayPartyList(user03.getMemberId());
 
-        PartyMyTodayResponse sushi = mine.get(0);
-        assertThat(sushi.restaurantName()).isEqualTo("스시하루");
-        assertThat(sushi.memberCount()).isEqualTo(3);
-        assertThat(sushi.confirmedCount()).isEqualTo(2);
-        assertThat(sushi.myConfirmed()).isTrue();
-        assertThat(sushi.meetPlace()).isEqualTo("본관 1층 로비");
+        assertThat(mine).extracting(PartyMyTodayResponse::partyId).containsExactly(sushi, pasta);
+        PartyMyTodayResponse sushiCard = mine.get(0);
+        assertThat(sushiCard.memberCount()).isEqualTo(3);
+        assertThat(sushiCard.confirmedCount()).isEqualTo(2);
+        assertThat(sushiCard.myConfirmed()).isTrue();
+        assertThat(sushiCard.meetPlace()).isEqualTo("본관 1층 로비");
     }
 
     @Test
     void 삭제된_팟은_빠진다() {
-        // user05는 삭제된 버거스테이션(12:30)에도 들어 있다
+        // user05는 삭제된 burger(12:30)에도 들어 있다
         List<PartyMyTodayResponse> mine = partyService.getMyTodayPartyList(user05.getMemberId());
 
-        assertThat(mine).extracting(PartyMyTodayResponse::restaurantName).containsExactly("스시하루", "홍반점");
+        assertThat(mine).extracting(PartyMyTodayResponse::partyId).containsExactly(sushi, hong);
     }
 
     @Test
-    void 식사_완료된_팟은_뒤로_밀린다() {
-        // user03에게 가장 이른 11:00 팟을 만들고 FINISHED로 바꾼다 → 앞의 2개는 그대로
-        Long finishedId = createParty(user03, MealType.LUNCH, LocalTime.of(11, 0));
-        em.flush();
-        em.createQuery("update MealParty p set p.status = :status where p.partyId = :id")
-                .setParameter("status", PartyStatus.FINISHED)
-                .setParameter("id", finishedId)
-                .executeUpdate();
-        em.clear();
+    void 식사_완료된_팟도_나오지만_뒤로_밀린다() {
+        // user03에게 가장 이른 11:00 팟을 만들고 FINISHED로 → 앞의 2개는 그대로
+        Long finished = create(user03, MealType.LUNCH, "11:00", 4);
+        setStatus(finished, PartyStatus.FINISHED);
+        assertThat(partyService.getMyTodayPartyList(user03.getMemberId()))
+                .extracting(PartyMyTodayResponse::partyId).containsExactly(sushi, pasta);
 
-        List<PartyMyTodayResponse> mine = partyService.getMyTodayPartyList(user03.getMemberId());
-
-        assertThat(mine).extracting(PartyMyTodayResponse::restaurantName).containsExactly("스시하루", "파스타앤코");
+        // 진행 중인 팟이 하나뿐이면 완료된 팟이 두 번째로 나온다
+        setStatus(pasta, PartyStatus.DELETED);
+        assertThat(partyService.getMyTodayPartyList(user03.getMemberId()))
+                .extracting(PartyMyTodayResponse::partyId).containsExactly(sushi, finished);
     }
 
     @Test
@@ -227,23 +284,36 @@ class PartyListServiceTest {
 
     // ===== 도우미 =====
 
-    private Long createParty(Member host, MealType mealType, LocalTime mealTime) {
-        PartyCreateRequest request = new PartyCreateRequest(
-                restaurantRepository.findAll().get(0).getRestaurantId(), mealType, mealTime, 4, null);
-        return partyService.createParty(request, host.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();
+    private Member member(String loginId) {
+        return memberRepository.findByLoginId(loginId).orElseThrow();
     }
 
-    private static List<String> names(PartyListResponse response) {
-        return response.parties().stream().map(PartyListItemResponse::restaurantName).toList();
+    private Long create(Member host, MealType mealType, String mealTime, int capacity) {
+        PartyCreateRequest request = new PartyCreateRequest(
+                restaurant.getRestaurantId(), mealType, LocalTime.parse(mealTime), capacity, null);
+        return partyService.createParty(request, host.getMemberId(), NINE_AM).partyId();
+    }
+
+    private void join(Long partyId, Member member) {
+        partyMemberService.joinParty(partyId, member.getMemberId());
+    }
+
+    private void setStatus(Long partyId, PartyStatus status) {
+        em.flush();
+        em.createQuery("update MealParty p set p.status = :status where p.partyId = :id")
+                .setParameter("status", status)
+                .setParameter("id", partyId)
+                .executeUpdate();
+        em.clear();
     }
 
     private static List<Long> ids(PartyListResponse response) {
         return response.parties().stream().map(PartyListItemResponse::partyId).toList();
     }
 
-    private static PartyListItemResponse find(PartyListResponse response, String restaurantName) {
+    private static PartyListItemResponse find(PartyListResponse response, Long partyId) {
         return response.parties().stream()
-                .filter(p -> p.restaurantName().equals(restaurantName))
+                .filter(p -> p.partyId().equals(partyId))
                 .findFirst()
                 .orElseThrow();
     }

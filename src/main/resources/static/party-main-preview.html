@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>메인 식사팟 부품 미리보기 | 슥밥</title>
+  <!--
+    A의 메인 부품 확인용 임시 페이지. C의 메인 화면(S-01)이 이 부품들을 끼워 넣으면 지운다.
+    메인에 넣을 때 필요한 것은 아래 link·script와 자리(div) 3개뿐이다.
+  -->
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/party-main.css">
+  <style>
+    .preview-page { display: flex; flex-direction: column; gap: var(--space-8); }
+    .preview-note { padding: var(--space-3) var(--space-4); border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link" href="/party-list.html">식사팟</a>
+        <a class="app-header__link" href="#">랭킹</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container preview-page">
+    <p class="preview-note">메인 화면(S-01)에 들어갈 식사팟 부품 미리보기입니다. 보여 줄 것이 없는 부품은 자리째 숨겨집니다.</p>
+
+    <!-- 메인 화면에서는 이 세 자리만 원하는 위치에 두면 된다 -->
+    <div id="thumbs-banner"></div>
+    <div id="my-parties"></div>
+    <div id="today-parties"></div>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/components/party-main.js"></script>
+  <script>
+    partyMain.renderThumbsBanner(document.getElementById('thumbs-banner'));
+    partyMain.renderMyParties(document.getElementById('my-parties'));
+    partyMain.renderTodayParties(document.getElementById('today-parties'));
+  </script>
+</body>
+</html>

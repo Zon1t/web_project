@@ -30,6 +30,10 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
     @Query("select count(pm) from PartyMember pm where pm.party.partyId = :partyId")
     long countByPartyId(@Param("partyId") Long partyId);
 
+    /** 이 팟의 참여 확정 인원 */
+    @Query("select count(pm) from PartyMember pm where pm.party.partyId = :partyId and pm.confirmed = true")
+    long countConfirmedByPartyId(@Param("partyId") Long partyId);
+
     /** 이 팟의 참여자 목록, 참여 순 (회원 정보까지 한 번에 가져온다) */
     @Query("select pm from PartyMember pm join fetch pm.member where pm.party.partyId = :partyId order by pm.joinedAt, pm.partyMemberId")
     List<PartyMember> findAllWithMemberByPartyId(@Param("partyId") Long partyId);

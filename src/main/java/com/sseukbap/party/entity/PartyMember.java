@@ -71,4 +71,14 @@ public class PartyMember {
     public static PartyMember create(MealParty party, Member member) {
         return new PartyMember(party, member);
     }
+
+    /** 참여 확정(2차). 일정 유무·중복 확정 검사는 Service에서 먼저 한다. */
+    public void confirm() {
+        this.confirmed = true;
+    }
+
+    /** 참여 확정 취소. 참여자 자격은 유지된다. (행은 그대로) */
+    public void cancelConfirm() {
+        this.confirmed = false;
+    }
 }

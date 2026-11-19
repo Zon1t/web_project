@@ -4,7 +4,6 @@ import com.sseukbap.common.enums.MealType;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.member.entity.Member;
-import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
@@ -48,7 +47,7 @@ public class PartyService {
     private final PartyMemberRepository partyMemberRepository;
     private final PartyChatRepository partyChatRepository;
     private final RestaurantRepository restaurantRepository;
-    private final MemberRepository memberRepository;
+    private final PartyFinder partyFinder;
 
     private static final String LIST_INVALID_MESSAGE = "조회 조건을 확인해 주세요.";
     private static final int LIST_LIMIT_MAX = 50;
@@ -82,7 +81,7 @@ public class PartyService {
         // 4. 식당 확인
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
-        Member host = getMember(memberId);
+        Member host = partyFinder.getMember(memberId);
 
         // 5~7. 팟 저장 → 방장을 참여자로 저장(확정 N) → 시스템 메시지 (하나의 트랜잭션)
         MealParty party = mealPartyRepository.save(MealParty.create(
@@ -97,9 +96,7 @@ public class PartyService {
     /** 식사팟 상세. 미참여자도 조회할 수 있다. */
     public PartyDetailResponse getParty(Long partyId, Long memberId) {
         // 1. 팟 조회 (없으면 PARTY_NOT_FOUND, 삭제됐으면 PARTY_DELETED)
-        MealParty party = mealPartyRepository.findById(partyId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PARTY_NOT_FOUND));
-        validateNotDeleted(party);
+        MealParty party = partyFinder.getParty(partyId);
 
         // 2. 참여자 목록 (참여 순, 회원 정보 포함)
         List<PartyMember> members = partyMemberRepository.findAllWithMemberByPartyId(partyId);
@@ -112,9 +109,7 @@ public class PartyService {
     @Transactional
     public void deleteParty(Long partyId, Long memberId) {
         // 1. 행 잠금 조회. 없거나 DELETED면 중단
-        MealParty party = mealPartyRepository.findByIdForUpdate(partyId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PARTY_NOT_FOUND));
-        validateNotDeleted(party);
+        MealParty party = partyFinder.getPartyForUpdate(partyId);
 
         // 2. 방장 확인
         if (!party.isHost(memberId)) {
@@ -296,17 +291,4 @@ public class PartyService {
         return value == null || value.isBlank();
     }
 
-    // ===== 공통 =====
-
-    private void validateNotDeleted(MealParty party) {
-        if (party.isDeleted()) {
-            throw new BusinessException(ErrorCode.PARTY_DELETED);
-        }
-    }
-
-    /** 세션의 회원이 DB에 없으면(탈퇴 등) 로그인부터 다시 하도록 401 */
-    private Member getMember(Long memberId) {
-        return memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
-    }
 }

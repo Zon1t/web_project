@@ -1,0 +1,343 @@
+/*
+ * base.css — 공통 기본 스타일 (B 담당, 수정은 B에게 요청)
+ *
+ * HTML에서 불러오는 순서: tokens.css → base.css → 화면별 css
+ *   <link rel="stylesheet" href="/css/tokens.css">
+ *   <link rel="stylesheet" href="/css/base.css">
+ *   <link rel="stylesheet" href="/css/restaurant-list.css">
+ *
+ * 들어 있는 것: 초기화, 레이아웃(.container), 버튼(.btn), 입력창(.input),
+ *              카드(.card), 칩(.chip), 뱃지(.badge), 상태 화면(.state)
+ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+/* ---------- 초기화 ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, p, ul, ol {
+  margin: 0;
+}
+
+ul, ol {
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* 키보드 사용자를 위한 포커스 표시 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 화면에는 안 보이지만 화면 낭독기는 읽는 글자 (label 등) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- 레이아웃 ---------- */
+.container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+.page-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.section-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text-sub {
+  color: var(--color-text-sub);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 버튼 ---------- */
+/* 사용: <button type="button" class="btn btn--primary">등록</button> */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--color-surface);
+}
+
+.btn--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.btn--primary:hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+.btn--danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.btn--danger:hover {
+  background: var(--color-danger-soft);
+}
+
+/* 글자만 있는 버튼 (더보기, 취소 등) */
+.btn--text {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-sub);
+}
+
+.btn--text:hover {
+  background: var(--color-surface);
+}
+
+.btn:disabled {
+  border-color: var(--color-border-light);
+  background: var(--color-surface);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* ---------- 입력창 ---------- */
+/*
+ * 사용:
+ * <div class="field">
+ *   <label class="field__label" for="name">식당 이름</label>
+ *   <input id="name" class="input">
+ *   <p class="field__message field__message--error">이름을 입력해 주세요.</p>
+ * </div>
+ */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+}
+
+.textarea {
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-disabled);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.input--error {
+  border-color: var(--color-danger);
+}
+
+.field__message {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.field__message--error {
+  color: var(--color-danger);
+}
+
+.field__message--success {
+  color: var(--color-success);
+}
+
+/* ---------- 카드 ---------- */
+.card {
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- 칩 (카테고리 필터, 태그 선택) ---------- */
+/* 선택된 칩은 class에 is-selected 추가, aria-pressed="true"도 함께 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--color-surface);
+}
+
+.chip.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---------- 뱃지 (상태, 카테고리) ---------- */
+/* 사용: <span class="badge badge--recruiting">모집중</span> */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.badge--recruiting { background: var(--color-status-recruiting-bg); color: var(--color-status-recruiting); }
+.badge--scheduled  { background: var(--color-status-scheduled-bg);  color: var(--color-status-scheduled); }
+.badge--full       { background: var(--color-status-full-bg);       color: var(--color-status-full); }
+.badge--closed     { background: var(--color-status-closed-bg);     color: var(--color-status-closed); }
+.badge--finished   { background: var(--color-status-finished-bg);   color: var(--color-status-finished); }
+
+/* ---------- 상태 화면: 로딩 / 빈 상태 / 오류 ---------- */
+/*
+ * 사용:
+ * <div class="state state--empty">
+ *   <p class="state__title">조건에 맞는 식당이 없습니다</p>
+ *   <p class="state__desc">검색어나 카테고리를 바꿔 보세요.</p>
+ * </div>
+ */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.state__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.state__desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.state--error .state__title {
+  color: var(--color-danger);
+}
+
+/* 로딩 표시: <div class="state state--loading"><span class="spinner" aria-hidden="true"></span><p class="state__desc">불러오는 중…</p></div> */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-border-light);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 640px) {
+  .container {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .page-title {
+    font-size: var(--font-size-xl);
+  }
+}

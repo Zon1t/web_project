@@ -1,6 +1,6 @@
 package com.sseukbap.party.dto;
 
-import com.sseukbap.party.entity.MealType;
+import com.sseukbap.common.enums.MealType;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

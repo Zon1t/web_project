@@ -8,7 +8,7 @@ import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyDetailResponse;
 import com.sseukbap.party.dto.PartyMemberResponse;
 import com.sseukbap.party.entity.MealParty;
-import com.sseukbap.party.entity.MealType;
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.party.entity.PartyChat;
 import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyRole;

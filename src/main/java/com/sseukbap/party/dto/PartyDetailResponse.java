@@ -2,7 +2,7 @@ package com.sseukbap.party.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.sseukbap.party.entity.MealParty;
-import com.sseukbap.party.entity.MealType;
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyRole;
 import com.sseukbap.party.entity.PartyStatus;

@@ -1,0 +1,240 @@
+/*
+ * main.css — 메인 화면 (S-01, C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ *
+ * A 부품(따봉 배너·식사팟 카드)은 css/party-main.css가 꾸민다. (클래스 앞머리 pm-)
+ * 부품 자리(#thumbs-banner 등)에는 display를 주지 않는다. (부품이 hidden으로 숨김)
+ */
+
+/* ---------- 헤더 오른쪽: 닉네임·로그아웃 (header.css는 B 담당이라 여기서 보충) ---------- */
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.app-header__nickname {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.app-header__nickname:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+/* ---------- 레이아웃 ---------- */
+.main-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.main-section[hidden] {
+  display: none;
+}
+
+.main-section__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.main-section__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.main-section__meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.main-section__more {
+  margin-left: auto;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.main-section__more:hover {
+  color: var(--color-primary);
+}
+
+/* 영역 안의 로딩·빈 상태·오류는 조금 낮게 */
+.main-state {
+  padding: var(--space-8) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- ③ 오늘의 구내식당 ---------- */
+.cafeteria-meals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.cafeteria-meal {
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.cafeteria-meal__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.cafeteria-meal__menus {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  word-break: keep-all;
+}
+
+/* ---------- 아래 줄: ⑥ TOP 3 + ⑦ 룰렛 ---------- */
+.main-bottom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: stretch;
+}
+
+.main-card {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.main-card .main-section__head {
+  margin-bottom: var(--space-3);
+}
+
+.main-card .main-section__title {
+  font-size: var(--font-size-lg);
+}
+
+/* ⑥ 이달의 따봉 TOP 3 */
+.top3-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.top3-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--font-size-sm);
+}
+
+.top3-item:last-child {
+  border-bottom: none;
+}
+
+.top3-item__rank {
+  width: var(--space-6);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.top3-item__name {
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top3-item__name:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.top3-item__category {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.top3-item__thumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--color-text-sub);
+}
+
+/* ⑦ 메뉴 룰렛 배너 */
+.main-roulette {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.main-roulette__title {
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.main-roulette__desc {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 768px) {
+  .cafeteria-meals,
+  .main-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 헤더에 로그아웃 버튼이 더해져 좁은 화면에서 메뉴 글자가 줄바꿈되지 않도록 */
+.app-header__logo,
+.app-header__link {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .app-header__inner {
+    gap: var(--space-3);
+  }
+
+  .app-header__nav {
+    gap: var(--space-3);
+  }
+
+  .app-header__user {
+    gap: var(--space-2);
+  }
+
+  .app-header__user .btn {
+    height: 36px;
+    padding: 0 var(--space-3);
+  }
+
+  .app-header__nickname {
+    display: none;   /* 좁은 화면에서는 로그아웃만 */
+  }
+
+  .main-page {
+    gap: var(--space-8);
+  }
+
+  .main-roulette {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

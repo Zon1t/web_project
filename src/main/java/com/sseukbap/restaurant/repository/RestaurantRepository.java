@@ -22,6 +22,9 @@ import java.util.List;
  */
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
+    /** 같은 지도 URL(표준 URL)의 식당이 있는지 (식당 등록 중복 확인) */
+    boolean existsByMapUrl(String mapUrl);
+
     /**
      * 식당 목록 (검색·필터) + 식당별 최근 30일 따봉 수, 리뷰 수.
      * 정렬: 따봉 수 내림차순 → 리뷰 수 내림차순 → 등록 순(RESTAURANT_ID 오름차순)

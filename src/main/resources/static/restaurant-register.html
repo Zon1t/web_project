@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식당 등록 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/restaurant-register.css">
+</head>
+<body>
+  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link is-active" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link" href="/party-list.html">식사팟</a>
+        <a class="app-header__link" href="#">랭킹</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container register-page">
+    <h1 class="page-title">식당 등록</h1>
+
+    <form id="register-form" class="register-form" novalidate>
+      <!-- 1. 네이버 지도 URL -->
+      <div class="field">
+        <label class="field__label" for="map-url">네이버 지도 URL <span class="register-form__required" aria-hidden="true">*</span></label>
+        <div id="map-url-hint" class="url-guide">
+          <p class="url-guide__title">링크 가져오는 방법</p>
+          <ol class="url-guide__steps">
+            <li><span><a href="https://map.naver.com" target="_blank" rel="noopener noreferrer">네이버 지도<span class="sr-only">(새 탭)</span></a>에서 식당 검색</span></li>
+            <li><span>식당 정보에서 <strong>[공유]</strong></span></li>
+            <li><span><strong>[링크 복사]</strong></span></li>
+            <li><span>아래 칸에 붙여 넣기</span></li>
+          </ol>
+        </div>
+        <input id="map-url" class="input" type="url" inputmode="url" autocomplete="off" required
+               placeholder="https://naver.me/... 또는 https://map.naver.com/..." aria-describedby="map-url-hint">
+      </div>
+
+      <!-- 2. 식당 이름 + 이미 등록된 비슷한 이름 -->
+      <div class="field">
+        <label class="field__label" for="restaurant-name">식당 이름 <span class="register-form__required" aria-hidden="true">*</span></label>
+        <input id="restaurant-name" class="input" type="text" maxlength="30" autocomplete="off" required
+               placeholder="예: OO국밥 세종대점" aria-describedby="name-hint">
+        <p id="name-hint" class="field__message">지점이 여러 곳이면 지점명까지 입력해 주세요. 이 이름으로 네이버에서 주소를 찾습니다.</p>
+        <div id="similar-names" class="similar-names" aria-live="polite"></div>
+      </div>
+
+      <!-- URL + 이름으로 찾은 장소 (확인 결과) -->
+      <div id="check-result" class="check-result" aria-live="polite"></div>
+
+      <!-- 3. 카테고리 (구내식당은 등록 불가) -->
+      <div class="field">
+        <label class="field__label" for="category">카테고리 <span class="register-form__required" aria-hidden="true">*</span></label>
+        <select id="category" class="select" required>
+          <option value="">선택하세요</option>
+        </select>
+      </div>
+
+      <p id="form-message" class="field__message field__message--error" role="alert"></p>
+
+      <div class="register-form__actions">
+        <a class="btn" href="/restaurant-list.html">취소</a>
+        <button id="submit-button" class="btn btn--primary" type="submit" disabled>등록하기</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
+  <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/pages/restaurant-register.js"></script>
+</body>
+</html>

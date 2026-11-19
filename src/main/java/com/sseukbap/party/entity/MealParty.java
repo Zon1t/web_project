@@ -160,4 +160,28 @@ public class MealParty {
     public void leave(int memberCountAfter) {
         this.status = this.status.afterMemberLeft(memberCountAfter, capacity, hasSchedule());
     }
+
+    /**
+     * 방장의 일정 확정·수정: 확정 시간·만날 장소·메모를 저장하고 RECRUITING이면 SCHEDULED로 바꾼다.
+     * (SCHEDULED·FULL·CLOSED는 유지) 확정 초기화는 Service에서 PARTY_MEMBER에 한다.
+     */
+    public void updateSchedule(LocalTime confirmedTime, String meetPlace, String confirmMemo) {
+        this.confirmedTime = confirmedTime;
+        this.meetPlace = meetPlace;
+        this.confirmMemo = confirmMemo;
+        this.status = this.status.afterScheduleSet();
+    }
+
+    /** 방장의 모집 마감: RECRUITING·SCHEDULED·FULL → CLOSED */
+    public void close() {
+        this.status = this.status.afterClosed();
+    }
+
+    /**
+     * 방장의 모집 재개 (CLOSED에서만): 정원이 차 있으면 FULL, 아니면 일정 유무로 SCHEDULED / RECRUITING
+     * @param memberCount 현재 인원 (방장 포함)
+     */
+    public void reopen(int memberCount) {
+        this.status = this.status.afterReopened(memberCount, capacity, hasSchedule());
+    }
 }

@@ -7,11 +7,17 @@ import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
+import com.sseukbap.party.dto.PartyScheduleUpdateRequest;
+import com.sseukbap.party.dto.PartyScheduleUpdateResponse;
+import com.sseukbap.party.dto.PartyStatusUpdateRequest;
+import com.sseukbap.party.dto.PartyStatusUpdateResponse;
+import com.sseukbap.party.service.PartyHostService;
 import com.sseukbap.party.service.PartyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,7 +29,8 @@ import java.util.List;
 
 /**
  * 식사팟 API. 모두 로그인 필요 (미로그인은 인터셉터가 401)
- * 처리 로직은 PartyService에 있다. Controller는 요청을 받아 넘기고 ApiResponse로 감싸기만 한다.
+ * 처리 로직은 PartyService(생성·조회·삭제)와 PartyHostService(방장의 일정·마감)에 있다.
+ * Controller는 요청을 받아 넘기고 ApiResponse로 감싸기만 한다.
  */
 @RestController
 @RequestMapping("/api/parties")
@@ -31,6 +38,7 @@ import java.util.List;
 public class PartyController {
 
     private final PartyService partyService;
+    private final PartyHostService partyHostService;
 
     /** 식사팟 생성 */
     @PostMapping("/create")
@@ -72,5 +80,21 @@ public class PartyController {
                                          @LoginMember Long memberId) {
         partyService.deleteParty(partyId, memberId);
         return ApiResponse.success();
+    }
+
+    /** 일정 확정·수정 (방장). 수정이면 모든 참여자의 확정이 초기화된다 */
+    @PatchMapping("/{partyId}/schedule")
+    public ApiResponse<PartyScheduleUpdateResponse> updateSchedule(@PathVariable Long partyId,
+                                                                   @Valid @RequestBody PartyScheduleUpdateRequest request,
+                                                                   @LoginMember Long memberId) {
+        return ApiResponse.success(partyHostService.updateSchedule(partyId, request, memberId));
+    }
+
+    /** 모집 마감·재개 (방장). action = CLOSE / REOPEN */
+    @PatchMapping("/{partyId}/status")
+    public ApiResponse<PartyStatusUpdateResponse> updateStatus(@PathVariable Long partyId,
+                                                               @Valid @RequestBody PartyStatusUpdateRequest request,
+                                                               @LoginMember Long memberId) {
+        return ApiResponse.success(partyHostService.updateStatus(partyId, request, memberId));
     }
 }

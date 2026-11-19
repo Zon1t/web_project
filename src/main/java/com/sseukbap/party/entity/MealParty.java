@@ -144,4 +144,20 @@ public class MealParty {
     public void delete() {
         this.status = this.status.afterDeleted();
     }
+
+    /**
+     * 참여자가 들어온 뒤 상태 반영: 정원에 도달하면 FULL (자동 마감)
+     * @param memberCountAfter 참여 후 인원 (방장 포함)
+     */
+    public void join(int memberCountAfter) {
+        this.status = this.status.afterMemberJoined(memberCountAfter, capacity);
+    }
+
+    /**
+     * 참여자가 나간 뒤 상태 반영: FULL이었다면 일정 유무로 SCHEDULED / RECRUITING (CLOSED는 유지)
+     * @param memberCountAfter 나간 후 인원 (방장 포함)
+     */
+    public void leave(int memberCountAfter) {
+        this.status = this.status.afterMemberLeft(memberCountAfter, capacity, hasSchedule());
+    }
 }

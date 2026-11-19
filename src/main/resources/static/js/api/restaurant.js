@@ -44,5 +44,23 @@
     getDetail(restaurantId) {
       return api.get('/restaurants/' + encodeURIComponent(restaurantId));
     },
+
+    /**
+     * 관심 등록 — POST /api/restaurants/{restaurantId}/interest
+     * 오류: 404 RESTAURANT_NOT_FOUND, 409 ALREADY_INTERESTED
+     * @returns {Promise<{interested: boolean, interestCount: number}>}
+     */
+    addInterest(restaurantId) {
+      return api.post('/restaurants/' + encodeURIComponent(restaurantId) + '/interest');
+    },
+
+    /**
+     * 관심 해제 — DELETE /api/restaurants/{restaurantId}/interest
+     * 오류: 404 INTEREST_NOT_FOUND
+     * @returns {Promise<{interested: boolean, interestCount: number}>}
+     */
+    removeInterest(restaurantId) {
+      return api.delete('/restaurants/' + encodeURIComponent(restaurantId) + '/interest');
+    },
   };
 })(window);

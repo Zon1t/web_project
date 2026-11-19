@@ -1,12 +1,16 @@
 package com.sseukbap.party.repository;
 
 import com.sseukbap.party.entity.MealParty;
+import com.sseukbap.party.entity.PartyStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,4 +27,13 @@ public interface MealPartyRepository extends JpaRepository<MealParty, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from MealParty p where p.partyId = :partyId")
     Optional<MealParty> findByIdForUpdate(@Param("partyId") Long partyId);
+
+    /**
+     * 특정 날짜의 팟 중 excludedStatuses를 뺀 것 (식당 정보까지 한 번에)
+     * 목록: excludedStatuses = FINISHED, DELETED
+     */
+    @Query("select p from MealParty p join fetch p.restaurant "
+            + "where p.partyDate = :partyDate and p.status not in :excludedStatuses")
+    List<MealParty> findAllByPartyDateExcludingStatuses(@Param("partyDate") LocalDate partyDate,
+                                                        @Param("excludedStatuses") Collection<PartyStatus> excludedStatuses);
 }

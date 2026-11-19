@@ -69,10 +69,14 @@ public class GlobalExceptionHandler {
         return toResponse(ErrorCode.INVALID_REQUEST, null, request);
     }
 
-    /** 업로드 파일 크기 초과 (application.yml: max-file-size 5MB) */
+    /**
+     * 업로드 파일 크기 초과 (application.yml: max-file-size 5MB, max-request-size 6MB)
+     * → API_SPEC 리뷰 작성 오류 표대로 400 INVALID_IMAGE "jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다."
+     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e, HttpServletRequest request) {
-        return toResponse(ErrorCode.INVALID_REQUEST, "파일 크기는 5MB 이하만 가능합니다.", request);
+        log.warn("Upload too large: {} {}", request.getMethod(), request.getRequestURI());
+        return toResponse(ErrorCode.INVALID_IMAGE, null, request);
     }
 
     /** 없는 주소 */

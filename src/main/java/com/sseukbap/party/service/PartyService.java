@@ -1,5 +1,6 @@
 package com.sseukbap.party.service;
 
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.member.entity.Member;
@@ -7,11 +8,16 @@ import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyListItemResponse;
+import com.sseukbap.party.dto.PartyListResponse;
+import com.sseukbap.party.dto.PartyMyTodayResponse;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.entity.PartyChat;
 import com.sseukbap.party.entity.PartyMember;
+import com.sseukbap.party.entity.PartyStatus;
 import com.sseukbap.party.repository.MealPartyRepository;
 import com.sseukbap.party.repository.PartyChatRepository;
+import com.sseukbap.party.repository.PartyMemberCount;
 import com.sseukbap.party.repository.PartyMemberRepository;
 import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
@@ -21,10 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * 식사팟 생성·상세·삭제.
+ * 식사팟 생성·상세·삭제·목록.
  * 기준: docs/API_SPEC.md 6장 (각 메서드의 번호는 명세의 "시스템 처리" 순서)
  */
 @Service
@@ -37,6 +49,10 @@ public class PartyService {
     private final PartyChatRepository partyChatRepository;
     private final RestaurantRepository restaurantRepository;
     private final MemberRepository memberRepository;
+
+    private static final String LIST_INVALID_MESSAGE = "조회 조건을 확인해 주세요.";
+    private static final int LIST_LIMIT_MAX = 50;
+    private static final int MY_TODAY_LIMIT = 2;
 
     /** 식사팟 생성. 방장이 첫 참여자가 되고 상태는 RECRUITING */
     @Transactional
@@ -112,6 +128,172 @@ public class PartyService {
 
         // 4. DELETED로 변경 (커밋 시 UPDATE 실행)
         party.delete();
+    }
+
+    // ===== 목록 =====
+
+    /**
+     * 식사팟 목록 (오늘, FINISHED·DELETED 제외). 식사팟 목록 화면과 메인 '오늘의 식사팟'에서 쓴다.
+     * 파라미터는 모두 선택값이라 문자열로 받아 여기서 검사한다. (잘못된 값은 "조회 조건을 확인해 주세요.")
+     */
+    public PartyListResponse getPartyList(String mealType, String status, String excludeJoined,
+                                          String limit, Long memberId) {
+        // 1. 파라미터 검증
+        MealType mealTypeFilter = parseMealType(mealType);
+        PartyStatus statusFilter = parseListStatus(status);
+        boolean isExcludeJoined = parseBoolean(excludeJoined);
+        Integer limitValue = parseLimit(limit);
+
+        // 2. 오늘 + FINISHED·DELETED 제외 + 요청 조건(status, excludeJoined)
+        //    하루치라 개수가 적어서 한 번에 가져와 자바에서 거른다.
+        LocalDate today = LocalDate.now();
+        List<MealParty> todayParties = mealPartyRepository.findAllByPartyDateExcludingStatuses(
+                today, EnumSet.of(PartyStatus.FINISHED, PartyStatus.DELETED));
+        Set<Long> joinedPartyIds = getJoinedPartyIds(memberId, today);
+
+        // 3. 정렬: 기준 시간 → partyId
+        List<MealParty> filtered = todayParties.stream()
+                .filter(p -> statusFilter == null || p.getStatus() == statusFilter)
+                .filter(p -> !isExcludeJoined || !joinedPartyIds.contains(p.getPartyId()))
+                .sorted(Comparator.comparing(MealParty::getBaseTime).thenComparing(MealParty::getPartyId))
+                .toList();
+
+        // 5. 끼니별 개수 (탭 숫자): mealType·limit과 관계없이 센다
+        int lunchCount = (int) filtered.stream().filter(p -> p.getMealType() == MealType.LUNCH).count();
+        int dinnerCount = (int) filtered.stream().filter(p -> p.getMealType() == MealType.DINNER).count();
+
+        // 6. 끼니 필터 + limit
+        List<MealParty> result = filtered.stream()
+                .filter(p -> mealTypeFilter == null || p.getMealType() == mealTypeFilter)
+                .limit(limitValue == null ? Long.MAX_VALUE : limitValue)
+                .toList();
+
+        // 4. 팟별 인원 수 (쿼리 한 번) + 내 참여 여부
+        Map<Long, PartyMemberCount> counts = countMembers(result);
+        List<PartyListItemResponse> items = result.stream()
+                .map(p -> PartyListItemResponse.of(
+                        p,
+                        memberCountOf(counts, p.getPartyId()),
+                        joinedPartyIds.contains(p.getPartyId())))
+                .toList();
+
+        return new PartyListResponse(lunchCount, dinnerCount, items);
+    }
+
+    /**
+     * 내가 참여 중인 오늘 식사팟 (최대 2개). 메인 '참여 중인 식사팟' 카드용.
+     * DELETED는 빼고 FINISHED(식사 완료)는 포함한다. 없으면 빈 배열.
+     */
+    public List<PartyMyTodayResponse> getMyTodayPartyList(Long memberId) {
+        // 1. 오늘 + DELETED 제외 + 내가 참여한 팟
+        List<PartyMember> myParties = partyMemberRepository.findAllByMemberIdAndPartyDate(
+                memberId, LocalDate.now(), EnumSet.of(PartyStatus.DELETED));
+
+        // 2. 정렬: FINISHED가 아닌 팟 먼저 → 기준 시간 → partyId, 4. 최대 2개
+        List<PartyMember> top = myParties.stream()
+                .sorted(Comparator.comparing((PartyMember pm) -> pm.getParty().isFinished())
+                        .thenComparing(pm -> pm.getParty().getBaseTime())
+                        .thenComparing(pm -> pm.getParty().getPartyId()))
+                .limit(MY_TODAY_LIMIT)
+                .toList();
+
+        // 3. 참여 인원·확정 인원(쿼리 한 번), 내 확정 여부
+        Map<Long, PartyMemberCount> counts = countMembers(top.stream().map(PartyMember::getParty).toList());
+        return top.stream()
+                .map(pm -> {
+                    Long partyId = pm.getParty().getPartyId();
+                    return PartyMyTodayResponse.of(
+                            pm.getParty(),
+                            memberCountOf(counts, partyId),
+                            confirmedCountOf(counts, partyId),
+                            pm.isConfirmed());
+                })
+                .toList();
+    }
+
+    // ===== 목록 도우미 =====
+
+    private Set<Long> getJoinedPartyIds(Long memberId, LocalDate date) {
+        return partyMemberRepository.findAllByMemberIdAndPartyDate(memberId, date, EnumSet.of(PartyStatus.DELETED))
+                .stream()
+                .map(pm -> pm.getParty().getPartyId())
+                .collect(Collectors.toSet());
+    }
+
+    /** 팟 ID → 인원 집계. 팟이 없으면 쿼리를 날리지 않는다. (Oracle은 빈 IN () 불가) */
+    private Map<Long, PartyMemberCount> countMembers(List<MealParty> parties) {
+        if (parties.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> partyIds = parties.stream().map(MealParty::getPartyId).toList();
+        return partyMemberRepository.countByPartyIds(partyIds).stream()
+                .collect(Collectors.toMap(PartyMemberCount::partyId, Function.identity()));
+    }
+
+    private static int memberCountOf(Map<Long, PartyMemberCount> counts, Long partyId) {
+        PartyMemberCount count = counts.get(partyId);
+        return count == null ? 0 : count.memberCount().intValue();
+    }
+
+    private static int confirmedCountOf(Map<Long, PartyMemberCount> counts, Long partyId) {
+        PartyMemberCount count = counts.get(partyId);
+        return count == null || count.confirmedCount() == null ? 0 : count.confirmedCount().intValue();
+    }
+
+    private static MealType parseMealType(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return MealType.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
+        }
+    }
+
+    /** 목록에서 고를 수 있는 상태는 RECRUITING, SCHEDULED, FULL, CLOSED 뿐 */
+    private static PartyStatus parseListStatus(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            PartyStatus status = PartyStatus.valueOf(value);
+            if (status.isActive()) {
+                return status;
+            }
+        } catch (IllegalArgumentException e) {
+            // 아래에서 처리
+        }
+        throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
+    }
+
+    private static boolean parseBoolean(String value) {
+        if (isBlank(value) || "false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
+    }
+
+    private static Integer parseLimit(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            int limit = Integer.parseInt(value.trim());
+            if (limit >= 1 && limit <= LIST_LIMIT_MAX) {
+                return limit;
+            }
+        } catch (NumberFormatException e) {
+            // 아래에서 처리
+        }
+        throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     // ===== 공통 =====

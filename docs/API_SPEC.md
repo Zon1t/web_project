@@ -29,6 +29,7 @@
 | 요청 형식 | `Content-Type: application/json` (파일 첨부가 있는 리뷰 작성만 `multipart/form-data`) |
 | 날짜·시간 | 날짜 `YYYY-MM-DD`, 시간 `HH:mm`, 일시 ISO-8601 |
 | 끼니 값 | `LUNCH`(점심), `DINNER`(저녁) |
+| 식사팟 날짜 | 오늘 ~ 7일 후 (2026-11-20 변경, 기존: 당일만). 목록·생성은 날짜를 고르고, 없으면 오늘 |
 | 식사팟 상태 값 | `RECRUITING`(모집중), `SCHEDULED`(일정 확정), `FULL`(정원 마감, 자동), `CLOSED`(모집 마감, 방장), `FINISHED`(식사 완료), `DELETED`(삭제) |
 
 ### 공통 응답 구조
@@ -180,7 +181,7 @@
 | B | DELETE | `/api/reviews/{reviewId}` | 리뷰 삭제 |
 | A | POST | `/api/parties/create` | 식사팟 생성 |
 | A | GET | `/api/parties/list` | 식사팟 목록 조회 |
-| A | GET | `/api/parties/my/today` | 내가 참여 중인 오늘 식사팟 조회 |
+| A | GET | `/api/parties/my/today` | 내가 참여 중인 식사팟 조회 (오늘 ~ 7일 후) |
 | A | GET | `/api/parties/my/thumbs-pending` | 따봉 요청 대상 조회 |
 | A | GET | `/api/parties/{partyId}` | 식사팟 상세 조회 |
 | A | DELETE | `/api/parties/{partyId}` | 식사팟 삭제 (방장) |
@@ -1194,12 +1195,15 @@ null
 
 ### POST /api/parties/create — 식사팟 생성
 
-**요구사항**: 당일 식사팟을 만든다. 생성자는 방장(HOST)이자 첫 참여자로 등록되고, 상태는 RECRUITING이다. FE는 성공 후 식사팟 상세로 이동한다. 식당 상세에서 들어온 경우 restaurantId는 화면에서 고정된 값을 보낸다.
+**요구사항**: 오늘부터 7일 후까지의 식사팟을 만든다. 날짜를 보내지 않으면 오늘 팟이다. 생성자는 방장(HOST)이자 첫 참여자로 등록되고, 상태는 RECRUITING이다. FE는 성공 후 식사팟 상세로 이동한다. 식당 상세에서 들어온 경우 restaurantId는 화면에서 고정된 값을 보낸다.
+
+> 2026-11-20 변경: 당일만 → 오늘 ~ 7일 후 (partyDate 추가)
 
 **Request — Body**
 ```json
 {
   "restaurantId": 12,
+  "partyDate": "2026-11-21",
   "mealType": "LUNCH",
   "mealTime": "12:00",
   "capacity": 4,
@@ -1210,20 +1214,22 @@ null
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
 | restaurantId | number | O | 존재하는 식당 |
+| partyDate | string | X | YYYY-MM-DD. 오늘 ~ 오늘+7일. 없으면 오늘 |
 | mealType | string | O | LUNCH, DINNER |
-| mealTime | string | O | HH:mm. LUNCH 11:00~13:30, DINNER 17:00~19:30, 30분 단위, 현재 시각 이후 |
+| mealTime | string | O | HH:mm. LUNCH 11:00~13:30, DINNER 17:00~19:30, 30분 단위. 오늘 팟이면 현재 시각 이후 |
 | capacity | number | O | 2~12 (방장 포함) |
 | memo | string | X | 최대 50자 |
 
 **시스템 처리**
-1. 필수값·형식·범위를 검증한다.
-2. mealTime이 mealType 시간대에 속하고 30분 단위인지 확인한다.
-3. 오늘 날짜 + mealTime이 현재 시각보다 이후인지 확인한다.
-4. RESTAURANT가 있는지 확인한다.
-5. MEAL_PARTY를 저장한다. (party_date = 오늘, host_id = 로그인 회원, status = RECRUITING)
-6. PARTY_MEMBER에 방장을 저장한다. (confirmed_yn = N)
-7. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었습니다'를 저장한다.
-8. 5~7을 하나의 트랜잭션으로 처리한다.
+1. 필수값·형식·범위를 검증한다. partyDate가 없으면 오늘로 한다.
+2. partyDate가 오늘 ~ 오늘+7일인지 확인한다.
+3. mealTime이 mealType 시간대에 속하고 30분 단위인지 확인한다.
+4. partyDate + mealTime이 현재 시각보다 이후인지 확인한다. (미래 날짜는 항상 통과)
+5. RESTAURANT가 있는지 확인한다.
+6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING)
+7. PARTY_MEMBER에 방장을 저장한다. (confirmed_yn = N)
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었습니다'를 저장한다.
+9. 6~8을 하나의 트랜잭션으로 처리한다.
 
 **Response 200 (data)**
 ```json
@@ -1236,7 +1242,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 정원 범위 밖, 한마디 50자 초과 |
+| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 정원 범위 밖, 한마디 50자 초과, partyDate 형식 오류·범위(오늘~7일 후) 밖 |
 | 400 | INVALID_MEAL_TIME | 선택할 수 없는 식사 시간입니다. | 시간대·30분 단위 위반, 지난 시간 |
 | 404 | RESTAURANT_NOT_FOUND | 식당을 찾을 수 없습니다. | 없는 restaurantId |
 
@@ -1244,12 +1250,15 @@ null
 
 ### GET /api/parties/list — 식사팟 목록 조회
 
-**요구사항**: 당일 식사팟을 식사 시간 빠른 순으로 반환한다. FINISHED·DELETED는 제외한다. 식사팟 목록 화면(끼니 탭)과 메인 '오늘의 식사팟'(excludeJoined=true, status=RECRUITING, limit=3)에서 사용한다.
+**요구사항**: 고른 날짜(기본 오늘)의 식사팟을 식사 시간 빠른 순으로 반환한다. FINISHED·DELETED는 제외한다. 식사팟 목록 화면(날짜 선택 + 끼니 탭)과 메인 '오늘의 식사팟'(date 없음, excludeJoined=true, status=RECRUITING, limit=3)에서 사용한다.
+
+> 2026-11-20 변경: date 파라미터 추가 (오늘 ~ 7일 후)
 
 **Request — Query**
 
 | 이름 | 타입 | 필수 | 설명 |
 | --- | --- | --- | --- |
+| date | string | X | YYYY-MM-DD. 오늘 ~ 오늘+7일. 없으면 오늘 |
 | mealType | string | X | LUNCH, DINNER. 없으면 전체 |
 | status | string | X | RECRUITING, SCHEDULED, FULL, CLOSED 중 하나. 없으면 FINISHED·DELETED를 모두 뺀 전체 |
 | excludeJoined | boolean | X | true면 내가 참여한 팟 제외. 기본 false |
@@ -1257,7 +1266,7 @@ null
 
 **시스템 처리**
 1. 파라미터 값을 검증한다.
-2. party_date = 오늘, status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다.
+2. party_date = date(없으면 오늘), status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다.
 3. 정렬: 기준 시간(confirmed_time, 없으면 meal_time) 오름차순 → party_id 오름차순.
 4. 팟별 참여 인원 수와 내 참여 여부를 계산한다.
 5. 끼니별 개수(lunchCount, dinnerCount)는 mealType·limit과 무관하게 같은 status·excludeJoined 조건으로 센다. (탭 숫자 표시용)
@@ -1292,19 +1301,21 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 조회 조건을 확인해 주세요. | 잘못된 mealType·status, limit 범위 밖 |
+| 400 | INVALID_REQUEST | 조회 조건을 확인해 주세요. | 잘못된 date·mealType·status, date 범위(오늘~7일 후) 밖, limit 범위 밖 |
 
 ---
 
-### GET /api/parties/my/today — 내가 참여 중인 오늘 식사팟 조회
+### GET /api/parties/my/today — 내가 참여 중인 식사팟 조회 (오늘 이후)
 
-**요구사항**: 메인 '참여 중인 식사팟' 카드용. 내가 참여한 당일 식사팟을 최대 2개 반환한다. FINISHED(식사 완료)도 포함하고, DELETED는 제외한다.
+**요구사항**: 메인 '참여 중인 식사팟' 카드용. 내가 참여한 오늘 ~ 7일 후 식사팟 중 가까운 것부터 최대 2개 반환한다. 오늘 식사 완료(FINISHED)된 팟도 포함하고, DELETED는 제외한다.
+
+> 2026-11-20 변경: 오늘만 → 오늘 ~ 7일 후, 응답에 partyDate 추가. URI는 메인(C) 호환을 위해 유지
 
 **Request**: 파라미터 없음
 
 **시스템 처리**
-1. party_date = 오늘, status ≠ DELETED이고 PARTY_MEMBER에 로그인 회원이 있는 MEAL_PARTY를 조회한다.
-2. 정렬: FINISHED가 아닌 팟을 먼저, 그 안에서 기준 시간 오름차순. FINISHED는 뒤로.
+1. party_date가 오늘 ~ 오늘+7일, status ≠ DELETED이고 PARTY_MEMBER에 로그인 회원이 있는 MEAL_PARTY를 조회한다.
+2. 정렬: FINISHED가 아닌 팟을 먼저, 그 안에서 party_date 오름차순 → 기준 시간 오름차순. FINISHED는 뒤로.
 3. 팟별 참여 인원 수, 확정 인원 수, 내 확정 여부를 계산한다.
 4. 최대 2개를 반환한다. 없으면 빈 배열(FE는 영역 숨김).
 
@@ -1314,6 +1325,7 @@ null
   {
     "partyId": 31,
     "restaurantName": "OO국밥 세종대점",
+    "partyDate": "2026-11-21",
     "mealType": "LUNCH",
     "time": "12:00",
     "status": "SCHEDULED",
@@ -1753,7 +1765,7 @@ null
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| confirmedTime | string | O | HH:mm. 팟의 mealType 시간대, 30분 단위, 현재 시각 이후 |
+| confirmedTime | string | O | HH:mm. 팟의 mealType 시간대, 30분 단위, 팟의 식사 날짜 + 시간이 현재 시각 이후 |
 | meetPlace | string | O | 1~30자 |
 | confirmMemo | string | X | 최대 50자 |
 
@@ -1762,7 +1774,7 @@ null
 2. 트랜잭션을 시작하고 MEAL_PARTY 행을 잠금 조회한다. 없거나 DELETED면 중단한다.
 3. 로그인 회원이 방장인지 확인한다.
 4. status가 FINISHED면 중단한다.
-5. confirmedTime이 mealType 시간대·30분 단위이고 현재 시각 이후인지 확인한다.
+5. confirmedTime이 mealType 시간대·30분 단위이고, 팟의 party_date + confirmedTime이 현재 시각 이후인지 확인한다.
 6. 기존 일정이 있었으면 모든 PARTY_MEMBER의 confirmed_yn을 N으로 초기화한다.
 7. confirmed_time, meet_place, confirm_memo를 저장한다.
 8. status가 RECRUITING이면 SCHEDULED로 변경한다. (SCHEDULED·FULL·CLOSED는 유지)

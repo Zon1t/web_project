@@ -113,7 +113,7 @@ CREATE TABLE MEAL_PARTY (
     PARTY_ID        NUMBER                               NOT NULL,
     RESTAURANT_ID   NUMBER                               NOT NULL,
     HOST_ID         NUMBER                               NOT NULL,   -- 방장 → MEMBER
-    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(당일), 시간 없이 TRUNC 값
+    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(오늘~7일 후), 시간 없이 TRUNC 값
     MEAL_TYPE       VARCHAR2(10)                         NOT NULL,   -- LUNCH / DINNER
     MEAL_TIME       VARCHAR2(5)                          NOT NULL,   -- 예정 시간 'HH:mm'
     CAPACITY        NUMBER(2)     DEFAULT 4              NOT NULL,   -- 방장 포함 2~12
@@ -205,6 +205,6 @@ CREATE TABLE SUGGESTION (
 -- ---------------------------------------------------------------------
 CREATE INDEX IX_REVIEW_RESTAURANT     ON REVIEW (RESTAURANT_ID, CREATED_AT);   -- 식당별 리뷰 페이징
 CREATE INDEX IX_MEAL_PARTY_RESTAURANT ON MEAL_PARTY (RESTAURANT_ID, PARTY_DATE); -- 30일 따봉 집계
-CREATE INDEX IX_MEAL_PARTY_DATE       ON MEAL_PARTY (PARTY_DATE, MEAL_TYPE);    -- 당일 식사팟 목록
+CREATE INDEX IX_MEAL_PARTY_DATE       ON MEAL_PARTY (PARTY_DATE, MEAL_TYPE);    -- 날짜별 식사팟 목록
 CREATE INDEX IX_PARTY_CHAT_PARTY      ON PARTY_CHAT (PARTY_ID, CHAT_ID);        -- 대화 폴링
 CREATE INDEX IX_PARTY_MEMBER_MEMBER   ON PARTY_MEMBER (MEMBER_ID);              -- 내가 참여한 식사팟

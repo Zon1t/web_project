@@ -20,6 +20,8 @@
  *
  * 보여 줄 것이 없으면 그 자리(container)에 hidden을 붙여 영역째 숨긴다.
  * (따봉 대상 없음, [다음에]로 오늘 숨김, 참여 중인 팟 없음)
+ *
+ * 따봉을 남기면 document에 'sseukbap:thumbs-added' 이벤트를 보낸다. (메인이 따봉 TOP 3를 다시 불러옴)
  */
 (function (global) {
   'use strict';
@@ -87,6 +89,8 @@
     let notice;
     try {
       const result = await partyApi.thumbs(pending.partyId);
+      // 메인(C)이 이 신호를 받으면 '이달의 따봉 TOP 3'를 다시 불러온다
+      document.dispatchEvent(new CustomEvent('sseukbap:thumbs-added'));
       notice = '따봉을 남겼어요! ' + pending.restaurantName + ' 최근 30일 따봉 ' + result.thumbsCount30d + '개';
     } catch (err) {
       if (err.statusCode === 401) return;

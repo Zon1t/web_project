@@ -1,7 +1,8 @@
 /*
  * main.js — 메인 화면 (S-01, C)
  *
- * C가 그리는 영역: ① 헤더(닉네임·로그아웃) ③ 오늘의 구내식당 ⑥ 이달의 따봉 TOP 3 ⑦ 룰렛 배너(P1)
+ * C가 그리는 영역: ③ 오늘의 구내식당 ⑥ 이달의 따봉 TOP 3 ⑦ 룰렛 배너(P1)
+ *   (① 헤더의 닉네임·로그아웃은 js/components/app-header.js)
  * A가 그리는 영역: ② 따봉 배너 ④ 참여 중인 식사팟 ⑤ 오늘의 식사팟
  *
  * A 부품 (js/components/party-main.js, css/party-main.css) — 사용법은 그 파일 맨 위 주석
@@ -31,38 +32,12 @@
 
   /* ---------- 시작 ---------- */
 
-  loadHeader();
   loadCafeteria();
   loadTop3();
   mountPartyParts();
   document.getElementById('main-roulette').hidden = !ROULETTE_READY;
 
-  document.getElementById('header-logout').addEventListener('click', logout);
   document.addEventListener('sseukbap:thumbs-added', loadTop3);   // A의 따봉 배너에서 따봉 성공 시
-
-  /* ---------- ① 헤더 ---------- */
-
-  async function loadHeader() {
-    try {
-      const me = await authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
-      const link = document.getElementById('header-nickname');
-      link.textContent = me.nickname + ' 님';
-      link.hidden = false;
-    } catch (err) {
-      // 401은 이동 처리됨. 그 외 오류는 닉네임만 안 보이게 둔다.
-    }
-  }
-
-  async function logout() {
-    const button = document.getElementById('header-logout');
-    button.disabled = true;
-    try {
-      await authApi.logout();
-    } catch (err) {
-      // 이미 세션이 끝났어도 로그인 화면으로 보낸다
-    }
-    location.href = '/login.html';
-  }
 
   /* ---------- ③ 오늘의 구내식당 ---------- */
 

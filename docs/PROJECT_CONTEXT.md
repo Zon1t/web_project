@@ -672,6 +672,9 @@ com.sseukbap
 | 11/18 | thumbs·roulette 도메인 정리 → 랭킹·룰렛은 restaurants, 따봉 요청 대상은 parties/my 하위로 이동 |
 | 11/18 | 기술 스택 확정: Boot 4.1.2 + Hibernate 7 + OracleLegacyDialect + ojdbc8 19.33 (연결 테스트 통과) |
 | 11/18 | 역할 분담안(A 식사팟 / B 식당 / C 회원·메뉴·공통) 작성, 컨벤션 초안 작성 |
+| 11/19 | 구내식당은 초기 데이터로만 제공, 식당 등록 시 CAFETERIA 선택 불가 (룰렛 카테고리 반영은 C와 확인) |
+| 11/19 | check-map-url에 name 추가: 네이버에 URL·장소 ID 조회 공식 API가 없어 식당 이름으로 지역 검색, 사용자가 주소 확인 후 등록. map_url은 장소 ID 기준 표준 URL(`https://map.naver.com/p/entry/place/{id}`)로 저장·중복 판단 |
+| 11/19 | 네이버 검색 API 발급처 변경: 개발자센터 → 네이버 클라우드 NAVER API HUB (키 이름 `naver.client-id/secret` 유지). 지도 키(Maps)는 서버 yml에 넣지 않음 |
 
 ### 미결 사항
 

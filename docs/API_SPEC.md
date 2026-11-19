@@ -761,21 +761,27 @@ null
 
 ### GET /api/restaurants/check-map-url — 네이버 지도 URL 검증
 
-**요구사항**: 식당 등록 화면에서 URL 입력이 끝나면(포커스 해제 시) 호출해 입력창 아래에 결과를 표시한다. 형식 → 중복 → 장소 존재 순으로 검사하고, 정상이면 네이버 API로 조회한 장소 이름·주소·좌표를 반환한다. 오류 상황도 화면 안내용이므로 200으로 응답하고 reason으로 구분한다.
+> 2026-11-19 변경: `name` 파라미터 추가, 장소는 식당 이름으로 검색(네이버에 URL·장소 ID로 조회하는 공식 API 없음), 중복은 장소 ID로 만든 표준 URL로 판단
+
+**요구사항**: 식당 등록 화면에서 URL과 식당 이름 입력이 끝나면 호출해 입력창 아래에 결과를 표시한다. 형식 → 중복 → 장소 검색 순으로 검사하고, 정상이면 네이버 지역 검색으로 찾은 장소 이름·주소·좌표를 반환한다. 사용자는 표시된 주소를 보고 맞는 식당인지 확인한 뒤 등록한다. 오류 상황도 화면 안내용이므로 200으로 응답하고 reason으로 구분한다.
 
 **Request — Query**
 
 | 이름 | 타입 | 필수 | 설명 |
 | --- | --- | --- | --- |
 | url | string | O | 입력한 네이버 지도 URL (URL 인코딩) |
+| name | string | O | 입력한 식당 이름, 1~30자, 앞뒤 공백 제거 (지역 검색어로 사용) |
 
 **시스템 처리**
-1. url 형식을 검사한다. naver.me 또는 map.naver.com이 아니면 INVALID_FORMAT.
-2. 같은 map_url의 RESTAURANT가 있으면 DUPLICATE.
-3. 네이버 API로 장소를 조회한다. 결과가 없으면 NOT_FOUND.
-4. 정상이면 장소 정보를 함께 반환한다.
+1. url, name 필수값·길이를 검증한다.
+2. url 형식을 검사한다. naver.me 또는 map.naver.com 링크에서 장소 ID를 찾을 수 없으면 INVALID_FORMAT. (naver.me 단축 링크는 연결된 주소를 따라가 장소 ID를 찾는다)
+3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 DUPLICATE.
+4. 네이버 지역 검색(NAVER API HUB)으로 name을 검색한다. 결과가 없으면 NOT_FOUND.
+5. 정상이면 첫 번째 검색 결과의 장소 정보를 반환한다. (이름의 HTML 태그 제거, 주소는 도로명 주소, 없으면 지번 주소)
 
-> ⚠️ 사용할 네이버 API 종류와 URL(특히 naver.me 단축 링크)에서 장소를 식별하는 방법은 구현 전 확인 필요
+> 네이버에는 URL·장소 ID로 장소를 조회하는 공식 API가 없어 이름으로 검색한다. 검색 결과가 URL의 장소와 다를 수 있으므로 화면에서 주소를 보여 주고 사용자가 확인한다.
+>
+> 지역 검색: `GET https://naverapihub.apigw.ntruss.com/search/v1/local` (헤더 `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY`). 키는 네이버 클라우드 플랫폼 콘솔 > NAVER API HUB에서 발급하고 `application-local.yml`의 `naver.client-id`·`naver.client-secret`에 넣는다. 응답 좌표 mapx(경도)·mapy(위도)는 WGS84 값에 10^7을 곱한 정수 문자열이다.
 
 **Response 200 (data) — 정상**
 ```json
@@ -812,7 +818,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | URL을 입력해 주세요. | url 누락 |
+| 400 | INVALID_REQUEST | URL과 식당 이름을 입력해 주세요. | url·name 누락, name 30자 초과 |
 | 502 | MAP_API_ERROR | 지도 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. | 네이버 API 호출 실패 |
 
 ---
@@ -864,7 +870,9 @@ null
 
 ### POST /api/restaurants/register — 식당 등록
 
-**요구사항**: 네이버 지도 URL, 식당 이름, 카테고리로 식당을 등록한다. 등록 직전에 URL 검증을 서버에서 다시 수행하고, 네이버 API로 조회한 주소·위도·경도를 함께 저장한다. 사옥 구내식당(세종대 계절밥상)은 초기 데이터로 미리 등록되어 있다.
+> 2026-11-19 변경: `CAFETERIA` 카테고리 등록 불가(구내식당은 초기 데이터로만 제공), 장소는 식당 이름으로 검색, map_url은 장소 ID로 만든 표준 URL로 저장
+
+**요구사항**: 네이버 지도 URL, 식당 이름, 카테고리로 식당을 등록한다. 등록 직전에 URL 검증을 서버에서 다시 수행하고, 네이버 지역 검색으로 찾은 주소·위도·경도를 함께 저장한다. 사옥 구내식당(세종대 계절밥상)은 초기 데이터로 미리 등록되어 있고, 사용자는 구내식당 카테고리로 등록할 수 없다.
 
 **Request — Body**
 ```json
@@ -879,14 +887,14 @@ null
 | --- | --- | --- | --- |
 | mapUrl | string | O | naver.me 또는 map.naver.com 링크 |
 | name | string | O | 1~30자, 앞뒤 공백 제거 |
-| category | string | O | 공통 규칙의 식당 카테고리 값 |
+| category | string | O | 공통 규칙의 식당 카테고리 값 중 `CAFETERIA` 제외 |
 
 **시스템 처리**
-1. 필수값·길이·카테고리 값을 검증한다.
-2. mapUrl 형식을 검사한다. 네이버 지도 링크가 아니면 중단한다.
-3. 같은 mapUrl의 RESTAURANT가 있으면 중단한다.
-4. 네이버 API로 장소를 조회한다. 결과가 없으면 중단한다.
-5. 조회된 address, lat, lng와 요청값으로 RESTAURANT를 저장한다. (member_id = 로그인 회원)
+1. 필수값·길이·카테고리 값을 검증한다. (`CAFETERIA`면 중단)
+2. mapUrl 형식을 검사하고 장소 ID를 찾는다. 찾을 수 없으면 중단한다.
+3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 중단한다.
+4. 네이버 지역 검색으로 name을 검색한다. 결과가 없으면 중단한다.
+5. 첫 번째 검색 결과의 address, lat, lng와 요청값으로 RESTAURANT를 저장한다. (map_url = 표준 URL, member_id = 로그인 회원)
 6. 생성된 restaurantId를 반환한다. FE는 식당 상세로 이동한다.
 
 > ⚠️ 노션 원문 5번에는 `is_cafeteria = N`이 남아 있으나, ERD에서 IS_CAFETERIA 컬럼은 삭제되었다(구내식당은 category = CAFETERIA로 구분). 이 문서는 ERD 기준으로 적었다.
@@ -902,10 +910,10 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 길이 초과, 없는 카테고리 |
-| 400 | INVALID_MAP_URL | 네이버 지도 URL만 입력할 수 있습니다. | 형식 오류 |
-| 404 | MAP_PLACE_NOT_FOUND | 존재하지 않는 주소입니다. | 네이버 API 조회 결과 없음 |
-| 409 | RESTAURANT_ALREADY_EXISTS | 이미 등록된 식당입니다. | 같은 mapUrl 존재 |
+| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 길이 초과, 없는 카테고리, CAFETERIA 카테고리 |
+| 400 | INVALID_MAP_URL | 네이버 지도 URL만 입력할 수 있습니다. | 형식 오류, 장소 ID를 찾을 수 없음 |
+| 404 | MAP_PLACE_NOT_FOUND | 존재하지 않는 주소입니다. | 지역 검색 결과 없음 |
+| 409 | RESTAURANT_ALREADY_EXISTS | 이미 등록된 식당입니다. | 같은 표준 URL(장소 ID) 존재 |
 | 502 | MAP_API_ERROR | 지도 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. | 네이버 API 호출 실패 |
 
 ---

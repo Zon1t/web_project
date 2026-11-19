@@ -36,9 +36,11 @@ import static org.mockito.BDDMockito.given;
 @Transactional
 class RestaurantRegisterServiceTest {
 
+    // 실제 네이버에 없는 장소 ID (9로 시작하는 10자리 더미 번호대와도 겹치지 않게). 실제 식당 링크를 쓰면
+    // 누군가 그 식당을 화면에서 등록했을 때 테스트가 '이미 등록됨'으로 깨진다.
     private static final String NEW_URL =
-            "https://map.naver.com/p/search/%EB%8C%80%EC%BF%A0%EC%9D%B4/place/1132965955?c=15.00,0,0,0,dh";
-    private static final String NEW_STANDARD_URL = "https://map.naver.com/p/entry/place/1132965955";
+            "https://map.naver.com/p/search/%EB%8C%80%EC%BF%A0%EC%9D%B4/place/123000000999?c=15.00,0,0,0,dh";
+    private static final String NEW_STANDARD_URL = "https://map.naver.com/p/entry/place/123000000999";
     private static final String REGISTERED_URL = "https://map.naver.com/p/entry/place/9000000001";
     private static final NaverPlace PLACE =
             new NaverPlace("대쿠이 본점", "대구광역시 남구 중앙대로51길 38-2", 35.8563052, 128.5885117);

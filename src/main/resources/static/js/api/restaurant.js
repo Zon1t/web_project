@@ -90,5 +90,14 @@
     register(restaurant) {
       return api.post('/restaurants/register', restaurant);
     },
+
+    /**
+     * 식당 정보 수정 제안 — POST /api/restaurants/{restaurantId}/suggestions
+     * 오류: 400 INVALID_REQUEST(내용 없음·500자 초과), 404 RESTAURANT_NOT_FOUND
+     * @returns {Promise<{suggestionId: number}>}
+     */
+    createSuggestion(restaurantId, content) {
+      return api.post('/restaurants/' + encodeURIComponent(restaurantId) + '/suggestions', { content });
+    },
   };
 })(window);

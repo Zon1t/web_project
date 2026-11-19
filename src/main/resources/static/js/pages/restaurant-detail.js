@@ -5,10 +5,10 @@
  *
  * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 네이버 지도 링크,
  *          [관심] 등록·해제, [식사팟 만들기] 이동, 로딩 / 없는 식당 / 오류 화면
- * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js (이 파일보다 먼저 불러온다)
+ * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js, 수정 제안 입력 창은 restaurant-detail-suggestion.js
+ * (둘 다 이 파일보다 먼저 불러온다)
  * 나중에 붙일 것
  *   - 리뷰 사진             → feature/review-image
- *   - 식당 정보 수정 제안   → feature/restaurant-suggestion
  */
 (function () {
   'use strict';
@@ -27,6 +27,7 @@
   root.addEventListener('click', (event) => {
     if (event.target.closest('[data-action="retry"]')) loadDetail();
     if (event.target.closest('[data-action="toggle-interest"]')) toggleInterest();
+    if (event.target.closest('[data-action="open-suggestion"]')) restaurantSuggestion.open(restaurantId);
   });
 
   // id가 숫자가 아니면 서버에 묻지 않고 바로 '없는 식당' 화면
@@ -117,7 +118,11 @@
   function renderDetail(d) {
     root.innerHTML =
       '<section id="info-section" class="detail-info" aria-labelledby="restaurant-name"></section>' +
-      '<section id="review-section" class="detail-reviews" aria-labelledby="review-title"></section>';
+      '<section id="review-section" class="detail-reviews" aria-labelledby="review-title"></section>' +
+      // 식당 정보 수정 제안: 누르면 입력 창 (restaurant-detail-suggestion.js)
+      '<p class="detail-suggestion">' +
+      '<button type="button" class="detail-suggestion__link" data-action="open-suggestion">식당 정보 수정 제안</button>' +
+      '</p>';
 
     renderInfo(d);
 

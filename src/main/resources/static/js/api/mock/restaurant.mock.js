@@ -9,6 +9,7 @@
  *   GET /restaurants/{restaurantId}
  *   POST, DELETE /restaurants/{restaurantId}/interest
  *   GET /restaurants/autocomplete, GET /restaurants/check-map-url, POST /restaurants/register
+ *   POST /restaurants/{restaurantId}/suggestions
  */
 (function () {
   'use strict';
@@ -254,5 +255,18 @@
     r.interested = false;
     r.interestCount -= 1;
     return { interested: false, interestCount: r.interestCount };
+  });
+
+  // POST /api/restaurants/{restaurantId}/suggestions
+  let nextSuggestionId = 1;
+  api.mock('POST', '/restaurants/{restaurantId}/suggestions', ({ params, body }) => {
+    const content = ((body && body.content) || '').trim();
+    if (!content || content.length > 500) {
+      throw api.mockError(400, 'INVALID_REQUEST', '제안 내용을 입력해 주세요.');
+    }
+    if (!restaurants.some((item) => String(item.restaurantId) === params.restaurantId)) {
+      throw api.mockError(404, 'RESTAURANT_NOT_FOUND', '식당을 찾을 수 없습니다.');
+    }
+    return { suggestionId: nextSuggestionId++ };
   });
 })();

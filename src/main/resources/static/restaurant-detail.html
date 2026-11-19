@@ -32,6 +32,30 @@
     <div id="detail-root"></div>
   </main>
 
+  <!-- 식당 정보 수정 제안 입력 창 (상세 맨 아래 링크로 연다) -->
+  <dialog id="suggestion-dialog" class="suggestion-dialog" aria-labelledby="suggestion-title">
+    <form id="suggestion-form" class="suggestion-dialog__form" method="dialog" novalidate>
+      <h2 id="suggestion-title" class="section-title">식당 정보 수정 제안</h2>
+      <p class="text-sub suggestion-dialog__desc">이름·카테고리·위치 등 잘못된 정보가 있으면 알려 주세요.</p>
+      <div class="field">
+        <label class="sr-only" for="suggestion-content">제안 내용</label>
+        <textarea id="suggestion-content" class="textarea" maxlength="500" rows="5" required
+                  placeholder="예: 카테고리가 일식이 아니라 한식이에요" aria-describedby="suggestion-message"></textarea>
+        <div class="suggestion-dialog__footer">
+          <p id="suggestion-message" class="field__message field__message--error" role="alert"></p>
+          <span id="suggestion-length" class="text-muted">0 / 500</span>
+        </div>
+      </div>
+      <div class="suggestion-dialog__actions">
+        <button type="button" class="btn" data-action="close-suggestion">취소</button>
+        <button id="suggestion-submit" type="submit" class="btn btn--primary">제출</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 제출 완료 안내 (잠깐 보였다가 사라짐) -->
+  <p id="toast" class="toast" role="status" aria-live="polite"></p>
+
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
   <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
@@ -40,6 +64,7 @@
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/review.js"></script>
   <script src="/js/pages/restaurant-detail-reviews.js"></script>
+  <script src="/js/pages/restaurant-detail-suggestion.js"></script>
   <script src="/js/pages/restaurant-detail.js"></script>
 </body>
 </html>

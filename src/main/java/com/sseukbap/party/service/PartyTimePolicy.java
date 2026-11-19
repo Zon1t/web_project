@@ -49,6 +49,14 @@ public final class PartyTimePolicy {
         return isOnStep && isInRange;
     }
 
+    /**
+     * 식사 일시가 현재 시각보다 이후인지 (생성 시 지난 시간이면 INVALID_MEAL_TIME)
+     * 예) 지금 11:40 → 12:00 true, 11:30 false, 11:40(같은 시각) false
+     */
+    public static boolean isAfterNow(LocalDate partyDate, LocalTime time, LocalDateTime now) {
+        return partyDate.atTime(time).isAfter(now);
+    }
+
     /** 끼니별 기본 시간 (점심 11:00, 저녁 17:00) */
     public static LocalTime getDefaultMealTime(MealType mealType) {
         return startOf(mealType);
@@ -64,8 +72,12 @@ public final class PartyTimePolicy {
      * 예) 기준 12:00 → 11:30까지 true, 11:31부터 false
      */
     public static boolean isBeforeDeadline(LocalDate partyDate, LocalTime baseTime, LocalDateTime now) {
-        LocalDateTime deadline = partyDate.atTime(baseTime).minusMinutes(DEADLINE_MINUTES_BEFORE);
-        return !now.isAfter(deadline);
+        return !now.isAfter(getDeadline(partyDate, baseTime));
+    }
+
+    /** 확정 취소·나가기 마감 일시 = 기준 시간 30분 전 (상세 응답의 cancelDeadline) */
+    public static LocalDateTime getDeadline(LocalDate partyDate, LocalTime baseTime) {
+        return partyDate.atTime(baseTime).minusMinutes(DEADLINE_MINUTES_BEFORE);
     }
 
     /**

@@ -52,6 +52,18 @@ class PartyTimePolicyTest {
         assertThat(PartyTimePolicy.isValidMealTime(MealType.LUNCH, LocalTime.of(12, 0, 1))).isFalse();
     }
 
+    @ParameterizedTest(name = "현재 11:40, 식사 {0} → {1}")
+    @DisplayName("생성: 식사 시간은 현재 시각 이후여야 한다 (같은 시각은 불가)")
+    @CsvSource({
+            "12:00, true",
+            "11:30, false",
+            "11:40, false",
+    })
+    void isAfterNow(String mealTime, boolean expected) {
+        LocalDateTime now = TODAY.atTime(11, 40);
+        assertThat(PartyTimePolicy.isAfterNow(TODAY, LocalTime.parse(mealTime), now)).isEqualTo(expected);
+    }
+
     @Test
     @DisplayName("기본 시간: 점심 11:00, 저녁 17:00")
     void getDefaultMealTime() {

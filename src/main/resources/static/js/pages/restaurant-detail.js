@@ -5,8 +5,9 @@
  *
  * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 네이버 지도 링크,
  *          [관심] 등록·해제, [식사팟 만들기] 이동, 로딩 / 없는 식당 / 오류 화면
- * 나중에 붙일 것 (자리만 있음)
- *   - 리뷰 작성·목록        → feature/review
+ * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js (이 파일보다 먼저 불러온다)
+ * 나중에 붙일 것
+ *   - 리뷰 사진             → feature/review-image
  *   - 식당 정보 수정 제안   → feature/restaurant-suggestion
  */
 (function () {
@@ -112,13 +113,36 @@
 
   /* ---------- 그리기 ---------- */
 
+  // 처음 한 번: 식당 정보 + 리뷰 영역
   function renderDetail(d) {
+    root.innerHTML =
+      '<section id="info-section" class="detail-info" aria-labelledby="restaurant-name"></section>' +
+      '<section id="review-section" class="detail-reviews" aria-labelledby="review-title"></section>';
+
+    renderInfo(d);
+
+    // 리뷰 작성·삭제로 리뷰 수·태그 TOP 3가 바뀌면 식당 정보를 다시 불러온다
+    restaurantReviews.mount(document.getElementById('review-section'), restaurantId, {
+      onChange: refreshInfo,
+    });
+  }
+
+  // 식당 정보만 다시 조회해서 다시 그린다 (리뷰 영역은 그대로)
+  async function refreshInfo() {
+    try {
+      renderInfo(await restaurantApi.getDetail(restaurantId));
+    } catch (err) {
+      // 리뷰는 이미 반영됐고 숫자만 못 바꾼 상태라, 새로고침 전까지 그대로 둔다
+      console.warn('식당 정보 갱신 실패', err);
+    }
+  }
+
+  function renderInfo(d) {
     document.title = d.name + ' | 슥밥';
     interest.interested = d.interested;
     interest.count = d.interestCount;
 
-    root.innerHTML =
-      '<section class="detail-info" aria-labelledby="restaurant-name">' +
+    document.getElementById('info-section').innerHTML =
       '<div class="detail-info__title-row">' +
       '<h1 id="restaurant-name" class="detail-info__name">' + esc(d.name) + '</h1>' +
       '<span class="badge detail-info__category">' + esc(CATEGORY_LABELS[d.category] || d.category) + '</span>' +
@@ -143,19 +167,7 @@
       '<a class="btn btn--primary" href="/party-create.html?restaurantId=' + encodeURIComponent(d.restaurantId) + '">' +
       '이 식당으로 식사팟 만들기</a>' +
       '</div>' +
-      '<p id="interest-message" class="field__message field__message--error detail-interest-message" role="alert"></p>' +
-      '</section>' +
-
-      // TODO(feature/review): 리뷰 작성 폼 + 목록(페이징)
-      '<section class="detail-reviews" aria-labelledby="review-title">' +
-      '<h2 id="review-title" class="section-title">리뷰<span class="detail-reviews__count">' + d.reviewCount + '</span></h2>' +
-      '<div class="state state--empty">' +
-      (d.reviewCount === 0
-        ? '<p class="state__title">첫 리뷰를 남겨 주세요</p>'
-        : '<p class="state__title">리뷰 목록 준비 중</p>') +
-      '<p class="state__desc">리뷰 작성·목록은 다음 작업에서 연결됩니다.</p>' +
-      '</div>' +
-      '</section>';
+      '<p id="interest-message" class="field__message field__message--error detail-interest-message" role="alert"></p>';
 
     renderInterest();
   }

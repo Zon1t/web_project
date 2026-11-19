@@ -1,0 +1,209 @@
+/*
+ * party-list.css — S-07 식사팟 목록 (A)
+ * 색·간격·글꼴은 tokens.css 변수만 쓴다. 버튼·뱃지·상태 화면은 base.css(B)의 것을 쓴다.
+ */
+
+.party-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.party-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.party-list-head__date {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ---------- 탭 ---------- */
+.party-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.party-tabs__tab {
+  height: var(--control-height);
+  margin-bottom: -2px;
+  padding: 0 var(--space-6);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.party-tabs__tab:hover {
+  color: var(--color-text);
+}
+
+.party-tabs__tab[aria-selected="true"] {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.party-tabs__count:not(:empty)::before {
+  content: '(';
+}
+
+.party-tabs__count:not(:empty)::after {
+  content: ')';
+}
+
+.party-list-message:empty {
+  display: none;
+}
+
+.party-list-message {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 목록 (넓은 화면: 표처럼 한 줄) ---------- */
+.party-rows__head,
+.party-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.3fr) 72px minmax(150px, 1fr) minmax(0, 1.6fr) 112px;
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.party-rows__head {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.party-row {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  cursor: pointer;
+}
+
+.party-row:hover {
+  background: var(--color-surface);
+}
+
+.party-row__name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.party-row__link {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.party-row__link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.party-row__category {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.party-row__time {
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.party-row__people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.party-row__count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 인원 막대: 참여 인원 / 정원 */
+.party-row__bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-light);
+  overflow: hidden;
+}
+
+.party-row__bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-text-sub);
+}
+
+.party-row__memo {
+  min-width: 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.party-row__action .btn {
+  width: 100%;
+}
+
+.party-row__error {
+  grid-column: 1 / -1;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.party-empty {
+  margin-top: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+/* ---------- 좁은 화면: 카드처럼 쌓기 ---------- */
+@media (max-width: 760px) {
+  .party-rows__head {
+    display: none;
+  }
+
+  .party-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name time"
+      "people people"
+      "memo memo"
+      "action action";
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-3);
+  }
+
+  .party-row__name { grid-area: name; }
+  .party-row__time { grid-area: time; }
+  .party-row__people { grid-area: people; }
+  .party-row__memo { grid-area: memo; }
+  .party-row__action { grid-area: action; }
+
+  .party-tabs__tab {
+    flex: 1;
+    padding: 0 var(--space-3);
+  }
+}

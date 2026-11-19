@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식당 상세 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/restaurant-detail.css">
+</head>
+<body>
+  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link is-active" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link" href="/party-list.html">식사팟</a>
+        <a class="app-header__link" href="#">랭킹</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container detail-page">
+    <nav class="detail-breadcrumb text-muted" aria-label="현재 위치">
+      <a href="/restaurant-list.html">식당 목록</a> &gt; 식당 상세
+    </nav>
+
+    <!-- 식당 정보 / 로딩 / 오류가 이 안에 그려진다 -->
+    <div id="detail-root"></div>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
+  <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
+  <!-- <script src="/js/api/mock/review.mock.js"></script> -->
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/review.js"></script>
+  <script src="/js/pages/restaurant-detail-reviews.js"></script>
+  <script src="/js/pages/restaurant-detail.js"></script>
+</body>
+</html>

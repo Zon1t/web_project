@@ -40,7 +40,7 @@
 실행 준비
 1. `docs/sql/`의 DDL·초기 데이터를 Oracle에 실행
 2. `application-local.yml.example`을 복사해 `application-local.yml` 작성 (DB 계정, 네이버 키)
-3. `SseukbapApplication` 실행 → http://localhost:8080
+3. `SseukbapApplication` 실행 → http://localhost:8081
 
 명령어
 - 빌드: `./gradlew build` (Windows: `gradlew.bat build`)

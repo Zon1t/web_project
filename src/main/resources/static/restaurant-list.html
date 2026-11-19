@@ -46,20 +46,20 @@
       <div id="restaurant-result"></div>
     </section>
 
-    <!-- 오른쪽: 지도 (F-17 네이버 지도 작업 때 연결) -->
+    <!-- 오른쪽: 네이버 지도 (restaurant-map.js가 채운다) -->
     <section class="restaurant-map" aria-label="식당 지도">
-      <div class="restaurant-map__placeholder">
-        <p class="state__title">지도 준비 중</p>
-        <p class="state__desc">네이버 지도는 다음 작업에서 연결됩니다.</p>
-      </div>
+      <div id="restaurant-map" class="restaurant-map__canvas"></div>
     </section>
   </main>
 
+  <!-- 지도 키 (Git 제외 파일). 없으면 지도 자리에 안내만 나오고 목록은 그대로 동작한다 -->
+  <script src="/js/config.js"></script>
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
   <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
   <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
   <script src="/js/api/restaurant.js"></script>
+  <script src="/js/pages/restaurant-map.js"></script>
   <script src="/js/pages/restaurant-list.js"></script>
 </body>
 </html>

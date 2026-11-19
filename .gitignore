@@ -36,3 +36,5 @@ Thumbs.db
 ### 비밀 정보·업로드 파일 (Git에 올리지 않음) ###
 application-local.yml
 /uploads/
+# 화면 설정 (지도 키). 견본: src/main/resources/static/js/config.example.js
+src/main/resources/static/js/config.js

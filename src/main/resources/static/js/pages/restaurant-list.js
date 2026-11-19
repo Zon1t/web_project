@@ -6,7 +6,7 @@
  *   2. 조건은 주소(?keyword=&category=)에도 남긴다. 상세에서 [뒤로]로 돌아와도 조건이 유지된다.
  *   3. 로딩 / 결과 없음 / 오류 화면을 보여 준다.
  *
- * 지도(F-17)는 나중에 이 파일에서 renderList와 같은 데이터로 핀을 그린다.
+ *   4. 같은 목록으로 오른쪽 지도 핀을 그리고, 목록 항목에 마우스를 올리면 핀을 강조한다. (restaurant-map.js)
  */
 (function () {
   'use strict';
@@ -33,6 +33,7 @@
   readConditionFromUrl();
   renderChips();
   bindEvents();
+  restaurantMap.init(document.getElementById('restaurant-map')); // 지도는 목록과 따로 불러온다
   loadList();
 
   /* ---------- 조건 ---------- */
@@ -80,6 +81,22 @@
     els.result.addEventListener('click', (event) => {
       if (event.target.closest('[data-action="retry"]')) loadList();
     });
+
+    // 목록 항목에 마우스를 올리거나 키보드로 포커스하면 지도 핀 강조
+    els.result.addEventListener('mouseover', (event) => highlightItem(event.target.closest('.restaurant-item')));
+    els.result.addEventListener('focusin', (event) => highlightItem(event.target.closest('.restaurant-item')));
+    els.result.addEventListener('mouseleave', () => highlightItem(null));
+    els.result.addEventListener('focusout', (event) => {
+      if (!els.result.contains(event.relatedTarget)) highlightItem(null);
+    });
+  }
+
+  function highlightItem(item) {
+    els.result.querySelectorAll('.restaurant-item.is-highlighted').forEach((el) => {
+      if (el !== item) el.classList.remove('is-highlighted');
+    });
+    if (item) item.classList.add('is-highlighted');
+    restaurantMap.highlight(item ? item.dataset.restaurantId : null);
   }
 
   /* ---------- 조회 ---------- */
@@ -122,6 +139,8 @@
 
   function renderList(list) {
     els.summary.textContent = '총 ' + list.length + '곳 · 따봉순';
+    restaurantMap.highlight(null);
+    restaurantMap.setRestaurants(list); // 지도 핀도 같은 목록으로
 
     if (list.length === 0) {
       els.result.innerHTML =
@@ -143,7 +162,8 @@
 
     return (
       '<li>' +
-      '<a class="restaurant-item" href="/restaurant-detail.html?id=' + encodeURIComponent(r.restaurantId) + '">' +
+      '<a class="restaurant-item" href="/restaurant-detail.html?id=' + encodeURIComponent(r.restaurantId) + '"' +
+      ' data-restaurant-id="' + encodeURIComponent(r.restaurantId) + '">' +
       '<span class="restaurant-item__info">' +
       '<span class="restaurant-item__name">' + esc(r.name) + '</span>' +
       '<span class="restaurant-item__meta">' + esc(meta) + '</span>' +

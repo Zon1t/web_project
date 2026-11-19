@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식당 목록 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/restaurant-list.css">
+</head>
+<body>
+  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link is-active" href="/restaurant-list.html" aria-current="page">식당</a>
+        <a class="app-header__link" href="#">식사팟</a>
+        <a class="app-header__link" href="#">랭킹</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="restaurant-page">
+    <!-- 왼쪽: 검색·필터·목록 -->
+    <section class="restaurant-panel" aria-labelledby="page-title">
+      <div class="restaurant-panel__head">
+        <h1 id="page-title" class="page-title">식당</h1>
+        <a class="btn btn--primary" href="/restaurant-register.html">+ 식당 등록</a>
+      </div>
+
+      <form id="search-form" class="restaurant-search" role="search">
+        <label class="sr-only" for="search-keyword">식당 이름 검색</label>
+        <input id="search-keyword" class="input" type="search" maxlength="30"
+               placeholder="식당 이름으로 검색" autocomplete="off">
+        <button class="btn" type="submit">검색</button>
+      </form>
+
+      <div id="category-chips" class="restaurant-chips" role="group" aria-label="카테고리"></div>
+
+      <p id="result-summary" class="text-muted restaurant-summary" aria-live="polite"></p>
+
+      <!-- 목록 / 로딩 / 빈 상태 / 오류가 이 안에 그려진다 -->
+      <div id="restaurant-result"></div>
+    </section>
+
+    <!-- 오른쪽: 지도 (F-17 네이버 지도 작업 때 연결) -->
+    <section class="restaurant-map" aria-label="식당 지도">
+      <div class="restaurant-map__placeholder">
+        <p class="state__title">지도 준비 중</p>
+        <p class="state__desc">네이버 지도는 다음 작업에서 연결됩니다.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
+  <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/pages/restaurant-list.js"></script>
+</body>
+</html>

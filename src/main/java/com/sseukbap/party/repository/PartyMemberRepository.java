@@ -2,7 +2,9 @@ package com.sseukbap.party.repository;
 
 import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +23,27 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
     @Query("select pm from PartyMember pm where pm.party.partyId = :partyId and pm.member.memberId = :memberId")
     Optional<PartyMember> findByPartyIdAndMemberId(@Param("partyId") Long partyId,
                                                    @Param("memberId") Long memberId);
+
+    /**
+     * 참여 정보 행 잠금 조회 (SELECT ... FOR UPDATE)
+     * 따봉 등록에서 같은 사람이 동시에 두 번 요청해도 한 번만 반영되게 한다. 반드시 @Transactional 안에서 호출할 것.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select pm from PartyMember pm where pm.party.partyId = :partyId and pm.member.memberId = :memberId")
+    Optional<PartyMember> findByPartyIdAndMemberIdForUpdate(@Param("partyId") Long partyId,
+                                                            @Param("memberId") Long memberId);
+
+    /**
+     * 따봉 요청 대상 후보: 이 회원이 참여 확정했고 아직 따봉을 안 남긴, 식사 날짜가 fromDate~toDate인 FINISHED 팟
+     * (팟·식당까지 한 번에 가져온다. 정렬은 Service에서)
+     */
+    @Query("select pm from PartyMember pm join fetch pm.party p join fetch p.restaurant "
+            + "where pm.member.memberId = :memberId and pm.confirmed = true and pm.thumbsUp = false "
+            + "and p.status = :finished and p.partyDate between :fromDate and :toDate")
+    List<PartyMember> findThumbsPendingCandidates(@Param("memberId") Long memberId,
+                                                  @Param("finished") PartyStatus finished,
+                                                  @Param("fromDate") LocalDate fromDate,
+                                                  @Param("toDate") LocalDate toDate);
 
     /** 이 회원이 이 팟에 참여 중인지 (참여하기의 ALREADY_JOINED 판단) */
     @Query("select count(pm) > 0 from PartyMember pm where pm.party.partyId = :partyId and pm.member.memberId = :memberId")

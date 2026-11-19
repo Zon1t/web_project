@@ -77,6 +77,11 @@ public class PartyMember {
         this.confirmed = true;
     }
 
+    /** 따봉 남기기 (Y). 팟 1건당 1회. 확정·식사 완료·중복 검사는 Service에서 먼저 한다. */
+    public void thumbsUp() {
+        this.thumbsUp = true;
+    }
+
     /** 참여 확정 취소. 참여자 자격은 유지된다. (행은 그대로) */
     public void cancelConfirm() {
         this.confirmed = false;

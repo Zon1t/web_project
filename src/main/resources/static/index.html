@@ -8,8 +8,7 @@
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/main.css">
-  <!-- A의 메인 부품 스타일 (준비되면 주석 해제) -->
-  <!-- <link rel="stylesheet" href="/css/party-main.css"> -->
+  <link rel="stylesheet" href="/css/party-main.css">
 </head>
 <body>
   <!-- ① 공통 헤더: 닉네임 클릭 → 마이페이지(S-10), 로그아웃 -->
@@ -32,8 +31,8 @@
   <main class="container main-page">
     <h1 class="sr-only">슥밥 메인</h1>
 
-    <!-- ② 따봉 요청 배너 (A 부품: partyMainParts.mountThumbsBanner) -->
-    <section id="main-thumbs-banner" class="main-section" hidden></section>
+    <!-- ② 따봉 요청 배너 (A 부품 partyMain.renderThumbsBanner, 보여 줄 게 없으면 hidden) -->
+    <div id="thumbs-banner"></div>
 
     <!-- ③ 오늘의 구내식당 (C) -->
     <section id="main-cafeteria" class="main-section" aria-labelledby="cafeteria-title">
@@ -44,11 +43,11 @@
       <div id="cafeteria-body"></div>
     </section>
 
-    <!-- ④ 참여 중인 식사팟 (A 부품: partyMainParts.mountMyParties, 없으면 숨김) -->
-    <section id="main-my-parties" class="main-section" hidden></section>
+    <!-- ④ 참여 중인 식사팟 (A 부품 partyMain.renderMyParties, 없으면 hidden) -->
+    <div id="my-parties"></div>
 
-    <!-- ⑤ 오늘의 식사팟 (A 부품: partyMainParts.mountTodayParties) -->
-    <section id="main-today-parties" class="main-section" hidden></section>
+    <!-- ⑤ 오늘의 식사팟 (A 부품 partyMain.renderTodayParties) -->
+    <div id="today-parties"></div>
 
     <div class="main-bottom">
       <!-- ⑥ 이달의 따봉 TOP 3 (C) -->
@@ -79,8 +78,7 @@
   <script src="/js/api/party.js"></script>
   <script src="/js/api/cafeteria.js"></script>
   <script src="/js/api/ranking.js"></script>
-  <!-- A의 메인 부품 (준비되면 주석 해제) -->
-  <!-- <script src="/js/components/party-main.js"></script> -->
+  <script src="/js/components/party-main.js"></script>
   <script src="/js/pages/main.js"></script>
 </body>
 </html>

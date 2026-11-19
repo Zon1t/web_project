@@ -4,16 +4,11 @@
  * C가 그리는 영역: ① 헤더(닉네임·로그아웃) ③ 오늘의 구내식당 ⑥ 이달의 따봉 TOP 3 ⑦ 룰렛 배너(P1)
  * A가 그리는 영역: ② 따봉 배너 ④ 참여 중인 식사팟 ⑤ 오늘의 식사팟
  *
- * A 부품을 끼워 넣는 약속
- *   - A는 js/components/party-main.js 에 아래 함수를 만든다.
- *       window.partyMainParts = {
- *         mountThumbsBanner(container),   // ② #main-thumbs-banner
- *         mountMyParties(container),      // ④ #main-my-parties
- *         mountTodayParties(container),   // ⑤ #main-today-parties
- *       }
- *   - 자리(container)는 처음에 hidden. A 함수가 제목까지 그리고, 보여 줄 때 container.hidden = false.
- *   - 제목 모양은 main.css의 .main-section__head / __title / __meta / __more 를 쓰면 메인과 맞는다.
- *   - 따봉을 남기면 document.dispatchEvent(new CustomEvent('sseukbap:thumbs-added')) → TOP 3를 다시 불러온다.
+ * A 부품 (js/components/party-main.js, css/party-main.css) — 사용법은 그 파일 맨 위 주석
+ *   - 자리: <div id="thumbs-banner">, <div id="my-parties">, <div id="today-parties">
+ *   - 부르기: partyMain.renderThumbsBanner / renderMyParties / renderTodayParties (자리 요소를 넘김)
+ *   - 조회·버튼·빈 상태·오류·숨김(hidden)은 부품이 처리한다. 자리 div에 display를 직접 주지 않는다.
+ *   - 따봉을 남기면 'sseukbap:thumbs-added' 이벤트로 TOP 3를 다시 불러온다. (A 부품이 이벤트를 보내야 동작)
  *   - party-main.js가 없거나 한 부품이 실패해도 나머지 영역은 그대로 보인다.
  *
  * 각 영역은 따로 불러온다. (하나가 느리거나 실패해도 다른 영역에 영향 없음)
@@ -143,17 +138,19 @@
   /* ---------- ②④⑤ A 부품 ---------- */
 
   function mountPartyParts() {
-    const parts = window.partyMainParts;
-    if (!parts) return;   // A 부품이 아직 없으면 자리를 숨긴 채로 둔다
+    const parts = window.partyMain;
 
-    mount(parts.mountThumbsBanner, 'main-thumbs-banner');
-    mount(parts.mountMyParties, 'main-my-parties');
-    mount(parts.mountTodayParties, 'main-today-parties');
+    mount(parts && parts.renderThumbsBanner, 'thumbs-banner');
+    mount(parts && parts.renderMyParties, 'my-parties');
+    mount(parts && parts.renderTodayParties, 'today-parties');
   }
 
   function mount(fn, containerId) {
     const container = document.getElementById(containerId);
-    if (typeof fn !== 'function') return;
+    if (typeof fn !== 'function') {
+      container.hidden = true;   // A 부품을 못 불러오면 자리를 숨긴다
+      return;
+    }
     Promise.resolve()
       .then(() => fn(container))
       .catch((err) => {

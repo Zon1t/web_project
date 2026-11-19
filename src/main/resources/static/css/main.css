@@ -2,12 +2,8 @@
  * main.css — 메인 화면 (S-01, C)
  * 색·간격은 tokens.css 변수만 사용한다.
  *
- * A 부품(따봉 배너·식사팟 카드)도 섹션 제목은 아래 공용 클래스를 쓰면 메인과 모양이 맞는다.
- *   <div class="main-section__head">
- *     <h2 class="main-section__title">참여 중인 식사팟</h2>
- *     <p class="main-section__meta">보조 정보</p>          (선택)
- *     <a class="main-section__more" href="...">전체 보기 &gt;</a>   (선택, 오른쪽 끝)
- *   </div>
+ * A 부품(따봉 배너·식사팟 카드)은 css/party-main.css가 꾸민다. (클래스 앞머리 pm-)
+ * 부품 자리(#thumbs-banner 등)에는 display를 주지 않는다. (부품이 hidden으로 숨김)
  */
 
 /* ---------- 헤더 오른쪽: 닉네임·로그아웃 (header.css는 B 담당이라 여기서 보충) ---------- */

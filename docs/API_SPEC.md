@@ -642,6 +642,8 @@ null
 ### GET /api/restaurants/roulette/candidates — 룰렛 후보 조회
 
 > 2026-11-18 이동: `GET /api/roulette/candidates` → `GET /api/restaurants/roulette/candidates`
+>
+> 2026-11-19 변경: 구내식당(`CAFETERIA`)은 '전체'를 포함해 룰렛 후보에서 항상 제외, `category=CAFETERIA`는 400
 
 **요구사항**: 룰렛 화면에서 카테고리를 고르면(최초 진입 시 '전체') 휠에 그릴 식당을 최대 8곳 무작위로 뽑아 반환한다. FE는 이 후보로 휠을 그리고, [룰렛 돌리기] 시 후보 ID 목록을 룰렛 실행 API로 보낸다.
 
@@ -652,8 +654,8 @@ null
 | category | string | X | 공통 규칙의 식당 카테고리 값. 없으면 전체 |
 
 **시스템 처리**
-1. category 값이 있으면 유효한지 확인한다.
-2. 조건에 맞는 RESTAURANT를 무작위 순서로 최대 8개 조회한다. (Oracle: ORDER BY DBMS_RANDOM.VALUE)
+1. category 값이 있으면 유효한지 확인한다. (`CAFETERIA`는 룰렛 카테고리가 아니므로 오류)
+2. 구내식당(`CAFETERIA`)을 제외하고, 조건에 맞는 RESTAURANT를 무작위 순서로 최대 8개 조회한다. (Oracle: ORDER BY DBMS_RANDOM.VALUE)
 3. 전체 대상 수와 후보 목록을 반환한다.
 
 **Response 200 (data)**
@@ -670,18 +672,22 @@ null
 ```
 - spinnable: 후보가 2곳 이상이면 true. false면 FE는 '룰렛을 돌릴 식당이 부족합니다'를 표시하고 버튼을 비활성화
 - category를 보내지 않으면 응답의 category는 null
+- totalCount도 구내식당을 제외한 수
+- 룰렛 화면의 카테고리 선택지: 전체 / 한식 / 중식 / 일식 / 양식 / 분식 / 기타 (구내식당 없음)
 
 **오류**
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 카테고리를 확인해 주세요. | 없는 category |
+| 400 | INVALID_REQUEST | 카테고리를 확인해 주세요. | 없는 category, `CAFETERIA` |
 
 ---
 
 ### POST /api/restaurants/roulette/spin — 메뉴 룰렛 실행
 
 > 2026-11-18 이동: `POST /api/roulette/spin` → `POST /api/restaurants/roulette/spin`
+>
+> 2026-11-19 변경: 구내식당(`CAFETERIA`) ID는 없는 식당과 같이 후보에서 제외
 
 **요구사항**: 화면에 그려진 룰렛 후보(룰렛 후보 조회 API 결과) 중 당첨 식당 1곳을 서버에서 무작위로 정한다. FE는 winnerId 칸에서 멈추도록 약 3초 회전 연출 후 결과 카드를 보여 준다. [다시 돌리기]는 같은 후보로 이 API를 다시 호출한다.
 
@@ -698,7 +704,7 @@ null
 
 **시스템 처리**
 1. candidateIds 개수(2~8)와 중복 여부를 검증한다.
-2. candidateIds 중 RESTAURANT에 없는 ID는 제외한다. (후보 조회 후 삭제된 식당 대비) 남은 후보가 2곳 미만이면 중단한다.
+2. candidateIds 중 RESTAURANT에 없는 ID와 구내식당(`CAFETERIA`) ID는 제외한다. (후보 조회 후 삭제된 식당 대비) 남은 후보가 2곳 미만이면 중단한다.
 3. 후보 중 1곳을 무작위로 선정한다.
 4. 당첨 식당의 요약 정보(결과 카드용)를 함께 반환한다.
 
@@ -721,7 +727,7 @@ null
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 룰렛 후보를 확인해 주세요. | 개수 2~8 위반, 중복 ID |
-| 409 | NOT_ENOUGH_CANDIDATES | 룰렛을 돌릴 식당이 부족합니다. | 없는 식당을 제외한 후보가 2곳 미만 |
+| 409 | NOT_ENOUGH_CANDIDATES | 룰렛을 돌릴 식당이 부족합니다. | 없는 식당·구내식당을 제외한 후보가 2곳 미만 |
 
 ---
 ## 5. restaurants·reviews — 식당·리뷰·관심 (B)

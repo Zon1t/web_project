@@ -1,0 +1,53 @@
+/*
+ * app-header.css — 공통 헤더 오른쪽(닉네임·로그아웃) 보충 (C)
+ * header.css(B)를 고치지 않고 덧붙인다. B가 공통 헤더를 확정하면 header.css로 옮겨도 된다.
+ *
+ * HTML에서 header.css 다음에 불러온다.
+ *   <link rel="stylesheet" href="/css/header.css">
+ *   <link rel="stylesheet" href="/css/app-header.css">
+ */
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+.app-header__nickname {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.app-header__nickname:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+/* 로그아웃 버튼이 더해져 좁은 화면에서 메뉴 글자가 줄바꿈되지 않도록 */
+.app-header__logo,
+.app-header__link {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .app-header__inner {
+    gap: var(--space-3);
+  }
+
+  .app-header__nav {
+    gap: var(--space-3);
+  }
+
+  .app-header__user {
+    gap: var(--space-2);
+  }
+
+  .app-header__user .btn {
+    height: 36px;
+    padding: 0 var(--space-3);
+  }
+
+  .app-header__nickname {
+    display: none;   /* 좁은 화면에서는 로그아웃만 */
+  }
+}

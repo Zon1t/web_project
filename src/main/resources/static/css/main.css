@@ -6,23 +6,7 @@
  * 부품 자리(#thumbs-banner 등)에는 display를 주지 않는다. (부품이 hidden으로 숨김)
  */
 
-/* ---------- 헤더 오른쪽: 닉네임·로그아웃 (header.css는 B 담당이라 여기서 보충) ---------- */
-.app-header__user {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-left: auto;
-}
-
-.app-header__nickname {
-  color: var(--color-text-sub);
-  font-size: var(--font-size-sm);
-}
-
-.app-header__nickname:hover {
-  color: var(--color-text);
-  text-decoration: underline;
-}
+/* 헤더 오른쪽(닉네임·로그아웃) 스타일은 css/app-header.css */
 
 /* ---------- 레이아웃 ---------- */
 .main-page {
@@ -201,34 +185,7 @@
   }
 }
 
-/* 헤더에 로그아웃 버튼이 더해져 좁은 화면에서 메뉴 글자가 줄바꿈되지 않도록 */
-.app-header__logo,
-.app-header__link {
-  white-space: nowrap;
-}
-
 @media (max-width: 640px) {
-  .app-header__inner {
-    gap: var(--space-3);
-  }
-
-  .app-header__nav {
-    gap: var(--space-3);
-  }
-
-  .app-header__user {
-    gap: var(--space-2);
-  }
-
-  .app-header__user .btn {
-    height: 36px;
-    padding: 0 var(--space-3);
-  }
-
-  .app-header__nickname {
-    display: none;   /* 좁은 화면에서는 로그아웃만 */
-  }
-
   .main-page {
     gap: var(--space-8);
   }

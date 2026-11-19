@@ -1,0 +1,101 @@
+/*
+ * auth.css — 로그인(S-03)·회원가입(S-02) 화면 (C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-card__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.auth-card__desc {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* 입력창 + [중복 확인] 버튼 한 줄 */
+.auth-field__row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.auth-field__row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-field__row .btn {
+  flex-shrink: 0;
+}
+
+/* 화면 위쪽 안내 상자 (가입 완료, 로그인 실패 등) */
+.auth-notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.auth-notice[hidden] {
+  display: none;
+}
+
+.auth-notice--success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.auth-notice--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.auth-card__footer {
+  margin-top: var(--space-6);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.auth-card__footer a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: var(--space-6) var(--space-3);
+  }
+
+  .auth-card {
+    padding: var(--space-6) var(--space-5);
+  }
+}

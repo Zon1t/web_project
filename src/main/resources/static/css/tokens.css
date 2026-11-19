@@ -1,0 +1,89 @@
+/*
+ * tokens.css — 슥밥 디자인 변수 (B 담당, 수정은 B에게 요청)
+ *
+ * 색·간격·글꼴·둥글기는 이 파일의 변수만 사용한다.
+ *   예) color: var(--color-text);  padding: var(--space-4);
+ * 기준: 와이어프레임 'S-01 메인 디자인 시안 A' (Noto Sans KR, 파랑 포인트 #2D6CDF)
+ * 그라데이션은 쓰지 않는다 (CLAUDE.md 7장).
+ */
+:root {
+  /* ---------- 색: 기본 ---------- */
+  --color-primary: #2d6cdf;          /* 주요 버튼, 링크, 강조 */
+  --color-primary-hover: #2459bd;
+  --color-primary-soft: #e3eeff;     /* 연한 파랑 배경 (선택된 칩 등) */
+  --color-on-primary: #ffffff;       /* primary 배경 위 글자 */
+
+  --color-text: #1b2430;             /* 본문 */
+  --color-text-sub: #4a5563;         /* 보조 설명 */
+  --color-text-muted: #5a6675;       /* 날짜·건수 같은 약한 정보 */
+  --color-text-disabled: #8a94a3;
+
+  --color-bg: #ffffff;               /* 페이지 배경 */
+  --color-surface: #f4f6f9;          /* 카드·타일 배경 */
+  --color-surface-hover: #ecf2fc;
+  --color-border: #c9d1dc;           /* 입력창·구분선 */
+  --color-border-light: #e3e8ef;     /* 목록 구분선 */
+
+  /* ---------- 색: 상태 ---------- */
+  --color-danger: #c62828;           /* 오류 문구, 삭제 */
+  --color-danger-soft: #fdecec;
+  --color-success: #0b7360;          /* 사용 가능, 완료 */
+  --color-success-soft: #ddf6ef;
+  --color-warning: #a3510a;          /* 주의, 마감 임박 */
+  --color-warning-soft: #fff1dc;
+
+  /* ---------- 색: 식사팟 상태 뱃지 (A 화면에서 사용) ---------- */
+  --color-status-recruiting: #2459bd;      /* 모집중 */
+  --color-status-recruiting-bg: #e3eeff;
+  --color-status-scheduled: #0b7360;       /* 일정 확정 */
+  --color-status-scheduled-bg: #ddf6ef;
+  --color-status-full: #a3510a;            /* 정원 마감 */
+  --color-status-full-bg: #fff1dc;
+  --color-status-closed: #4a5563;          /* 모집 마감 */
+  --color-status-closed-bg: #eceff3;
+  --color-status-finished: #5a6675;        /* 식사 완료 */
+  --color-status-finished-bg: #f4f6f9;
+
+  /* ---------- 글꼴 ---------- */
+  --font-family: 'Noto Sans KR', system-ui, -apple-system, 'Malgun Gothic', sans-serif;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;              /* 본문 기본 */
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;             /* 화면 제목 */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.3;
+  --line-height-base: 1.6;
+
+  /* ---------- 간격 (4px 단위) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ---------- 둥글기 ---------- */
+  --radius-sm: 6px;                  /* 뱃지 */
+  --radius-md: 8px;                  /* 버튼·입력창 */
+  --radius-lg: 16px;                 /* 카드 */
+  --radius-full: 999px;              /* 칩·동그라미 */
+
+  /* ---------- 그림자 ---------- */
+  --shadow-sm: 0 1px 3px rgba(27, 36, 48, 0.08);
+  --shadow-md: 0 6px 16px rgba(27, 36, 48, 0.10);
+
+  /* ---------- 크기 ---------- */
+  --header-height: 72px;
+  --content-max-width: 1200px;
+  --control-height: 44px;            /* 버튼·입력창 높이 (터치 영역 44px 이상) */
+}

@@ -65,12 +65,15 @@ class RestaurantServiceTest {
 
     @Test
     void 목록은_검색어와_카테고리로_거른다() {
+        // 화면에서 등록한 식당이 더해져도 깨지지 않게: 결과는 모두 조건에 맞고, 더미 식당이 순서대로 들어 있으면 된다
         List<RestaurantListResponse> japanese = restaurantService.getRestaurantList("", "JAPANESE");
+        assertThat(japanese).allMatch(r -> r.category() == RestaurantCategory.JAPANESE);
         assertThat(japanese).extracting(RestaurantListResponse::name)
-                .containsExactly("스시하루", "라멘공방");
+                .containsSubsequence("스시하루", "라멘공방");
 
         List<RestaurantListResponse> keyword = restaurantService.getRestaurantList("  반점 ", null);
-        assertThat(keyword).extracting(RestaurantListResponse::name).containsExactly("홍반점");
+        assertThat(keyword).allMatch(r -> r.name().contains("반점"));
+        assertThat(keyword).extracting(RestaurantListResponse::name).contains("홍반점");
 
         assertThat(restaurantService.getRestaurantList("없는식당이름", null)).isEmpty();
     }

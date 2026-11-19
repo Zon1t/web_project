@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * 식사팟 대화 (PARTY_CHAT 테이블). 기준: docs/sql/01_ddl.sql
@@ -61,7 +62,8 @@ public class PartyChat {
         this.member = member;
         this.content = content;
         this.messageType = messageType;
-        this.createdAt = LocalDateTime.now();
+        // DB 컬럼이 DATE(초 단위)라서 미리 초 단위로 자른다. 전송 응답과 조회 응답의 시각이 같아진다.
+        this.createdAt = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     /** 참여자가 보낸 메시지 */

@@ -1,6 +1,7 @@
 package com.sseukbap.party.repository;
 
 import com.sseukbap.party.entity.PartyChat;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,4 +20,12 @@ public interface PartyChatRepository extends JpaRepository<PartyChat, Long> {
     @Query("select c from PartyChat c left join fetch c.member "
             + "where c.party.partyId = :partyId and c.chatId > :afterId order by c.chatId")
     List<PartyChat> findAllAfter(@Param("partyId") Long partyId, @Param("afterId") Long afterId);
+
+    /**
+     * 위와 같고 개수 제한만 붙인 버전 (대화 조회 API는 최대 200개)
+     * 사용 예: findAllAfter(partyId, afterId, PageRequest.of(0, 200))
+     */
+    @Query("select c from PartyChat c left join fetch c.member "
+            + "where c.party.partyId = :partyId and c.chatId > :afterId order by c.chatId")
+    List<PartyChat> findAllAfter(@Param("partyId") Long partyId, @Param("afterId") Long afterId, Pageable pageable);
 }

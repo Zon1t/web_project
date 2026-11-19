@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,15 +38,16 @@ public class ReviewController {
 
     /**
      * 리뷰 작성 (multipart/form-data)
-     * content: 한줄평, tagIds: 태그 (여러 개면 같은 이름으로 반복, 예: tagIds=1&tagIds=4)
-     * image(사진)는 feature/review-image에서 추가한다.
+     * content: 한줄평, tagIds: 태그 (여러 개면 같은 이름으로 반복, 예: tagIds=1&tagIds=4),
+     * image: 사진 1장 (선택, jpg·png 5MB 이하)
      */
     @PostMapping("/api/restaurants/{restaurantId}/reviews")
     public ApiResponse<ReviewCreateResponse> create(@PathVariable Long restaurantId,
                                                     @RequestParam(required = false) String content,
                                                     @RequestParam(required = false) List<String> tagIds,
+                                                    @RequestParam(required = false) MultipartFile image,
                                                     @LoginMember Long memberId) {
-        return ApiResponse.success(reviewService.createReview(restaurantId, memberId, content, tagIds));
+        return ApiResponse.success(reviewService.createReview(restaurantId, memberId, content, tagIds, image));
     }
 
     /** 리뷰 삭제 (작성자만) */

@@ -5,10 +5,15 @@ import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.member.entity.Member;
 import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.restaurant.entity.Restaurant;
+import com.sseukbap.restaurant.entity.RestaurantCategory;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
 import com.sseukbap.review.dto.ReviewItemResponse;
 import com.sseukbap.review.dto.ReviewListResponse;
+import com.sseukbap.review.entity.Review;
+import com.sseukbap.review.entity.ReviewTag;
 import com.sseukbap.review.repository.ReviewRepository;
+import com.sseukbap.review.repository.ReviewTagRepository;
+import com.sseukbap.review.repository.TagRepository;
 import com.sseukbap.review.service.ReviewService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,11 +27,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 리뷰 목록·작성·삭제 확인. @Transactional이라 테스트에서 쓴 리뷰는 DB에 남지 않는다.
+ * 리뷰 목록·작성·삭제 확인. @Transactional이라 테스트에서 만든 식당·리뷰는 DB에 남지 않는다.
  *
- * 더미데이터(docs/sql/04_dummy_data.sql) 기준 홍반점 리뷰 2개
- *   - user02, 9일 전,  태그 1·9·10 (점심추천, 웨이팅많음, 도보5분이내)  ← 최신
- *   - user01, 20일 전, 태그 1·6·8  (점심추천, 단체가능, 가성비)
+ * 개발 DB에는 팀원이 화면에서 쓴 리뷰가 계속 쌓이므로, 더미 식당 대신
+ * 테스트마다 '테스트 전용 식당'과 리뷰 2개를 직접 만들어서 확인한다.
+ *   - user01 리뷰, 태그 1·6·8  (점심추천, 단체가능, 가성비)
+ *   - user02 리뷰, 태그 1·9·10 (점심추천, 웨이팅많음, 도보5분이내)  ← 나중에 저장 = 최신
  */
 @SpringBootTest
 @Transactional
@@ -34,29 +40,41 @@ class ReviewServiceTest {
 
     @Autowired ReviewService reviewService;
     @Autowired ReviewRepository reviewRepository;
+    @Autowired ReviewTagRepository reviewTagRepository;
+    @Autowired TagRepository tagRepository;
     @Autowired RestaurantRepository restaurantRepository;
     @Autowired MemberRepository memberRepository;
 
-    Long hongId;
+    Long restaurantId;
     Member user01;
     Member user02;
 
     @BeforeEach
     void setUp() {
-        hongId = restaurantRepository.findAll().stream()
-                .filter(r -> r.getName().equals("홍반점"))
-                .findFirst()
-                .map(Restaurant::getRestaurantId)
-                .orElseThrow();
         user01 = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
+
+        Restaurant restaurant = restaurantRepository.save(Restaurant.create(
+                "리뷰테스트식당", RestaurantCategory.KOREAN, "https://map.naver.com/p/entry/place/123000000777",
+                "테스트 주소", 37.55, 127.07, user01));
+        restaurantId = restaurant.getRestaurantId();
+
+        saveReview(restaurant, user01, "첫 번째 리뷰", 1L, 6L, 8L);
+        saveReview(restaurant, user02, "두 번째 리뷰", 1L, 9L, 10L);
+    }
+
+    private void saveReview(Restaurant restaurant, Member member, String content, Long... tagIds) {
+        Review review = reviewRepository.save(Review.create(restaurant, member, content, null));
+        for (Long tagId : tagIds) {
+            reviewTagRepository.save(ReviewTag.create(review, tagRepository.getReferenceById(tagId)));
+        }
     }
 
     // ===== 목록 =====
 
     @Test
     void 목록은_최신순_페이징되고_내_리뷰를_표시한다() {
-        ReviewListResponse page1 = reviewService.getReviewList(hongId, 1, 1, user01.getMemberId());
+        ReviewListResponse page1 = reviewService.getReviewList(restaurantId, 1, 1, user01.getMemberId());
 
         assertThat(page1.page()).isEqualTo(1);
         assertThat(page1.size()).isEqualTo(1);
@@ -69,7 +87,7 @@ class ReviewServiceTest {
         assertThat(newest.imageUrl()).isNull();
         assertThat(newest.mine()).isFalse();
 
-        ReviewListResponse page2 = reviewService.getReviewList(hongId, 2, 1, user01.getMemberId());
+        ReviewListResponse page2 = reviewService.getReviewList(restaurantId, 2, 1, user01.getMemberId());
         assertThat(page2.hasNext()).isFalse();
         assertThat(page2.items()).singleElement()
                 .satisfies(item -> {
@@ -80,7 +98,7 @@ class ReviewServiceTest {
 
     @Test
     void 목록_page_size가_없으면_1페이지_10개() {
-        ReviewListResponse result = reviewService.getReviewList(hongId, null, null, user01.getMemberId());
+        ReviewListResponse result = reviewService.getReviewList(restaurantId, null, null, user01.getMemberId());
 
         assertThat(result.page()).isEqualTo(1);
         assertThat(result.size()).isEqualTo(10);
@@ -91,9 +109,9 @@ class ReviewServiceTest {
     @Test
     void 목록_page_size_범위_밖이면_400_없는_식당이면_404() {
         Long me = user01.getMemberId();
-        assertError(() -> reviewService.getReviewList(hongId, 0, 10, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
-        assertError(() -> reviewService.getReviewList(hongId, 1, 0, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
-        assertError(() -> reviewService.getReviewList(hongId, 1, 51, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
+        assertError(() -> reviewService.getReviewList(restaurantId, 0, 10, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
+        assertError(() -> reviewService.getReviewList(restaurantId, 1, 0, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
+        assertError(() -> reviewService.getReviewList(restaurantId, 1, 51, me), ErrorCode.INVALID_REQUEST, "페이지 정보를 확인해 주세요.");
         assertError(() -> reviewService.getReviewList(-1L, 1, 10, me), ErrorCode.RESTAURANT_NOT_FOUND, null);
     }
 
@@ -103,10 +121,10 @@ class ReviewServiceTest {
     void 작성하면_공백을_지우고_태그_중복을_하나로_저장한다() {
         Long me = user03Id();
 
-        Long reviewId = reviewService.createReview(hongId, me, "  짜장면 맛있어요  ", List.of("5", "1", "5"))
+        Long reviewId = reviewService.createReview(restaurantId, me, "  짜장면 맛있어요  ", List.of("5", "1", "5"), null)
                 .reviewId();
 
-        ReviewListResponse list = reviewService.getReviewList(hongId, 1, 10, me);
+        ReviewListResponse list = reviewService.getReviewList(restaurantId, 1, 10, me);
         assertThat(list.totalCount()).isEqualTo(3);
         ReviewItemResponse created = list.items().get(0); // 방금 쓴 리뷰가 가장 최신
         assertThat(created.reviewId()).isEqualTo(reviewId);
@@ -117,7 +135,7 @@ class ReviewServiceTest {
 
     @Test
     void 태그_없이도_작성할_수_있다() {
-        Long reviewId = reviewService.createReview(hongId, user03Id(), "한 번 더 갈게요", null).reviewId();
+        Long reviewId = reviewService.createReview(restaurantId, user03Id(), "한 번 더 갈게요", null, null).reviewId();
         assertThat(reviewRepository.findById(reviewId)).isPresent();
     }
 
@@ -125,20 +143,20 @@ class ReviewServiceTest {
     void 작성_한줄평이_없거나_100자_초과면_400() {
         Long me = user03Id();
         String message = "한줄평을 입력해 주세요.";
-        assertError(() -> reviewService.createReview(hongId, me, null, null), ErrorCode.INVALID_REQUEST, message);
-        assertError(() -> reviewService.createReview(hongId, me, "   ", null), ErrorCode.INVALID_REQUEST, message);
-        assertError(() -> reviewService.createReview(hongId, me, "가".repeat(101), null), ErrorCode.INVALID_REQUEST, message);
+        assertError(() -> reviewService.createReview(restaurantId, me, null, null, null), ErrorCode.INVALID_REQUEST, message);
+        assertError(() -> reviewService.createReview(restaurantId, me, "   ", null, null), ErrorCode.INVALID_REQUEST, message);
+        assertError(() -> reviewService.createReview(restaurantId, me, "가".repeat(101), null, null), ErrorCode.INVALID_REQUEST, message);
 
         // 100자는 통과
-        assertThat(reviewService.createReview(hongId, me, "가".repeat(100), null).reviewId()).isNotNull();
+        assertThat(reviewService.createReview(restaurantId, me, "가".repeat(100), null, null).reviewId()).isNotNull();
     }
 
     @Test
     void 작성_없는_태그면_INVALID_TAG_없는_식당이면_404() {
         Long me = user03Id();
-        assertError(() -> reviewService.createReview(hongId, me, "좋아요", List.of("1", "14")), ErrorCode.INVALID_TAG, null);
-        assertError(() -> reviewService.createReview(hongId, me, "좋아요", List.of("abc")), ErrorCode.INVALID_TAG, null);
-        assertError(() -> reviewService.createReview(-1L, me, "좋아요", null), ErrorCode.RESTAURANT_NOT_FOUND, null);
+        assertError(() -> reviewService.createReview(restaurantId, me, "좋아요", List.of("1", "14"), null), ErrorCode.INVALID_TAG, null);
+        assertError(() -> reviewService.createReview(restaurantId, me, "좋아요", List.of("abc"), null), ErrorCode.INVALID_TAG, null);
+        assertError(() -> reviewService.createReview(-1L, me, "좋아요", null, null), ErrorCode.RESTAURANT_NOT_FOUND, null);
     }
 
     // ===== 삭제 =====
@@ -146,17 +164,17 @@ class ReviewServiceTest {
     @Test
     void 내_리뷰는_삭제된다() {
         Long me = user03Id();
-        Long reviewId = reviewService.createReview(hongId, me, "삭제할 리뷰", List.of("1", "8")).reviewId();
+        Long reviewId = reviewService.createReview(restaurantId, me, "삭제할 리뷰", List.of("1", "8"), null).reviewId();
 
         reviewService.deleteReview(reviewId, me);
 
         assertThat(reviewRepository.findById(reviewId)).isEmpty();
-        assertThat(reviewService.getReviewList(hongId, 1, 10, me).totalCount()).isEqualTo(2);
+        assertThat(reviewService.getReviewList(restaurantId, 1, 10, me).totalCount()).isEqualTo(2);
     }
 
     @Test
     void 남의_리뷰는_403_없는_리뷰는_404() {
-        Long othersReviewId = reviewService.getReviewList(hongId, 1, 1, user01.getMemberId())
+        Long othersReviewId = reviewService.getReviewList(restaurantId, 1, 1, user01.getMemberId())
                 .items().get(0).reviewId(); // user02의 리뷰
 
         assertError(() -> reviewService.deleteReview(othersReviewId, user01.getMemberId()),

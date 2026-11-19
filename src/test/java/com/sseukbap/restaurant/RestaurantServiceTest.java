@@ -12,6 +12,7 @@ import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.entity.RestaurantCategory;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
 import com.sseukbap.restaurant.service.RestaurantService;
+import com.sseukbap.review.repository.ReviewRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,7 @@ class RestaurantServiceTest {
     @Autowired RestaurantService restaurantService;
     @Autowired RestaurantRepository restaurantRepository;
     @Autowired MemberRepository memberRepository;
+    @Autowired ReviewRepository reviewRepository;
 
     // ===== 목록 =====
 
@@ -56,9 +58,10 @@ class RestaurantServiceTest {
                 .orElseThrow();
         assertThat(cafeteria.category()).isEqualTo(RestaurantCategory.CAFETERIA);
 
-        // 홍반점: 리뷰 2개, 좌표 있음
+        // 홍반점: 리뷰 수, 좌표 있음
         RestaurantListResponse hong = list.get(0);
-        assertThat(hong.reviewCount()).isEqualTo(2);
+        // 리뷰 수는 화면에서 쓴 리뷰가 더해질 수 있어서 DB에 실제 있는 수와 비교한다
+        assertThat(hong.reviewCount()).isEqualTo(reviewRepository.countByRestaurant_RestaurantId(hong.restaurantId()));
         assertThat(hong.lat()).isNotNull();
         assertThat(hong.lng()).isNotNull();
     }
@@ -105,7 +108,7 @@ class RestaurantServiceTest {
         assertThat(detail.cafeteria()).isFalse();
         assertThat(detail.mapUrl()).isNotBlank();
         assertThat(detail.thumbsCount30d()).isEqualTo(4);
-        assertThat(detail.reviewCount()).isEqualTo(2);
+        assertThat(detail.reviewCount()).isEqualTo(reviewRepository.countByRestaurant_RestaurantId(hongId));
         assertThat(detail.interestCount()).isGreaterThanOrEqualTo(1);
         assertThat(detail.interested()).isTrue();   // user01은 홍반점 관심 등록
 

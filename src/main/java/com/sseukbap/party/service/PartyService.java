@@ -7,6 +7,7 @@ import com.sseukbap.member.entity.Member;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyInviteLinkResponse;
 import com.sseukbap.party.dto.PartyListItemResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
@@ -52,6 +53,8 @@ public class PartyService {
     private static final String LIST_INVALID_MESSAGE = "조회 조건을 확인해 주세요.";
     private static final int LIST_LIMIT_MAX = 50;
     private static final int MY_TODAY_LIMIT = 2;
+    /** 식사팟 상세 화면 경로 (B·C와 맞춘 FE 주소 규칙) */
+    private static final String PARTY_DETAIL_PATH = "/party-detail.html?partyId=";
 
     /** 식사팟 생성. 방장이 첫 참여자가 되고 상태는 RECRUITING */
     @Transactional
@@ -123,6 +126,37 @@ public class PartyService {
 
         // 4. DELETED로 변경 (커밋 시 UPDATE 실행)
         party.delete();
+    }
+
+    // ===== 초대 링크 =====
+
+    /**
+     * 초대 문구와 상세 화면 경로. 참여자만, 모집 중(RECRUITING·SCHEDULED)인 팟만 초대할 수 있다.
+     * 문구의 닉네임은 링크를 요청한 사람(방장이 아니어도 됨)
+     */
+    public PartyInviteLinkResponse getInviteLink(Long partyId, Long memberId) {
+        // 1. 팟 조회. 없거나 DELETED면 중단
+        MealParty party = partyFinder.getParty(partyId);
+
+        // 2. 참여자 확인 (403)
+        PartyMember me = partyMemberRepository.findByPartyIdAndMemberId(partyId, memberId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.NOT_JOINED_FORBIDDEN, "참여 중인 식사팟만 초대할 수 있습니다."));
+
+        // 3. 마감(FULL·CLOSED)·완료(FINISHED)된 팟은 초대 불가
+        if (!party.getStatus().isJoinable()) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS, "마감되었거나 완료된 식사팟은 초대할 수 없습니다.");
+        }
+
+        // 4. 문구 + 상세 화면 경로
+        String text = me.getMember().getNickname() + "님이 " + party.getRestaurant().getName() + " "
+                + toKorean(party.getMealType()) + " 식사에 초대하셨습니다~";
+        return new PartyInviteLinkResponse(text, PARTY_DETAIL_PATH + partyId);
+    }
+
+    /** 끼니 한글 이름 (MealType은 common 담당이라 여기서 변환) */
+    private static String toKorean(MealType mealType) {
+        return mealType == MealType.LUNCH ? "점심" : "저녁";
     }
 
     // ===== 목록 =====

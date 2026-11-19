@@ -7,6 +7,7 @@ import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyDetailResponse;
 import com.sseukbap.party.dto.PartyMemberResponse;
+import com.sseukbap.party.dto.PartyScheduleUpdateRequest;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.common.enums.MealType;
 import com.sseukbap.party.entity.PartyChat;
@@ -47,6 +48,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PartyServiceTest {
 
     @Autowired PartyService partyService;
+    @Autowired PartyHostService partyHostService;
+    @Autowired PartyMemberService partyMemberService;
     @Autowired MealPartyRepository mealPartyRepository;
     @Autowired PartyMemberRepository partyMemberRepository;
     @Autowired PartyChatRepository partyChatRepository;
@@ -175,18 +178,24 @@ class PartyServiceTest {
 
     @Test
     void 일정이_확정된_팟은_schedule과_확정_시간_기준_마감시각이_나온다() {
-        // 더미데이터: 오늘 점심 SCHEDULED 스시하루 (12:00 확정, user03 방장·확정, user05 미확정)
-        MealParty scheduled = mealPartyRepository.findAll().stream()
-                .filter(p -> p.getStatus() == PartyStatus.SCHEDULED && p.getPartyDate().equals(LocalDate.now()))
-                .findFirst()
-                .orElseThrow();
+        // 예정 12:00 팟에 방장이 12:30 · 정문으로 일정 확정, 방장·user02 참여 확정
+        // (더미 SCHEDULED 팟은 스케줄러가 FINISHED로 바꿀 수 있어서 직접 만든다)
+        Long partyId = createPartyWithGuest();
+        partyHostService.updateSchedule(partyId,
+                new PartyScheduleUpdateRequest(LocalTime.of(12, 30), "정문", "늦으면 채팅"), user01.getMemberId(), NINE_AM);
+        partyMemberService.confirmParty(partyId, user01.getMemberId());
+        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        em.flush();
+        em.clear();
 
-        PartyDetailResponse detail = partyService.getParty(scheduled.getPartyId(), user03.getMemberId());
+        PartyDetailResponse detail = partyService.getParty(partyId, user02.getMemberId());
 
+        assertThat(detail.status()).isEqualTo(PartyStatus.SCHEDULED);
         assertThat(detail.schedule()).isNotNull();
-        assertThat(detail.schedule().confirmedTime()).isEqualTo(scheduled.getConfirmedTime());
-        assertThat(detail.cancelDeadline())
-                .isEqualTo(scheduled.getPartyDate().atTime(scheduled.getConfirmedTime()).minusMinutes(30));
+        assertThat(detail.schedule().confirmedTime()).isEqualTo(LocalTime.of(12, 30));
+        assertThat(detail.schedule().meetPlace()).isEqualTo("정문");
+        assertThat(detail.mealTime()).isEqualTo(LocalTime.of(12, 0));                    // 예정 시간은 그대로
+        assertThat(detail.cancelDeadline()).isEqualTo(LocalDate.now().atTime(12, 0));    // 확정 12:30 - 30분
         assertThat(detail.confirmedCount()).isEqualTo(2);
         assertThat(detail.myConfirmed()).isTrue();
     }

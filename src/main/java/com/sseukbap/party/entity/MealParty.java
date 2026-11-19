@@ -172,6 +172,11 @@ public class MealParty {
         this.status = this.status.afterScheduleSet();
     }
 
+    /** 식사 완료 (스케줄러): 진행 중인 팟 → FINISHED. 기준 시간이 지났는지는 스케줄러가 먼저 확인한다. */
+    public void finish() {
+        this.status = this.status.afterMealTimePassed();
+    }
+
     /** 방장의 모집 마감: RECRUITING·SCHEDULED·FULL → CLOSED */
     public void close() {
         this.status = this.status.afterClosed();

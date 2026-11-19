@@ -57,9 +57,10 @@ class PartyEntityMappingTest {
             assertThat(p.getBaseTime()).isNotNull();
         });
 
-        // 일정 확정된 팟은 확정 시간이 있다
+        // 확정 시간('HH:mm')도 읽힌다 (지난 FINISHED 더미 팟에 있음)
+        assertThat(parties).anyMatch(MealParty::hasSchedule);
+        // SCHEDULED 팟은 반드시 확정 시간이 있다 (스케줄러가 FINISHED로 바꿨으면 0개일 수 있음)
         assertThat(parties).filteredOn(p -> p.getStatus() == PartyStatus.SCHEDULED)
-                .isNotEmpty()
                 .allMatch(MealParty::hasSchedule);
 
         // 소프트 삭제된 팟도 행은 남아 있다

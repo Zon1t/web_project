@@ -2,6 +2,8 @@ package com.sseukbap.auth.service;
 
 import com.sseukbap.auth.dto.CheckIdResponse;
 import com.sseukbap.auth.dto.CheckNicknameResponse;
+import com.sseukbap.auth.dto.LoginRequest;
+import com.sseukbap.auth.dto.MemberInfoResponse;
 import com.sseukbap.auth.dto.SignupRequest;
 import com.sseukbap.auth.dto.SignupResponse;
 import com.sseukbap.common.exception.BusinessException;
@@ -14,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Service
@@ -82,6 +85,33 @@ public class AuthService {
 
         // 7. 생성된 회원 정보 반환
         return SignupResponse.from(member);
+    }
+
+    /**
+     * 로그인: 아이디·비밀번호 확인. 세션 처리는 Controller에서 한다.
+     * 아이디가 없든 비밀번호가 틀리든 같은 오류(LOGIN_FAILED)로 응답한다.
+     */
+    public MemberInfoResponse login(LoginRequest request) {
+        // 1. 필수값 검증은 LoginRequest의 @Valid에서 처리됨
+
+        // 2. 아이디로 회원 조회. 없으면 로그인 실패
+        Member member = memberRepository.findByLoginId(request.loginId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+
+        // 3. 입력 비밀번호와 저장된 암호화 비밀번호 비교
+        if (!passwordEncoder.matches(request.password(), member.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        return MemberInfoResponse.from(member);
+    }
+
+    /**
+     * 로그인 사용자 조회. 세션의 회원이 DB에 없으면(탈퇴 등) empty를 돌려준다.
+     * → Controller가 세션을 무효화하고 401로 응답한다.
+     */
+    public Optional<MemberInfoResponse> getMe(Long memberId) {
+        return memberRepository.findById(memberId).map(MemberInfoResponse::from);
     }
 
     // Oracle 오류 메시지 예: ORA-00001: unique constraint (계정.UK_MEMBER_LOGIN_ID) violated

@@ -7,6 +7,7 @@
  * 등록된 목업
  *   GET /restaurants/list
  *   GET /restaurants/{restaurantId}
+ *   POST, DELETE /restaurants/{restaurantId}/interest
  */
 (function () {
   'use strict';
@@ -153,5 +154,30 @@
       reviewCount: r.reviewCount,
       interested: r.interested,
     };
+  });
+
+  // POST /api/restaurants/{restaurantId}/interest
+  api.mock('POST', '/restaurants/{restaurantId}/interest', ({ params }) => {
+    const r = restaurants.find((item) => String(item.restaurantId) === params.restaurantId);
+    if (!r) {
+      throw api.mockError(404, 'RESTAURANT_NOT_FOUND', '식당을 찾을 수 없습니다.');
+    }
+    if (r.interested) {
+      throw api.mockError(409, 'ALREADY_INTERESTED', '이미 관심 등록한 식당입니다.');
+    }
+    r.interested = true;
+    r.interestCount += 1;
+    return { interested: true, interestCount: r.interestCount };
+  });
+
+  // DELETE /api/restaurants/{restaurantId}/interest
+  api.mock('DELETE', '/restaurants/{restaurantId}/interest', ({ params }) => {
+    const r = restaurants.find((item) => String(item.restaurantId) === params.restaurantId);
+    if (!r || !r.interested) {
+      throw api.mockError(404, 'INTEREST_NOT_FOUND', '관심 등록되지 않은 식당입니다.');
+    }
+    r.interested = false;
+    r.interestCount -= 1;
+    return { interested: false, interestCount: r.interestCount };
   });
 })();

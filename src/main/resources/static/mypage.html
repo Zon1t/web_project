@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>마이페이지 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/mypage.css">
+</head>
+<body>
+  <!-- ① 공통 헤더 (강조 메뉴 없음, 닉네임이 마이페이지 링크) -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link" href="/party-list.html">식사팟</a>
+        <a class="app-header__link" href="/ranking.html">랭킹</a>
+      </nav>
+      <div class="app-header__user">
+        <a id="header-nickname" class="app-header__nickname" href="/mypage.html" aria-current="page" hidden></a>
+        <button id="header-logout" class="btn" type="button">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mypage">
+    <h1 class="page-title">마이페이지</h1>
+
+    <!-- ② 프로필 + 활동 건수 -->
+    <section id="mypage-profile" class="mypage-profile" aria-label="내 정보"></section>
+
+    <!-- ③ 탭 -->
+    <div class="mypage-tabs" role="tablist" aria-label="내 활동">
+      <button class="mypage-tab" type="button" role="tab" id="tab-reviews" data-tab="reviews"
+              aria-controls="mypage-panel" aria-selected="false">내 리뷰</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-parties" data-tab="parties"
+              aria-controls="mypage-panel" aria-selected="false">참여한 식사팟</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-restaurants" data-tab="restaurants"
+              aria-controls="mypage-panel" aria-selected="false">등록한 식당</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-interests" data-tab="interests"
+              aria-controls="mypage-panel" aria-selected="false">관심 식당</button>
+    </div>
+
+    <!-- ④ 탭 내용: 목록 / 로딩 / 빈 상태 / 오류 -->
+    <section id="mypage-panel" class="mypage-panel" role="tabpanel" aria-live="polite"></section>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/review.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/api/mypage.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/pages/mypage.js"></script>
+</body>
+</html>

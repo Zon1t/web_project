@@ -1,0 +1,264 @@
+/*
+ * mypage.css — 마이페이지 화면 (S-10, C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ */
+.mypage .page-title {
+  margin-bottom: var(--space-6);
+}
+
+/* ---------- 프로필 ---------- */
+.mypage-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mypage-profile .state {
+  width: 100%;
+  padding: var(--space-6);
+}
+
+.mypage-profile__nickname {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.mypage-profile__login-id {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mypage-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mypage-stat:hover {
+  background: var(--color-surface-hover);
+}
+
+.mypage-stat__count {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.mypage-stat__label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+/* ---------- 탭 ---------- */
+.mypage-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.mypage-tab {
+  flex: 0 0 auto;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font: inherit;
+  font-size: var(--font-size-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mypage-tab:hover {
+  color: var(--color-text);
+}
+
+.mypage-tab.is-selected {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.mypage-panel {
+  padding-top: var(--space-4);
+}
+
+.mypage-state {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- 목록 ---------- */
+.mypage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mypage-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* 줄 전체가 링크인 항목 (식사팟, 등록한 식당) */
+.mypage-item--link:hover {
+  background: var(--color-surface-hover);
+}
+
+.mypage-item__cover {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+
+.mypage-item__cover:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.mypage-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mypage-item__title {
+  display: inline-block;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+a.mypage-item__title:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.mypage-item__content {
+  margin-top: var(--space-1);
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.mypage-item__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-item__meta {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-item__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.mypage-item__thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-surface);
+}
+
+.mypage-item__actions {
+  flex: 0 0 auto;
+}
+
+.mypage-item__danger {
+  color: var(--color-danger);
+}
+
+.mypage-badge--confirmed {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.mypage-badge--host {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.mypage-thumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.mypage-visited--yes {
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 640px) {
+  .mypage-profile {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-4);
+  }
+
+  .mypage-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mypage-stat__count {
+    font-size: var(--font-size-lg);
+  }
+
+  .mypage-tab {
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .mypage-item {
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .mypage-item__thumb {
+    width: 56px;
+    height: 56px;
+  }
+}

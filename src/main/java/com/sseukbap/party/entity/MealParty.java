@@ -129,4 +129,19 @@ public class MealParty {
     public boolean isDeleted() {
         return status == PartyStatus.DELETED;
     }
+
+    /** 식사가 끝난 팟인지 (참여·나가기·삭제 등 불가, 409 PARTY_FINISHED) */
+    public boolean isFinished() {
+        return status == PartyStatus.FINISHED;
+    }
+
+    // ===== 상태 변경 =====
+
+    /**
+     * 소프트 삭제: 행은 남기고 상태만 DELETED로 바꾼다. (참여자·대화 행도 그대로)
+     * 방장 여부·FINISHED 검사는 Service에서 먼저 한다.
+     */
+    public void delete() {
+        this.status = this.status.afterDeleted();
+    }
 }

@@ -25,7 +25,7 @@
 2. `src/main/resources/application-local.yml.example`을 복사해 `application-local.yml`을 만들고 본인 DB 계정과 네이버 API 키를 입력해요. (이 파일은 Git에 올라가지 않아요)
 3. SQL Developer에서 `docs/sql/`의 스크립트를 순서대로 실행해 테이블을 만들어요.
 4. IntelliJ에서 프로젝트를 열고 Gradle 동기화 후 `SseukbapApplication`을 실행해요.
-5. http://localhost:8080 에 접속해요.
+5. http://localhost:8081 에 접속해요.
 
 빌드만 확인할 때는 터미널(PowerShell)에서 `.\gradlew.bat clean build -x test`를 실행해요.
 

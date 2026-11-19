@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식사팟 만들기 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/party-create.css">
+</head>
+<body>
+  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 (B의 header.css) -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link is-active" href="/party-list.html" aria-current="page">식사팟</a>
+        <a class="app-header__link" href="#">랭킹</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container party-create-page">
+    <h1 class="page-title">식사팟 만들기</h1>
+
+    <form id="party-form" class="party-form" novalidate>
+      <!-- 식당: 식당 상세에서 오면 고정, 아니면 이름 검색 -->
+      <div class="field" id="restaurant-field">
+        <span class="field__label" id="restaurant-label">식당 <span class="party-form__required" aria-hidden="true">*</span></span>
+
+        <!-- 고정·선택된 식당 -->
+        <div id="restaurant-selected" class="party-form__selected" hidden>
+          <span id="restaurant-name" class="party-form__selected-name"></span>
+          <span id="restaurant-fixed-badge" class="badge" hidden>식당 상세에서 선택됨</span>
+          <button type="button" id="restaurant-change" class="btn btn--text" hidden>다른 식당 고르기</button>
+        </div>
+
+        <!-- 이름 검색 (자동완성) -->
+        <div id="restaurant-search" class="party-form__search">
+          <input id="restaurant-input" class="input" type="text" autocomplete="off" maxlength="30"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="restaurant-options"
+                 aria-labelledby="restaurant-label" placeholder="식당 이름을 입력해 검색하세요">
+          <ul id="restaurant-options" class="party-form__options" role="listbox" aria-label="검색된 식당" hidden></ul>
+        </div>
+        <p id="restaurant-message" class="field__message">등록된 식당만 고를 수 있어요. 없으면 식당을 먼저 등록해 주세요.</p>
+      </div>
+
+      <!-- 끼니 -->
+      <fieldset class="field party-form__fieldset">
+        <legend class="field__label">끼니 <span class="party-form__required" aria-hidden="true">*</span></legend>
+        <div class="party-form__toggle">
+          <button type="button" class="party-form__toggle-btn" data-meal-type="LUNCH" aria-pressed="false">점심</button>
+          <button type="button" class="party-form__toggle-btn" data-meal-type="DINNER" aria-pressed="false">저녁</button>
+        </div>
+      </fieldset>
+
+      <!-- 식사 시간 -->
+      <div class="field">
+        <label class="field__label" for="meal-time">식사 시간 <span class="party-form__required" aria-hidden="true">*</span></label>
+        <select id="meal-time" class="select party-form__time"></select>
+        <p id="time-message" class="field__message">점심 11:00~13:30 / 저녁 17:00~19:30, 30분 단위. 지난 시간은 고를 수 없어요.</p>
+      </div>
+
+      <!-- 정원 -->
+      <div class="field">
+        <span class="field__label" id="capacity-label">정원 <span class="party-form__required" aria-hidden="true">*</span></span>
+        <div class="party-form__stepper" role="group" aria-labelledby="capacity-label">
+          <button type="button" class="btn party-form__step" data-step="-1" aria-label="정원 줄이기">−</button>
+          <output id="capacity-value" class="party-form__step-value" aria-live="polite">4명</output>
+          <button type="button" class="btn party-form__step" data-step="1" aria-label="정원 늘리기">+</button>
+          <span class="text-muted">2~12명 (본인 포함)</span>
+        </div>
+      </div>
+
+      <!-- 한마디 -->
+      <div class="field">
+        <label class="field__label" for="memo">한마디</label>
+        <input id="memo" class="input" type="text" maxlength="50" placeholder="예: 빨리 먹고 복귀해요">
+        <p class="field__message"><span id="memo-count">0</span> / 50자</p>
+      </div>
+
+      <p id="form-message" class="field__message field__message--error" role="alert"></p>
+
+      <div class="party-form__actions">
+        <a class="btn" href="/party-list.html" id="cancel-link">취소</a>
+        <button type="submit" class="btn btn--primary" id="submit-button" disabled>만들기</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/pages/party-create.js"></script>
+</body>
+</html>

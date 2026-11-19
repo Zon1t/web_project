@@ -1,0 +1,129 @@
+/* restaurant-detail.css — S-05 식당 상세 (B) */
+
+.detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+}
+
+.detail-breadcrumb a:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+/* ---------- 식당 정보 ---------- */
+.detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.detail-info__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.detail-info__name {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  word-break: break-all;
+}
+
+.detail-info__category {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.detail-info__address {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sub);
+}
+
+/* 많이 선택된 태그 TOP 3 */
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.detail-tags__label {
+  margin-right: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.detail-tag {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sub);
+}
+
+.detail-tag__count {
+  margin-left: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+/* 따봉·관심·리뷰 수 */
+.detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  font-size: var(--font-size-sm);
+}
+
+.detail-stats__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.detail-stats__item strong {
+  font-weight: var(--font-weight-bold);
+}
+
+.detail-map-link {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.detail-map-link:hover {
+  color: var(--color-primary-hover);
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.detail-actions .btn {
+  height: 48px;
+}
+
+/* ---------- 리뷰 (리뷰 기능 작업 때 채움) ---------- */
+.detail-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detail-reviews__count {
+  margin-left: var(--space-1);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}

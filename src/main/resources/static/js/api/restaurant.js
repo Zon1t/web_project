@@ -13,6 +13,20 @@
 
   global.restaurantApi = {
     /**
+     * 카테고리 코드 → 화면 표시 이름 (FE 상수, 순서 = 필터 칩 순서)
+     * 사용: restaurantApi.CATEGORY_LABELS.KOREAN → '한식'
+     */
+    CATEGORY_LABELS: Object.freeze({
+      CAFETERIA: '구내식당',
+      KOREAN: '한식',
+      CHINESE: '중식',
+      JAPANESE: '일식',
+      WESTERN: '양식',
+      SNACK: '분식',
+      ETC: '기타',
+    }),
+
+    /**
      * 식당 목록 조회 (검색·필터·지도) — GET /api/restaurants/list
      * @param {{keyword?: string, category?: string}} [condition] 빈 값이면 전체
      * @returns {Promise<Array>} [{restaurantId, name, category, cafeteria, thumbsCount30d, reviewCount, lat, lng}]

@@ -23,7 +23,7 @@
   const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
   const TOP_LIMIT = 3;
   const RESTAURANT_DETAIL_URL = '/restaurant-detail.html?id=';
-  const ROULETTE_READY = false;   // 룰렛 화면(S-11)이 생기면 true → 배너 표시
+  const ROULETTE_READY = true;    // 룰렛 화면(S-11) 완성 → 배너 표시
 
   const CAFETERIA_MESSAGES = {
     CLOSED: '오늘은 운영하지 않습니다.',

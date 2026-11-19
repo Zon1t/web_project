@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>메뉴 룰렛 | 슥밥</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/roulette.css">
+</head>
+<body>
+  <!-- ① 공통 헤더 (S-01과 동일) -->
+  <header class="app-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo" href="/">슥밥</a>
+      <nav class="app-header__nav" aria-label="주 메뉴">
+        <a class="app-header__link" href="/">구내식당</a>
+        <a class="app-header__link" href="/restaurant-list.html">식당</a>
+        <a class="app-header__link" href="/party-list.html">식사팟</a>
+        <a class="app-header__link" href="/ranking.html">랭킹</a>
+      </nav>
+      <div class="app-header__user">
+        <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
+        <button id="header-logout" class="btn" type="button">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container roulette-page">
+    <h1 class="page-title">오늘 뭐 먹지? 메뉴 룰렛</h1>
+
+    <!-- ② 카테고리 선택 (단일 선택, 기본 '전체') -->
+    <div id="roulette-categories" class="roulette-categories" role="group" aria-label="카테고리 선택"></div>
+
+    <div class="roulette-layout">
+      <!-- ③ 룰렛 휠 + ④ 돌리기 버튼 -->
+      <div class="roulette-stage">
+        <div class="roulette-wheel-box">
+          <span class="roulette-pointer" aria-hidden="true"></span>
+          <div id="roulette-wheel" class="roulette-wheel" aria-hidden="true"></div>
+          <div id="roulette-wheel-state" class="roulette-wheel-state" aria-live="polite" hidden></div>
+        </div>
+        <button id="roulette-spin" class="btn btn--primary roulette-spin" type="button" disabled>룰렛 돌리기</button>
+      </div>
+
+      <!-- ⑤ 결과 카드 -->
+      <section id="roulette-result" class="roulette-result" aria-live="polite" aria-label="룰렛 결과"></section>
+    </div>
+  </main>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/api/roulette.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/pages/roulette.js"></script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+/*
+ * roulette.css — 메뉴 룰렛 화면 (S-11, C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ */
+.roulette-page .page-title {
+  margin-bottom: var(--space-4);
+}
+
+.roulette-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.roulette-categories .chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.roulette-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 400px) 1fr;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+/* ---------- ③ 휠 ---------- */
+.roulette-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.roulette-wheel-box {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1 / 1;
+  padding-top: var(--space-4);   /* 화살표 자리 */
+}
+
+/* 12시 방향 화살표 (돌지 않는다) */
+.roulette-pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-top: 26px solid var(--color-text);
+  border-right: 14px solid transparent;
+  border-left: 14px solid transparent;
+  transform: translateX(-50%);
+}
+
+.roulette-wheel {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.roulette-wheel svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.roulette-seg {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.roulette-seg--a {
+  fill: var(--color-primary-soft);
+}
+
+.roulette-seg--b {
+  fill: var(--color-bg);
+}
+
+.roulette-label {
+  fill: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: var(--font-weight-medium);
+  pointer-events: none;
+}
+
+.roulette-slice.is-winner .roulette-seg {
+  fill: var(--color-primary);
+}
+
+.roulette-slice.is-winner .roulette-label {
+  fill: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.roulette-hub {
+  fill: var(--color-bg);
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+/* 로딩·후보 부족·오류 안내 (휠 위에 겹쳐서) */
+.roulette-wheel-state {
+  position: absolute;
+  inset: var(--space-4) 0 0;
+  z-index: 3;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.roulette-wheel-state[hidden] {
+  display: none;
+}
+
+.roulette-spin {
+  min-width: 220px;
+  min-height: 52px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ---------- ⑤ 결과 카드 ---------- */
+.roulette-result {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 240px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.roulette-result__eyebrow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-result__placeholder {
+  margin-top: var(--space-3);
+  color: var(--color-text-sub);
+}
+
+.roulette-result__name {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  word-break: keep-all;
+}
+
+.roulette-result__meta {
+  margin-top: var(--space-3);
+  color: var(--color-text-sub);
+}
+
+.roulette-result__thumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  vertical-align: middle;
+}
+
+.roulette-result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 860px) {
+  .roulette-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .roulette-wheel-box {
+    max-width: 340px;
+  }
+}
+
+@media (max-width: 640px) {
+  .roulette-result {
+    min-height: 0;
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .roulette-result__name {
+    font-size: var(--font-size-xl);
+  }
+
+  .roulette-result__actions .btn {
+    flex: 1 1 100%;
+  }
+}

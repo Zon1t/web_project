@@ -62,5 +62,33 @@
     removeInterest(restaurantId) {
       return api.delete('/restaurants/' + encodeURIComponent(restaurantId) + '/interest');
     },
+
+    /**
+     * 식당 이름 자동완성 (등록된 식당, 최대 5개) — GET /api/restaurants/autocomplete
+     * @returns {Promise<Array>} [{restaurantId, name, category}]
+     */
+    autocomplete(keyword) {
+      return api.get('/restaurants/autocomplete', { keyword });
+    },
+
+    /**
+     * 네이버 지도 URL 검증 — GET /api/restaurants/check-map-url
+     * 실패도 200: valid=false + reason(INVALID_FORMAT / DUPLICATE / NOT_FOUND) + message
+     * 오류: 400 INVALID_REQUEST, 502 MAP_API_ERROR
+     * @returns {Promise<{valid, reason, message, place: {name, address, lat, lng} | null}>}
+     */
+    checkMapUrl(url, name) {
+      return api.get('/restaurants/check-map-url', { url, name });
+    },
+
+    /**
+     * 식당 등록 — POST /api/restaurants/register
+     * 오류: 400 INVALID_REQUEST / INVALID_MAP_URL, 404 MAP_PLACE_NOT_FOUND, 409 RESTAURANT_ALREADY_EXISTS, 502 MAP_API_ERROR
+     * @param {{mapUrl: string, name: string, category: string}} restaurant category는 CAFETERIA 제외
+     * @returns {Promise<{restaurantId: number}>}
+     */
+    register(restaurant) {
+      return api.post('/restaurants/register', restaurant);
+    },
   };
 })(window);

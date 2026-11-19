@@ -5,6 +5,7 @@ import com.sseukbap.common.response.ApiResponse;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyInviteLinkResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
 import com.sseukbap.party.dto.PartyScheduleUpdateRequest;
@@ -80,6 +81,13 @@ public class PartyController {
                                          @LoginMember Long memberId) {
         partyService.deleteParty(partyId, memberId);
         return ApiResponse.success();
+    }
+
+    /** 초대 링크 조회 (참여자, 모집 중인 팟만) */
+    @GetMapping("/{partyId}/invite-link")
+    public ApiResponse<PartyInviteLinkResponse> getInviteLink(@PathVariable Long partyId,
+                                                              @LoginMember Long memberId) {
+        return ApiResponse.success(partyService.getInviteLink(partyId, memberId));
     }
 
     /** 일정 확정·수정 (방장). 수정이면 모든 참여자의 확정이 초기화된다 */

@@ -26,6 +26,8 @@
   })));
 
   const CONTENT_MAX = 100;
+  const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+  const IMAGE_ERROR_MESSAGE = 'jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다.'; // 서버 INVALID_IMAGE와 같은 문구
 
   function reviewsPath(restaurantId) {
     return '/restaurants/' + encodeURIComponent(restaurantId) + '/reviews';
@@ -47,15 +49,31 @@
 
     /**
      * 리뷰 작성 (multipart) — POST /api/restaurants/{restaurantId}/reviews
-     * 오류: 400 INVALID_REQUEST(한줄평), 400 INVALID_TAG, 404 RESTAURANT_NOT_FOUND
-     * @param {{content: string, tagIds?: number[]}} review 사진(image)은 다음 작업에서 추가
+     * 오류: 400 INVALID_REQUEST(한줄평), 400 INVALID_TAG, 400 INVALID_IMAGE, 404 RESTAURANT_NOT_FOUND
+     * @param {{content: string, tagIds?: number[], image?: File}} review image는 사진 1장 (선택, jpg·png 5MB)
      * @returns {Promise<{reviewId: number}>}
      */
     create(restaurantId, review) {
       const form = new FormData();
       form.append('content', review.content);
       (review.tagIds || []).forEach((tagId) => form.append('tagIds', tagId)); // tagIds=1&tagIds=4
+      if (review.image) form.append('image', review.image);
       return api.postForm(reviewsPath(restaurantId), form);
+    },
+
+    /**
+     * 사진 검사 (서버와 같은 기준을 화면에서 먼저 확인 → 큰 파일을 올렸다가 실패하는 일 방지)
+     * @param {File} file
+     * @returns {string|null} 문제가 있으면 오류 문구, 없으면 null
+     */
+    checkImage(file) {
+      const extension = (file.name.split('.').pop() || '').toLowerCase();
+      const okExtension = ['jpg', 'jpeg', 'png'].includes(extension);
+      const okType = ['image/jpeg', 'image/png'].includes(file.type);
+      if (!okExtension || !okType || file.size === 0 || file.size > IMAGE_MAX_BYTES) {
+        return IMAGE_ERROR_MESSAGE;
+      }
+      return null;
     },
 
     /**

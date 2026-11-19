@@ -21,6 +21,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,7 +35,8 @@ import java.util.stream.Collectors;
 /**
  * 리뷰 목록·작성·삭제. 기준: docs/API_SPEC.md 5장
  *
- * 사진(F-09)은 feature/review-image에서 추가한다. 지금은 image를 받지 않고 IMAGE_PATH = NULL로 저장한다.
+ * 사진(F-09): ReviewImageStorage가 검사·저장·삭제한다.
+ *   작성 실패(롤백) → 저장한 파일 삭제, 리뷰 삭제 → 커밋된 뒤 파일 삭제
  */
 @Service
 @RequiredArgsConstructor
@@ -49,6 +53,7 @@ public class ReviewService {
     private final TagRepository tagRepository;
     private final RestaurantRepository restaurantRepository;
     private final MemberRepository memberRepository;
+    private final ReviewImageStorage reviewImageStorage;
 
     /** 리뷰 목록 (최신순 페이징) */
     public ReviewListResponse getReviewList(Long restaurantId, Integer page, Integer size, Long memberId) {
@@ -88,10 +93,11 @@ public class ReviewService {
      * 리뷰 작성
      *
      * @param tagIds 화면에서 보낸 tagId 문자열들. 숫자가 아니거나 1~13이 아니면 INVALID_TAG
+     * @param image  사진 1장 (선택). 없거나 빈 파일이면 사진 없이 저장
      */
     @Transactional
     public ReviewCreateResponse createReview(Long restaurantId, Long memberId,
-                                             String content, List<String> tagIds) {
+                                             String content, List<String> tagIds, MultipartFile image) {
         // 1. 한줄평 검증: 앞뒤 공백 제거 후 1~100자
         String trimmed = (content == null) ? "" : content.trim();
         if (trimmed.isEmpty() || trimmed.length() > CONTENT_MAX) {
@@ -105,11 +111,16 @@ public class ReviewService {
         // 3. 태그: 중복 제거 후 모두 TAG에 있는지 확인
         List<Tag> tags = findTags(tagIds);
 
-        // 4. (사진은 feature/review-image에서 추가)
+        // 4. 사진: 검사 후 저장. 이 트랜잭션이 실패(롤백)하면 저장한 파일을 지운다 (명세 7번)
+        String imagePath = null;
+        if (image != null && !image.isEmpty()) {
+            imagePath = reviewImageStorage.save(image);
+            deleteFileOnRollback(imagePath);
+        }
 
         // 5. 리뷰 저장
         Member member = memberRepository.getReferenceById(memberId); // 로그인 회원 (SELECT 없이 참조만)
-        Review review = reviewRepository.save(Review.create(restaurant, member, trimmed, null));
+        Review review = reviewRepository.save(Review.create(restaurant, member, trimmed, imagePath));
 
         // 6. 리뷰-태그 저장 (5와 같은 트랜잭션이라 하나라도 실패하면 리뷰도 저장되지 않는다)
         reviewTagRepository.saveAll(tags.stream()
@@ -132,10 +143,38 @@ public class ReviewService {
         }
 
         // 3. REVIEW_TAG → REVIEW 순서로 삭제
+        String imagePath = review.getImagePath();
         reviewTagRepository.deleteByReview_ReviewId(reviewId);
         reviewRepository.delete(review);
 
-        // 4. (사진 파일 삭제는 feature/review-image에서 추가)
+        // 4. 사진 파일 삭제: DB 삭제가 확정(커밋)된 뒤에. 실패해도 로그만 남기고 응답은 성공
+        if (imagePath != null) {
+            runAfterCommit(() -> reviewImageStorage.delete(imagePath));
+        }
+    }
+
+    // ===== 트랜잭션이 끝난 뒤 할 일 =====
+
+    /** 이 트랜잭션이 롤백되면 방금 저장한 사진 파일을 지운다 */
+    private void deleteFileOnRollback(String imagePath) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    reviewImageStorage.delete(imagePath);
+                }
+            }
+        });
+    }
+
+    /** 이 트랜잭션이 커밋된 뒤에 실행한다 */
+    private void runAfterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 
     // ===== 내부 도우미 =====

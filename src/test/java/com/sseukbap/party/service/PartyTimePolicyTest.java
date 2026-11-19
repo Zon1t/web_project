@@ -1,6 +1,6 @@
 package com.sseukbap.party.service;
 
-import com.sseukbap.party.entity.MealType;
+import com.sseukbap.common.enums.MealType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

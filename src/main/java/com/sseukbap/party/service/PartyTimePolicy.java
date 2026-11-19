@@ -1,6 +1,6 @@
 package com.sseukbap.party.service;
 
-import com.sseukbap.party.entity.MealType;
+import com.sseukbap.common.enums.MealType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

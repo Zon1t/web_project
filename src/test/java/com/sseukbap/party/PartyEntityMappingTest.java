@@ -1,9 +1,9 @@
 package com.sseukbap.party;
 
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.member.entity.Member;
 import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.party.entity.MealParty;
-import com.sseukbap.party.entity.MealType;
 import com.sseukbap.party.entity.MessageType;
 import com.sseukbap.party.entity.PartyChat;
 import com.sseukbap.party.entity.PartyMember;

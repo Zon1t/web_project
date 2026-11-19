@@ -1,5 +1,6 @@
 package com.sseukbap.party.entity;
 
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.member.entity.Member;
 import com.sseukbap.party.service.PartyTimePolicy;
 import com.sseukbap.restaurant.entity.Restaurant;

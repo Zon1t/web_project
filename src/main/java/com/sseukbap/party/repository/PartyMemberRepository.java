@@ -3,6 +3,7 @@ package com.sseukbap.party.repository;
 import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -29,6 +30,16 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
     /** 이 팟의 현재 인원 (방장 포함) */
     @Query("select count(pm) from PartyMember pm where pm.party.partyId = :partyId")
     long countByPartyId(@Param("partyId") Long partyId);
+
+    /**
+     * 이 팟의 모든 참여자 확정을 N으로 초기화 (방장의 일정 수정 시)
+     * 한 번의 UPDATE로 처리한다. (엔티티를 하나씩 바꾸지 않고 DB에서 바로 변경)
+     * 주의: 이미 메모리에 올라온 PartyMember 객체에는 반영되지 않는다.
+     *       clearAutomatically를 쓰면 잠금으로 가져온 MealParty까지 관리 대상에서 빠지므로 쓰지 않는다.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("update PartyMember pm set pm.confirmed = false where pm.party.partyId = :partyId")
+    int resetConfirmations(@Param("partyId") Long partyId);
 
     /** 이 팟의 참여 확정 인원 */
     @Query("select count(pm) from PartyMember pm where pm.party.partyId = :partyId and pm.confirmed = true")

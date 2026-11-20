@@ -5,9 +5,12 @@
  *   restaurantMap.init(document.getElementById('restaurant-map'));  // 지도 불러오기 (한 번)
  *   restaurantMap.setRestaurants(list);   // 목록과 같은 데이터로 핀 다시 그리기 (검색·필터 때마다)
  *   restaurantMap.highlight(12);          // 목록 항목에 마우스를 올리면 핀 강조, null이면 해제
+ *   restaurantMap.onHover((id) => { ... }); // 지도 핀에 마우스를 올리면 목록도 강조하도록 (id 또는 null)
  *
  * - 지도 키: js/config.js의 window.APP_CONFIG.naverMapKeyId (Git 제외, 견본은 config.example.js)
  * - 가운데: 사옥(구내식당) 위치. 목록에 구내식당 좌표가 없으면 세종대 좌표
+ * - 핀: 슥밥 로고(brand.js)를 넣은 물방울 모양. 구내식당은 보조색(주황)
+ * - 강조된 핀(목록·핀에 마우스): 통통 튀며 커지고, 위에 툴팁(이름, 카테고리 · 따봉 수)
  * - 핀을 누르면 말풍선: 이름, 카테고리 · 따봉 수, [상세 보기]
  * - 키가 없거나 지도를 못 불러오면 지도 자리에 안내만 보여 주고, 목록은 그대로 동작한다.
  */
@@ -17,7 +20,9 @@
   const MAP_SCRIPT_URL = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=';
   const DEFAULT_CENTER = { lat: 37.5509, lng: 127.0738 }; // 세종대 (사옥 좌표가 없을 때)
   const DEFAULT_ZOOM = 16;
-  const PIN_SIZE = 28;
+  // 핀 상자 크기 (강조 때 커지는 건 CSS transform이라 상자 크기는 그대로, 핀 끝 = 좌표)
+  const PIN_WIDTH = 32;
+  const PIN_HEIGHT = 42;
 
   const esc = utils.escapeHtml;
 
@@ -29,6 +34,8 @@
   let centered = false;         // 처음 한 번만 사옥으로 가운데 맞춤
   const markers = new Map();    // restaurantId → { marker, restaurant }
   let highlightedId = null;
+  let infoOpenId = null;        // 말풍선이 열린 핀 (툴팁과 겹치지 않게)
+  let hoverCallback = null;     // 지도 핀 마우스 → 목록 강조
 
   /* ---------- 밖에서 쓰는 함수 ---------- */
 
@@ -52,6 +59,10 @@
       return;
     }
     renderMarkers(list);
+  }
+
+  function onHover(callback) {
+    hoverCallback = callback;
   }
 
   function highlight(restaurantId) {
@@ -98,7 +109,7 @@
       disableAnchor: true,
       pixelOffset: new maps.Point(0, -6),
     });
-    maps.Event.addListener(map, 'click', () => infoWindow.close()); // 빈 곳을 누르면 말풍선 닫기
+    maps.Event.addListener(map, 'click', closeInfo); // 빈 곳을 누르면 말풍선 닫기
 
     ready = true;
     if (pendingList) {
@@ -111,7 +122,7 @@
 
   function renderMarkers(list) {
     const maps = global.naver.maps;
-    infoWindow.close();
+    closeInfo();
     markers.forEach(({ marker }) => marker.setMap(null));
     markers.clear();
 
@@ -126,6 +137,14 @@
           zIndex: restaurant.cafeteria ? 50 : 10,
         });
         maps.Event.addListener(marker, 'click', () => openInfo(restaurant, marker));
+        maps.Event.addListener(marker, 'mouseover', () => {
+          highlight(restaurant.restaurantId);
+          if (hoverCallback) hoverCallback(restaurant.restaurantId);
+        });
+        maps.Event.addListener(marker, 'mouseout', () => {
+          highlight(null);
+          if (hoverCallback) hoverCallback(null);
+        });
         markers.set(restaurant.restaurantId, { marker, restaurant });
       });
 
@@ -143,11 +162,31 @@
     const classes = ['map-pin'];
     if (restaurant.cafeteria) classes.push('map-pin--cafeteria');
     if (active) classes.push('is-active');
+    const showTip = active && infoOpenId !== restaurant.restaurantId;
     return {
-      content: '<div class="' + classes.join(' ') + '"><span class="map-pin__dot"></span></div>',
-      size: new global.naver.maps.Size(PIN_SIZE, PIN_SIZE),
-      anchor: new global.naver.maps.Point(PIN_SIZE / 2, PIN_SIZE), // 핀 끝이 좌표를 가리키게
+      content:
+        '<div class="' + classes.join(' ') + '">' +
+        (showTip ? tipHtml(restaurant) : '') +
+        '<svg class="map-pin__shape" viewBox="0 0 40 52" aria-hidden="true" focusable="false">' +
+        '<path class="map-pin__body" d="M20 51 C20 51 3.5 32.5 3.5 19.5 A16.5 16.5 0 1 1 36.5 19.5 C36.5 32.5 20 51 20 51 Z"/>' +
+        '<circle cx="20" cy="19.5" r="12.5" fill="#fff"/>' +
+        '<svg class="map-pin__logo" x="9.5" y="9" width="21" height="21" viewBox="0 0 48 48">' + global.brand.LOGO_PATHS + '</svg>' +
+        '</svg>' +
+        '</div>',
+      size: new global.naver.maps.Size(PIN_WIDTH, PIN_HEIGHT),
+      anchor: new global.naver.maps.Point(PIN_WIDTH / 2, PIN_HEIGHT), // 핀 끝이 좌표를 가리키게
     };
+  }
+
+  function tipHtml(restaurant) {
+    return '<div class="map-pin__tip" role="tooltip">' +
+      '<span class="map-pin__tip-name">' + esc(restaurant.name) + '</span>' +
+      '<span class="map-pin__tip-meta">' + esc(categoryLabel(restaurant)) + ' · 따봉 ' + Number(restaurant.thumbsCount30d || 0) + '</span>' +
+      '</div>';
+  }
+
+  function categoryLabel(restaurant) {
+    return restaurantApi.CATEGORY_LABELS[restaurant.category] || restaurant.category;
   }
 
   function setPinActive(restaurantId, active) {
@@ -160,7 +199,9 @@
   /* ---------- 말풍선 ---------- */
 
   function openInfo(restaurant, marker) {
-    const categoryText = restaurantApi.CATEGORY_LABELS[restaurant.category] || restaurant.category;
+    const categoryText = categoryLabel(restaurant);
+    infoOpenId = restaurant.restaurantId;
+    if (highlightedId === infoOpenId) setPinActive(infoOpenId, true); // 툴팁 숨김
     infoWindow.setContent(
       '<div class="map-info">' +
       '<p class="map-info__name">' + esc(restaurant.name) + '</p>' +
@@ -169,6 +210,13 @@
       '</div>'
     );
     infoWindow.open(map, marker);
+  }
+
+  function closeInfo() {
+    const id = infoOpenId;
+    infoOpenId = null;
+    if (infoWindow) infoWindow.close();
+    if (id != null && id === highlightedId) setPinActive(id, true); // 툴팁 다시 표시
   }
 
   /* ---------- 상태 화면 ---------- */
@@ -189,5 +237,5 @@
       '</div>';
   }
 
-  global.restaurantMap = { init, setRestaurants, highlight };
+  global.restaurantMap = { init, setRestaurants, highlight, onHover };
 })(window);

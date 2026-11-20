@@ -34,6 +34,7 @@
   renderChips();
   bindEvents();
   restaurantMap.init(document.getElementById('restaurant-map')); // 지도는 목록과 따로 불러온다
+  restaurantMap.onHover(highlightFromMap);                       // 지도 핀에 마우스 → 목록 항목 강조
   loadList();
 
   /* ---------- 조건 ---------- */
@@ -97,6 +98,19 @@
     });
     if (item) item.classList.add('is-highlighted');
     restaurantMap.highlight(item ? item.dataset.restaurantId : null);
+  }
+
+  // 지도 핀에 마우스를 올리면 목록 항목도 강조하고, 목록 밖에 있으면 보이게 스크롤
+  function highlightFromMap(restaurantId) {
+    const item = restaurantId == null ? null
+      : els.result.querySelector('.restaurant-item[data-restaurant-id="' + restaurantId + '"]');
+    els.result.querySelectorAll('.restaurant-item.is-highlighted').forEach((el) => {
+      if (el !== item) el.classList.remove('is-highlighted');
+    });
+    if (item) {
+      item.classList.add('is-highlighted');
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
 
   /* ---------- 조회 ---------- */

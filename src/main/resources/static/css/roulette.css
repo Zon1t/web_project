@@ -33,6 +33,10 @@
   gap: var(--space-6);
 }
 
+.roulette-wheel-box.is-clickable {
+  cursor: pointer;
+}
+
 .roulette-wheel-box {
   position: relative;
   width: 100%;
@@ -41,18 +45,45 @@
   padding-top: var(--space-4);   /* 화살표 자리 */
 }
 
-/* 12시 방향 화살표 (돌지 않는다) */
+/* 12시 방향 화살표 (돌지 않는다). 칸을 지날 때마다 is-tick으로 살짝 튕긴다
+   룰렛 연출은 화면의 핵심이라 '애니메이션 줄이기' 설정에서도 끄지 않는다 (roulette.js 참고) */
 .roulette-pointer {
   position: absolute;
-  top: 0;
+  top: -4px;
   left: 50%;
-  z-index: 2;
-  width: 0;
-  height: 0;
-  border-top: 26px solid var(--color-text);
-  border-right: 14px solid transparent;
-  border-left: 14px solid transparent;
-  transform: translateX(-50%);
+  z-index: 4;
+  width: 34px;
+  height: 42px;
+  margin-left: -17px;
+  filter: drop-shadow(0 3px 3px rgba(27, 36, 48, 0.3));
+  transform-origin: 50% 30%;
+}
+
+.roulette-pointer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.roulette-pointer path {
+  fill: var(--color-accent);
+  stroke: var(--color-bg);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.roulette-pointer circle {
+  fill: var(--color-bg);
+}
+
+.roulette-pointer.is-tick {
+  animation: roulette-tick 0.14s ease-out;
+}
+
+@keyframes roulette-tick {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(-16deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .roulette-wheel {
@@ -67,44 +98,123 @@
   width: 100%;
   height: 100%;
   overflow: visible;
+  filter: drop-shadow(0 10px 18px rgba(27, 36, 48, 0.16));
 }
 
+/* 바깥 장식 링 + 불빛 */
+.roulette-rim {
+  fill: none;
+  stroke: var(--color-text-sub);   /* 진한 검정 대신 보조 글자색 */
+  stroke-width: 14;
+}
+
+.roulette-light {
+  fill: #ffe7c7;
+}
+
+.roulette-wheel.is-spinning .roulette-light {
+  animation: roulette-blink 0.5s steps(1) infinite;
+}
+
+.roulette-wheel.is-spinning .roulette-light--odd {
+  animation-delay: 0.25s;
+}
+
+@keyframes roulette-blink {
+  0%   { fill: #ffe7c7; }
+  50%  { fill: var(--color-accent); }
+}
+
+/* 칸: 연파랑 · 연주황 (홀수 개면 마지막 칸은 흰색) */
 .roulette-seg {
+  stroke: var(--color-bg);
+  stroke-width: 2;
+  transition: opacity 0.3s;
+}
+
+.roulette-seg--empty {
   fill: var(--color-surface);
-  stroke: var(--color-border);
-  stroke-width: 1;
 }
 
-.roulette-seg--a {
-  fill: var(--color-primary-soft);
-}
-
-.roulette-seg--b {
-  fill: var(--color-bg);
-}
+.roulette-slice--blue .roulette-seg { fill: var(--color-primary-soft); }
+.roulette-slice--orange .roulette-seg { fill: var(--color-accent-soft); }
+.roulette-slice--plain .roulette-seg { fill: var(--color-bg); }
 
 .roulette-label {
   fill: var(--color-text);
   font-family: var(--font-family);
-  font-size: 14px;
-  font-weight: var(--font-weight-medium);
+  font-size: 15px;
+  font-weight: var(--font-weight-bold);
   pointer-events: none;
 }
 
+
+/* 당첨: 나머지 칸은 흐리게, 당첨 칸은 한 번 커졌다 돌아온다 */
+.roulette-slice {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: opacity 0.3s;
+}
+
+.has-winner .roulette-slice:not(.is-winner) {
+  opacity: 0.3;
+}
+
+.roulette-slice.is-winner {
+  animation: roulette-win 0.7s ease-out;
+}
+
 .roulette-slice.is-winner .roulette-seg {
-  fill: var(--color-primary);
+  stroke: var(--color-accent);
+  stroke-width: 3;
 }
 
-.roulette-slice.is-winner .roulette-label {
-  fill: var(--color-on-primary);
-  font-weight: var(--font-weight-bold);
+@keyframes roulette-win {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
 
-.roulette-hub {
-  fill: var(--color-bg);
-  stroke: var(--color-border);
-  stroke-width: 2;
+/* 가운데 로고 캡 (돌지 않는다) */
+.roulette-hub-cap {
+  position: absolute;
+  top: calc(50% + var(--space-4) / 2);
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 18%;
+  aspect-ratio: 1 / 1;
+  border: 4px solid var(--color-text-sub);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  transform: translate(-50%, -50%);
 }
+
+.roulette-hub-cap__logo {
+  width: 62%;
+  height: 62%;
+  color: var(--color-primary);
+}
+
+/* 효과음 켜기·끄기 */
+.roulette-sound {
+  gap: 6px;
+  margin-top: calc(var(--space-4) * -1);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-sound svg {
+  width: 18px;
+  height: 18px;
+}
+
+.roulette-sound[aria-pressed="true"] {
+  color: var(--color-primary);
+}
+
 
 /* 로딩·후보 부족·오류 안내 (휠 위에 겹쳐서) */
 .roulette-wheel-state {
@@ -148,6 +258,30 @@
   margin-top: var(--space-3);
   color: var(--color-text-sub);
 }
+
+.roulette-result__placeholder--spinning {
+  animation: roulette-fade 1s ease-in-out infinite alternate;
+}
+
+@keyframes roulette-fade {
+  from { opacity: 1; }
+  to   { opacity: 0.45; }
+}
+
+.roulette-result.is-revealed {
+  animation: roulette-reveal 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes roulette-reveal {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.roulette-result__error {
+  margin-top: var(--space-3);
+  color: var(--color-danger);
+}
+
 
 .roulette-result__name {
   margin-top: var(--space-2);

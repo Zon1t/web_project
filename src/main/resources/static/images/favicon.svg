@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="11" fill="#2d6cdf"/>
+  <g transform="translate(6.7 6.2) scale(0.72)" fill="#ffffff">
+    <path d="M12 23 Q15 14.5 24 14.5 Q33 14.5 36 23 Z" opacity=".6"/>
+    <path d="M7 23 H41 A17 16 0 0 1 7 23 Z"/>
+    <rect x="18" y="39.5" width="12" height="3.5" rx="1.75"/>
+    <g transform="rotate(38 36 12)">
+      <ellipse cx="36" cy="8.5" rx="4" ry="5.6"/>
+      <rect x="34.6" y="12" width="2.8" height="11" rx="1.4"/>
+    </g>
+  </g>
+</svg>

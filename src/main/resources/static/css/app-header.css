@@ -1,53 +1,324 @@
 /*
- * app-header.css — 공통 헤더 오른쪽(닉네임·로그아웃) (C, 2026-11-20 확정)
- * header.css(로고·메뉴)에 덧붙이는 파일. 공통 헤더 HTML 전체는 header.css 맨 위 주석 참고.
- *
- * HTML에서 header.css 다음에 불러온다.
- *   <link rel="stylesheet" href="/css/header.css">
- *   <link rel="stylesheet" href="/css/app-header.css">
+ * app-header.css — 공통 헤더 오른쪽: 알림 자리·아바타·드롭다운 (2026-11-20 개편)
+ * header.css 다음에 불러온다. HTML은 js/components/app-header.js가 그린다.
  */
 .app-header__user {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-2);
   margin-left: auto;
+  visibility: hidden;   /* 닉네임을 받기 전에는 자리만 차지 (헤더가 흔들리지 않게) */
 }
 
-.app-header__nickname {
+.app-header__user.is-ready {
+  visibility: visible;
+}
+
+/* ---------- 따봉 알림 (종 + 패널) ---------- */
+.app-header__notice {
+  position: relative;
+}
+
+.app-header__icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.app-header__icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.app-header__icon-btn:hover,
+.app-header__icon-btn[aria-expanded="true"] {
+  border-color: var(--color-border-light);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.app-header__dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--color-bg);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.app-header__dot[hidden] {
+  display: none;
+}
+
+.app-header__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: -48px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 320px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.app-header__panel[hidden] {
+  display: none;
+}
+
+.app-header__panel-head {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.app-header__panel-eyebrow {
+  color: var(--color-accent-strong);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.app-header__panel-title {
+  line-height: var(--line-height-tight);
+}
+
+.app-header__panel-desc,
+.app-header__panel-empty {
   color: var(--color-text-sub);
   font-size: var(--font-size-sm);
 }
 
-.app-header__nickname:hover {
-  color: var(--color-text);
-  text-decoration: underline;
+.app-header__panel-empty {
+  padding: var(--space-3) 0;
+  text-align: center;
 }
 
-/* 로그아웃 버튼이 더해져 좁은 화면에서 메뉴 글자가 줄바꿈되지 않도록 */
-.app-header__logo,
-.app-header__link {
+.app-header__panel-done {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+}
+
+.app-header__panel-error:empty {
+  display: none;
+}
+
+.app-header__panel-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.app-header__panel-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.app-header__panel-actions .btn {
+  flex: 1;
+}
+
+.app-header__thumbs-btn {
+  gap: 4px;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.app-header__thumbs-btn:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+/* ---------- 룰렛 플로팅 버튼 (app-header.js가 body 끝에 붙인다) ---------- */
+.roulette-fab {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 56px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  box-shadow: 0 8px 20px rgba(232, 119, 46, 0.35);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+  transition: gap 0.2s ease, padding 0.2s ease, background-color 0.15s;
+}
+
+.roulette-fab svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  transition: transform 0.6s ease;
+}
+
+.roulette-fab__label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.25s ease;
+}
+
+.roulette-fab:hover,
+.roulette-fab:focus-visible {
+  gap: var(--space-2);
+  padding: 0 20px;
+  background: var(--color-accent-hover);
+}
+
+.roulette-fab:hover .roulette-fab__label,
+.roulette-fab:focus-visible .roulette-fab__label {
+  max-width: 120px;
+}
+
+.roulette-fab:hover svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roulette-fab,
+  .roulette-fab svg,
+  .roulette-fab__label {
+    transition: none;
+  }
+}
+
+/* ---------- 아바타 + 닉네임 버튼 ---------- */
+.app-header__user-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-2) 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  cursor: pointer;
+}
+
+.app-header__user-btn:hover,
+.app-header__user-btn[aria-expanded="true"] {
+  border-color: var(--color-border-light);
+  background: var(--color-surface);
+}
+
+.app-header__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.app-header__nickname {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
 
+.app-header__chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.app-header__user-btn[aria-expanded="true"] .app-header__chevron {
+  transform: rotate(180deg);
+}
+
+/* ---------- 드롭다운 ---------- */
+.app-header__menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 160px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.app-header__menu[hidden] {
+  display: none;
+}
+
+.app-header__menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-header__menu-item:hover,
+.app-header__menu-item:focus-visible {
+  background: var(--color-surface);
+}
+
+.app-header__menu-item[data-action="logout"] {
+  color: var(--color-text-sub);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header__chevron {
+    transition: none;
+  }
+}
+
+/* ---------- 좁은 화면: 아바타만 ---------- */
 @media (max-width: 640px) {
-  .app-header__inner {
-    gap: var(--space-3);
+  .app-header__nickname,
+  .app-header__chevron {
+    display: none;
   }
 
-  .app-header__nav {
-    gap: var(--space-3);
+  .app-header__user-btn {
+    padding: 0 4px;
   }
 
-  .app-header__user {
-    gap: var(--space-2);
+  .app-header__panel {
+    right: -52px;
+    width: min(320px, calc(100vw - 24px));
   }
 
-  .app-header__user .btn {
-    height: 36px;
-    padding: 0 var(--space-3);
-  }
-
-  .app-header__nickname {
-    display: none;   /* 좁은 화면에서는 로그아웃만 */
+  .roulette-fab {
+    right: var(--space-4);
+    bottom: var(--space-4);
+    height: 52px;
+    padding: 0 14px;
   }
 }

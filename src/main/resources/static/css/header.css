@@ -1,68 +1,81 @@
 /*
- * header.css — 공통 헤더 (B 작성, 2026-11-20 확정)
+ * header.css — 공통 헤더: 틀·로고·GNB (B, 2026-11-20 개편)
  *
- * 로그인 후 모든 화면(로그인·회원가입 제외)이 같은 헤더를 쓴다.
- * 이 파일(로고·메뉴) + app-header.css(닉네임·로그아웃) + app-header.js(동작)를 함께 쓴다.
- *
- * ▼ 새 화면을 만들 때 복사할 헤더 (현재 메뉴에 class="is-active" aria-current="page")
- *
- *   <link rel="stylesheet" href="/css/header.css">
- *   <link rel="stylesheet" href="/css/app-header.css">
- *
- *   <header class="app-header">
- *     <div class="app-header__inner">
- *       <a class="app-header__logo" href="/">슥밥</a>
- *       <nav class="app-header__nav" aria-label="주 메뉴">
- *         <a class="app-header__link" href="/">구내식당</a>
- *         <a class="app-header__link" href="/restaurant-list.html">식당</a>
- *         <a class="app-header__link" href="/party-list.html">식사팟</a>
- *         <a class="app-header__link" href="/ranking.html">랭킹</a>
- *       </nav>
- *       <div class="app-header__user">
- *         <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
- *         <button id="header-logout" class="btn" type="button">로그아웃</button>
- *       </div>
- *     </div>
- *   </header>
- *
- *   <script src="/js/api/client.js"></script>
- *   <script src="/js/utils.js"></script>
- *   <script src="/js/api/auth.js"></script>
- *   ... 도메인 API JS ...
- *   <script src="/js/components/app-header.js"></script>
- *   <script src="/js/pages/화면.js"></script>
+ * 헤더 HTML은 js/components/app-header.js가 그린다. 화면에는 자리만 둔다.
+ *   <header id="app-header" class="app-header"></header>
+ * 사용 방법은 app-header.js 맨 위 주석 참고.
+ * 오른쪽 사용자 메뉴(아바타·드롭다운) 스타일은 app-header.css.
  */
+
+/* ---------- 로고 (헤더·푸터 공통) ---------- */
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.brand-logo__mark {
+  width: 1.3em;
+  height: 1.3em;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.brand-logo__accent {
+  color: var(--color-primary);
+}
+
+.brand-logo--sm {
+  font-size: var(--font-size-lg);
+}
+
+/* ---------- 헤더 틀 ---------- */
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   height: var(--header-height);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-bg);
 }
 
+/* 본문(.container)과 같은 폭·여백으로 맞춘다 */
 .app-header__inner {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-10);
+  max-width: var(--content-max-width);
   height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* 지도 화면처럼 본문이 화면 전체 폭을 쓰면 헤더도 전체 폭 (왼쪽 여백은 지도 화면 목록과 같게) */
+.app-header--wide .app-header__inner {
+  max-width: none;
   padding: 0 var(--space-12);
 }
 
-.app-header__logo {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-}
-
+/* ---------- GNB ---------- */
 .app-header__nav {
   display: flex;
-  gap: var(--space-8);
+  align-self: stretch;
+  gap: var(--space-6);
   font-size: var(--font-size-md);
 }
 
 .app-header__link {
+  position: relative;
+  display: flex;
+  align-items: center;
   color: var(--color-text-sub);
+  white-space: nowrap;
 }
 
 .app-header__link:hover {
@@ -74,14 +87,41 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* 선택된 메뉴: 헤더 아래 선에 맞춘 파란 막대 */
+.app-header__link.is-active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-primary);
+}
+
+/* ---------- 좁은 화면 ---------- */
 @media (max-width: 640px) {
-  .app-header__inner {
-    gap: var(--space-5);
+  .app-header__inner,
+  .app-header--wide .app-header__inner {
+    gap: var(--space-4);
     padding: 0 var(--space-4);
   }
 
+  .app-header .brand-logo__text {
+    display: none;   /* 좁은 화면에서는 심볼만 */
+  }
+
+  /* 메뉴가 넘치면 가로로 밀어서 본다 */
   .app-header__nav {
+    flex: 1;
+    min-width: 0;
     gap: var(--space-4);
+    overflow-x: auto;
     font-size: var(--font-size-sm);
+    scrollbar-width: none;
+  }
+
+  .app-header__nav::-webkit-scrollbar {
+    display: none;
   }
 }

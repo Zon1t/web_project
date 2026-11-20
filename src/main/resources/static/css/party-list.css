@@ -205,7 +205,7 @@
 
 .party-empty {
   margin-top: var(--space-4);
-  border: 1px dashed var(--color-border);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
 }
 

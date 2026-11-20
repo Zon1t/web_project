@@ -1,0 +1,510 @@
+/*
+ * today-meal.css — 메인 맨 위 '오늘의 한 끼' 카드 (js/components/today-meal.js, 시안 A '진행 단계형')
+ * 색·간격은 tokens.css 변수만 쓴다. 보조색(주황)은 룰렛·따봉에만.
+ * 클래스 앞머리 tm- (today meal)
+ */
+.today-meal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 200px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- 카드 틀 ---------- */
+.tm-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.tm-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.tm-head__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-head__sub {
+  color: var(--color-text-muted);
+}
+
+.tm-head__badge {
+  margin-left: auto;
+}
+
+/* ---------- 본문: 시간 블록 | 정보 | 할 일 ---------- */
+.tm-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6) var(--space-8);
+  padding: var(--space-5) var(--space-6);
+}
+
+.tm-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  flex-shrink: 0;
+  padding: var(--space-3) 0;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.tm-time__clock {
+  font-size: 30px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.tm-time__sub {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-time--primary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+.tm-time--plain {
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+}
+
+.tm-time--accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.tm-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tm-main__name {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.tm-main__name:hover {
+  color: var(--color-primary);
+}
+
+.tm-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+}
+
+.tm-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tm-fact svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.tm-fact--muted {
+  color: var(--color-text-muted);
+}
+
+.tm-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.tm-message:empty {
+  display: none;
+}
+
+.tm-message {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.tm-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.tm-cta__note {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.tm-cta__note--warning {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-cta__note--accent {
+  color: var(--color-accent-strong);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-cta__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tm-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-height);
+  color: var(--color-accent-strong);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ---------- 진행 막대 ---------- */
+.tm-steps {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-6) var(--space-5);
+}
+
+.tm-step {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+}
+
+.tm-step::before {
+  content: '';
+  height: 4px;
+  border-radius: 4px;
+  background: var(--color-border-light);
+}
+
+.tm-step--done {
+  color: var(--color-text-sub);
+}
+
+.tm-step--done::before {
+  background: var(--color-primary);
+}
+
+.tm-step--now {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-step--now::before {
+  background: var(--color-accent);
+}
+
+/* ---------- 버튼 ---------- */
+.tm-btn--accent {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-btn--accent:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+.tm-btn--accent svg {
+  margin-right: 4px;
+}
+
+/* 식사팟 만들기: 아이콘 + 굵은 파랑 버튼 */
+.tm-btn--create {
+  gap: 6px;
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-btn--create svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- ① 빈 상태 ---------- */
+.tm-empty {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+}
+
+.tm-empty--single {
+  grid-template-columns: 1fr;
+}
+
+.tm-empty__col {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-6);
+}
+
+.tm-empty__col + .tm-empty__col {
+  border-left: 1px solid var(--color-border-light);
+}
+
+.tm-empty__col--roulette {
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.tm-col-head {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: var(--space-2);
+}
+
+.tm-col-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-col-title small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.tm-col-icon {
+  display: inline-flex;
+  color: var(--color-accent);
+}
+
+.tm-col-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tm-col-more {
+  margin-left: auto;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.tm-col-more:hover {
+  color: var(--color-primary);
+}
+
+.tm-col-desc {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+/* 모집 중인 팟 미리 보기 */
+.tm-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.tm-row:first-child {
+  border-top: 0;
+}
+
+.tm-row__time {
+  width: 48px;
+  flex-shrink: 0;
+  color: var(--color-primary-hover);
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-row__name:hover {
+  color: var(--color-primary);
+}
+
+.tm-row__meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.tm-row__join {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.tm-list__empty {
+  padding: var(--space-4) 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.tm-list__empty a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* 식사팟 만들기 강조 줄 */
+.tm-create {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.tm-create--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+}
+
+.tm-create__title {
+  font-weight: var(--font-weight-bold);
+}
+
+.tm-create--inline .tm-create__title {
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-sm);
+}
+
+.tm-create__desc {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.tm-create__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* ---------- 다음 식사팟 한 줄 ---------- */
+.tm-upcoming {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.tm-upcoming:hover {
+  background: var(--color-surface-hover);
+}
+
+.tm-upcoming__label {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.tm-upcoming__more {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 800px) {
+  .tm-empty {
+    grid-template-columns: 1fr;
+  }
+
+  .tm-empty__col + .tm-empty__col {
+    border-top: 1px solid var(--color-border-light);
+    border-left: 0;
+  }
+
+  .tm-body {
+    flex-wrap: wrap;
+  }
+
+  .tm-cta {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .tm-cta__actions .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .tm-head,
+  .tm-body,
+  .tm-empty__col {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  .tm-steps {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+
+  .tm-time {
+    width: 96px;
+  }
+
+  .tm-time__clock {
+    font-size: var(--font-size-2xl);
+  }
+
+  .tm-main__name {
+    font-size: var(--font-size-xl);
+  }
+
+  .tm-row__meta {
+    display: none;
+  }
+}

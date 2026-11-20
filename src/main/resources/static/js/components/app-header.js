@@ -1,7 +1,8 @@
 /*
  * app-header.js — 공통 헤더 오른쪽: 닉네임 표시·로그아웃 (C)
  *
- * 로그인이 필요한 화면에서 쓴다. 헤더 HTML 안에 아래 두 요소를 두고 이 파일을 불러오면 된다.
+ * 로그인 후 모든 화면의 공통 헤더에서 쓴다. (2026-11-20 확정, 헤더 HTML 전체는 css/header.css 맨 위 주석 참고)
+ * 헤더 HTML 안에 아래 두 요소를 두고 이 파일을 불러오면 된다.
  *   <div class="app-header__user">
  *     <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
  *     <button id="header-logout" class="btn" type="button">로그아웃</button>

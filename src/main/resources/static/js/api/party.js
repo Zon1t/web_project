@@ -15,6 +15,26 @@
   'use strict';
 
   const enc = encodeURIComponent;
+  const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+  /** 'YYYY-MM-DD' → Date (그 날 0시, 브라우저 시간대) */
+  function parseIsoDate(isoDate) {
+    const [y, m, d] = String(isoDate).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  /** Date → 'YYYY-MM-DD' */
+  function toIsoDate(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+
+  /** 오늘과 며칠 차이인지 (내일 = 1, 어제 = -1) */
+  function daysFromToday(isoDate) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((parseIsoDate(isoDate) - today) / 86400000);
+  }
 
   global.partyApi = {
     /** 상태 코드 → 화면 표시 이름 */
@@ -38,20 +58,83 @@
       DINNER: Object.freeze(['17:00', '17:30', '18:00', '18:30', '19:00', '19:30']),
     }),
 
+    /** 식사팟을 만들고 볼 수 있는 날짜: 오늘 ~ 14일 후 (서버 규칙과 같다, 11/20 변경) */
+    MAX_DAYS_AHEAD: 14,
+
     /** 화면 주소 */
     detailUrl(partyId) {
       return '/party-detail.html?partyId=' + enc(partyId);
     },
-    createUrl(restaurantId) {
-      return '/party-create.html' + (restaurantId ? '?restaurantId=' + enc(restaurantId) : '');
+    /** 만들기 화면. restaurantId(식당 고정)·date(날짜 미리 선택)는 둘 다 선택 */
+    createUrl(restaurantId, date) {
+      const params = [];
+      if (restaurantId) params.push('restaurantId=' + enc(restaurantId));
+      if (date) params.push('date=' + enc(date));
+      return '/party-create.html' + (params.length ? '?' + params.join('&') : '');
     },
     LIST_URL: '/party-list.html',
+
+    /* ---------- 날짜 도우미 (모든 날짜는 'YYYY-MM-DD' 문자열) ---------- */
+
+    /** 오늘 → '2026-11-20' (브라우저 시각 기준) */
+    today() {
+      return toIsoDate(new Date());
+    },
+
+    /** 'YYYY-MM-DD'에서 days일 뒤 */
+    addDays(isoDate, days) {
+      const d = parseIsoDate(isoDate);
+      d.setDate(d.getDate() + days);
+      return toIsoDate(d);
+    },
+
+    /** 오늘 ~ 14일 후 날짜 목록 (날짜 선택 칩용) */
+    selectableDates() {
+      const today = this.today();
+      const dates = [];
+      for (let i = 0; i <= this.MAX_DAYS_AHEAD; i++) dates.push(this.addDays(today, i));
+      return dates;
+    },
+
+    /** 고를 수 있는 날짜인지 (오늘 ~ 14일 후) */
+    isSelectableDate(isoDate) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(isoDate || '') && this.selectableDates().includes(isoDate);
+    },
+
+    /** 짧은 이름: 오늘 / 내일 / 11.22 (토) — 날짜 칩용 */
+    shortDateLabel(isoDate) {
+      const diff = daysFromToday(isoDate);
+      if (diff === 0) return '오늘';
+      if (diff === 1) return '내일';
+      const d = parseIsoDate(isoDate);
+      return (d.getMonth() + 1) + '.' + d.getDate() + ' (' + WEEKDAYS[d.getDay()] + ')';
+    },
+
+    /** 긴 이름: 11월 22일 (토) */
+    fullDateLabel(isoDate) {
+      const d = parseIsoDate(isoDate);
+      return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + WEEKDAYS[d.getDay()] + ')';
+    },
+
+    /** 오늘이면 '오늘', 내일이면 '내일 · 11월 21일 (금)', 그 외 '11월 22일 (토)' */
+    relativeDateLabel(isoDate) {
+      const diff = daysFromToday(isoDate);
+      if (diff === 0) return '오늘';
+      if (diff === 1) return '내일 · ' + this.fullDateLabel(isoDate);
+      return this.fullDateLabel(isoDate);
+    },
+
+    /** 오늘 팟인지 */
+    isToday(isoDate) {
+      return daysFromToday(isoDate) === 0;
+    },
 
     /* ---------- 생성·조회·삭제 ---------- */
 
     /**
      * 식사팟 생성 — POST /api/parties/create
-     * @param {{restaurantId:number, mealType:string, mealTime:string, capacity:number, memo?:string}} body
+     * @param {{restaurantId:number, partyDate?:string, mealType:string, mealTime:string, capacity:number, memo?:string}} body
+     *        partyDate는 'YYYY-MM-DD', 오늘 ~ 14일 후. 없으면 오늘
      * @returns {Promise<{partyId:number}>}
      * 오류: 400 INVALID_REQUEST·INVALID_MEAL_TIME, 404 RESTAURANT_NOT_FOUND
      */
@@ -61,14 +144,15 @@
 
     /**
      * 식사팟 목록 — GET /api/parties/list
-     * @param {{mealType?:string, status?:string, excludeJoined?:boolean, limit?:number}} [condition]
+     * @param {{date?:string, mealType?:string, status?:string, excludeJoined?:boolean, limit?:number}} [condition]
+     *        date는 'YYYY-MM-DD', 없으면 오늘
      * @returns {Promise<{lunchCount:number, dinnerCount:number, parties:Array}>}
      */
     getList(condition) {
       return api.get('/parties/list', condition);
     },
 
-    /** 내가 참여 중인 오늘 식사팟 (최대 2개) — GET /api/parties/my/today */
+    /** 내가 참여 중인 식사팟 (오늘 ~ 14일 후 중 가까운 2개, partyDate 포함) — GET /api/parties/my/today */
     getMyToday() {
       return api.get('/parties/my/today');
     },

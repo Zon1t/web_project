@@ -24,6 +24,39 @@
   font-weight: var(--font-weight-regular);
 }
 
+/* ---------- 날짜: ‹ 전날 · 달력 · 다음 날 › (오늘 ~ 14일 후) ---------- */
+.party-date-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.party-date-bar__step {
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.party-date-bar__step:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.party-date-bar__step:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.party-date-bar .btn[hidden] {
+  display: none;
+}
+
 /* ---------- 탭 ---------- */
 .party-tabs {
   display: flex;

@@ -65,6 +65,20 @@
   color: var(--color-primary);
 }
 
+/* 오늘이 아닌 팟: 제목 옆 날짜 표시 (예: 내일, 11.22 (토)) */
+.party-head__when {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  vertical-align: middle;
+}
+
 /* 상태 4단계: 모집중 › 일정 확정 › 마감 › 식사 완료 (현재 단계 강조) */
 .party-steps {
   display: flex;

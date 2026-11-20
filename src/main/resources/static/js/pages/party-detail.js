@@ -21,7 +21,6 @@
   const MEAL_TYPE_LABELS = partyApi.MEAL_TYPE_LABELS;
   const CATEGORY_LABELS = restaurantApi.CATEGORY_LABELS;
   const POLL_INTERVAL_MS = 3000;
-  const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
   const partyId = new URLSearchParams(location.search).get('partyId');
 
@@ -122,7 +121,10 @@
       '<div class="party-head__top">' +
       '<h1 id="party-title" class="party-head__title">' +
       '<a href="' + restaurantUrl + '">' + esc(d.restaurantName) + '</a> ' +
-      esc(MEAL_TYPE_LABELS[d.mealType]) + '팟</h1>' +
+      esc(MEAL_TYPE_LABELS[d.mealType]) + '팟' +
+      // 오늘이 아닌 팟은 제목 옆에 날짜를 붙여 오늘 팟과 구분한다 (11/20)
+      (partyApi.isToday(d.partyDate) ? '' : ' <span class="party-head__when">' + esc(partyApi.shortDateLabel(d.partyDate)) + '</span>') +
+      '</h1>' +
       '<span class="text-muted">' + esc(CATEGORY_LABELS[d.category] || '') + '</span>' +
       '</div>' +
       renderSteps(d.status) +
@@ -149,7 +151,9 @@
   function renderInfo(d) {
     const schedule = d.schedule;
     const rows = [
-      ['날짜', formatDate(d.partyDate)],
+      ['날짜', esc(partyApi.isToday(d.partyDate)
+        ? '오늘 · ' + partyApi.fullDateLabel(d.partyDate)
+        : partyApi.relativeDateLabel(d.partyDate))],
       ['예정 시간', esc(d.mealTime)],
       [
         '확정 일정',
@@ -652,12 +656,4 @@
     }
   }
 
-  /* ---------- 날짜 표시 ---------- */
-
-  /** '2026-11-19' → '11월 19일 (목)' */
-  function formatDate(isoDate) {
-    const [y, m, d] = String(isoDate).split('-').map(Number);
-    const weekday = WEEKDAYS[new Date(y, m - 1, d).getDay()];
-    return m + '월 ' + d + '일 (' + weekday + ')';
-  }
 })();

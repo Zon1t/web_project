@@ -144,7 +144,7 @@
 
   /* ===================== 참여 중인 식사팟 ===================== */
 
-  /** 내가 참여 중인 오늘 식사팟 카드 최대 2개. 없으면 영역 숨김. 카드를 누르면 상세(S-12) */
+  /** 내가 참여 중인 식사팟(오늘 ~ 14일 후) 카드 최대 2개. 없으면 영역 숨김. 카드를 누르면 상세(S-12) */
   async function renderMyParties(container) {
     container.hidden = false;
     container.innerHTML = section('my-parties-title', '참여 중인 식사팟', '', loading());
@@ -163,10 +163,19 @@
     }
   }
 
+  /**
+   * 참여 중인 팟 카드. 서버가 오늘 → 다가오는 날짜 → 시간 순으로 준다. (11/20 변경: 오늘 ~ 14일 후)
+   * 오늘 팟은 강조(테두리·배경·'오늘' 표시), 다가오는 팟은 날짜만 붙인 평범한 카드.
+   */
   function myPartyCard(p) {
     const place = p.meetPlace ? '만날 장소: ' + esc(p.meetPlace) : '방장이 아직 일정을 확정하지 않았어요';
+    const isToday = !p.partyDate || partyApi.isToday(p.partyDate);
+    const when = isToday
+      ? '<span class="pm-card__when pm-card__when--today">오늘</span>'
+      : '<span class="pm-card__when">' + esc(partyApi.relativeDateLabel(p.partyDate)) + '</span>';
     return (
-      '<li><a class="pm-card pm-card--mine" href="' + partyApi.detailUrl(p.partyId) + '">' +
+      '<li><a class="pm-card pm-card--mine' + (isToday ? ' pm-card--today' : '') + '" href="' + partyApi.detailUrl(p.partyId) + '">' +
+      when +
       '<span class="pm-card__top"><b class="pm-card__name">' + esc(p.restaurantName) + '</b>' + statusBadge(p.status) + '</span>' +
       '<span class="pm-card__info">' + esc(MEAL_TYPE_LABELS[p.mealType]) + ' ' + esc(p.time) +
       ' · 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명' +

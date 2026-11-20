@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
-  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/date-picker.css">
   <link rel="stylesheet" href="/css/party-list.css">
 </head>
 <body>
@@ -30,8 +30,16 @@
 
   <main class="container party-list-page">
     <div class="party-list-head">
-      <h1 class="page-title">오늘의 식사팟 <span id="today-label" class="party-list-head__date"></span></h1>
-      <a class="btn btn--primary" href="/party-create.html">식사팟 만들기</a>
+      <h1 class="page-title"><span id="list-title">오늘의 식사팟</span> <span id="today-label" class="party-list-head__date"></span></h1>
+      <a class="btn btn--primary" id="create-link" href="/party-create.html">식사팟 만들기</a>
+    </div>
+
+    <!-- 날짜: 오늘 ~ 14일 후 (11/20 추가). ‹ 전날 · 달력 · 다음 날 › -->
+    <div class="party-date-bar" role="group" aria-label="날짜 선택">
+      <button type="button" class="party-date-bar__step" id="date-prev" aria-label="전날">&lsaquo;</button>
+      <div id="date-picker"></div>
+      <button type="button" class="party-date-bar__step" id="date-next" aria-label="다음 날">&rsaquo;</button>
+      <button type="button" class="btn btn--text" id="date-today" hidden>오늘로</button>
     </div>
 
     <!-- 점심 / 저녁 탭 (건수 표시) -->
@@ -53,7 +61,7 @@
   <script src="/js/api/auth.js"></script>
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/party.js"></script>
-  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/date-picker.js"></script>
   <script src="/js/pages/party-list.js"></script>
 </body>
 </html>

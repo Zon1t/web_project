@@ -3,11 +3,13 @@
  *
  * 주소: /party-create.html               → 식당 이름 검색으로 선택
  *       /party-create.html?restaurantId=12 → 그 식당으로 고정 (식당 상세·룰렛에서 진입)
+ *       ?date=2026-11-21 을 붙이면 그 날짜를 미리 고른다 (식사팟 목록에서 진입)
  *
  * 만든 것
  *   - 식당: 고정 또는 이름 검색(입력이 멈추고 300ms 뒤 검색, ↑↓ Enter 선택)
- *   - 끼니 토글: 기본은 15시 전 점심. 오늘 남은 시간이 없는 끼니는 고를 수 없다
- *   - 식사 시간: 끼니의 30분 단위 시간 중 지난 시간은 빼고, 가장 가까운 다음 시간이 기본
+ *   - 날짜 달력: 오늘 ~ 14일 후 (11/20 추가). 오늘 남은 시간이 없으면 오늘은 고를 수 없고 내일이 기본
+ *   - 끼니 토글: 오늘이면 15시 전 점심이 기본, 미래 날짜는 점심이 기본. 남은 시간이 없는 끼니는 고를 수 없다
+ *   - 식사 시간: 오늘이면 지난 시간은 빼고 가장 가까운 다음 시간이 기본, 미래 날짜는 끼니 첫 시간이 기본
  *   - 정원 −/+: 2~12명, 기본 4명
  *   - 한마디: 최대 50자, 글자 수 표시
  *   - [만들기]: 식당·시간이 있으면 활성. 성공하면 상세(S-12)로 이동
@@ -33,6 +35,8 @@
   const restaurantInput = document.getElementById('restaurant-input');
   const restaurantOptions = document.getElementById('restaurant-options');
   const restaurantMessage = document.getElementById('restaurant-message');
+  const datePickerEl = document.getElementById('date-picker');
+  const dateMessage = document.getElementById('date-message');
   const mealButtons = Array.from(document.querySelectorAll('.party-form__toggle-btn'));
   const timeSelect = document.getElementById('meal-time');
   const timeMessage = document.getElementById('time-message');
@@ -45,10 +49,12 @@
 
   const RESTAURANT_HINT = restaurantMessage.textContent;
   const TIME_HINT = timeMessage.textContent;
+  const DATE_HINT = dateMessage.textContent;
 
   const state = {
     restaurant: null,      // {restaurantId, name, category}
     isFixed: false,        // 식당 상세에서 들어와 고정됐는지
+    partyDate: null,       // 'YYYY-MM-DD'
     mealType: null,
     capacity: 4,
     searchTimer: null,
@@ -56,6 +62,7 @@
     options: [],           // 현재 검색 결과
     activeIndex: -1,       // 키보드로 고른 검색 결과 위치
     submitting: false,
+    picker: null,          // 날짜 달력 (date-picker.js)
   };
 
   /* ---------- 시작 ---------- */
@@ -73,7 +80,7 @@
   form.addEventListener('submit', onSubmit);
 
   renderCapacity();
-  initMealType();
+  initDate();
   initRestaurant();
 
   /* ---------- 식당 ---------- */
@@ -223,9 +230,57 @@
     }
   }
 
+  /* ---------- 날짜 ---------- */
+
+  /**
+   * 날짜 달력을 만들고 기본 날짜를 고른다.
+   * ?date가 고를 수 있는 날짜면 그 날짜, 아니면 오늘. 오늘 남은 시간이 없으면 내일.
+   * 화면을 열어 둔 사이 날짜가 바뀌면 다시 불러 범위를 새로 맞춘다.
+   */
+  function initDate() {
+    const fromUrl = new URLSearchParams(location.search).get('date');
+    let date = partyApi.isSelectableDate(fromUrl) ? fromUrl : partyApi.today();
+    if (!hasAnyTime(date)) date = partyApi.addDays(partyApi.today(), 1);
+
+    const min = partyApi.today();
+    const max = partyApi.addDays(min, partyApi.MAX_DAYS_AHEAD);
+    if (state.picker) {
+      state.picker.setRange(min, max);
+      state.picker.setValue(date);
+    } else {
+      state.picker = datePicker.create(datePickerEl, {
+        value: date,
+        min,
+        max,
+        // 오늘인데 남은 식사 시간이 없으면 고를 수 없다
+        isDisabled: (d) => partyApi.isToday(d) && !hasAnyTime(d),
+        formatLabel: (d) => partyApi.relativeDateLabel(d),
+        hint: '오늘부터 2주 후까지 고를 수 있어요.',
+        label: '식사 날짜',
+        onChange: selectDate,
+      });
+    }
+    selectDate(date);
+  }
+
+  /** 날짜를 바꾸면 끼니·시간 목록을 그 날짜에 맞게 다시 만든다 */
+  function selectDate(date) {
+    state.partyDate = date;
+    setMessage(dateMessage, '', partyApi.isToday(date) ? DATE_HINT : partyApi.relativeDateLabel(date) + ' 식사팟을 만들어요.');
+    initMealType();
+  }
+
+  /** 그 날짜에 고를 수 있는 시간이 하나라도 있는지 */
+  function hasAnyTime(date) {
+    return availableTimes('LUNCH', date).length > 0 || availableTimes('DINNER', date).length > 0;
+  }
+
   /* ---------- 끼니·시간 ---------- */
 
-  /** 기본 끼니: 15시 전 점심. 그 끼니의 남은 시간이 없으면 다른 끼니 */
+  /**
+   * 기본 끼니: 오늘이면 15시 전 점심, 미래 날짜는 지금 고른 끼니를 유지(처음이면 점심).
+   * 그 끼니의 남은 시간이 없으면 다른 끼니.
+   */
   function initMealType() {
     const lunchLeft = availableTimes('LUNCH').length > 0;
     const dinnerLeft = availableTimes('DINNER').length > 0;
@@ -234,14 +289,19 @@
     });
 
     if (!lunchLeft && !dinnerLeft) {
-      // 19:30이 지나면 오늘은 만들 수 있는 식사팟이 없다
+      // 오늘 19:30이 지나면 오늘은 만들 수 있는 식사팟이 없다 (보통은 내일이 자동 선택되어 여기 오지 않음)
       timeSelect.innerHTML = '';
       timeSelect.disabled = true;
-      setMessage(timeMessage, '오늘은 더 만들 수 있는 식사 시간이 없어요. 내일 다시 만들어 주세요.', TIME_HINT);
+      setMessage(timeMessage, '이 날짜에는 더 만들 수 있는 식사 시간이 없어요. 다른 날짜를 골라 주세요.', TIME_HINT);
       updateSubmit();
       return;
     }
-    const preferred = new Date().getHours() < LUNCH_UNTIL_HOUR ? 'LUNCH' : 'DINNER';
+    let preferred;
+    if (partyApi.isToday(state.partyDate)) {
+      preferred = new Date().getHours() < LUNCH_UNTIL_HOUR ? 'LUNCH' : 'DINNER';
+    } else {
+      preferred = state.mealType || 'LUNCH';
+    }
     const usable = preferred === 'LUNCH' ? lunchLeft : dinnerLeft;
     selectMealType(usable ? preferred : (lunchLeft ? 'LUNCH' : 'DINNER'));
   }
@@ -258,8 +318,15 @@
     updateSubmit();
   }
 
-  /** 끼니의 30분 단위 시간 중 지금 이후인 것만 (서버도 같은 규칙으로 검사한다) */
-  function availableTimes(mealType) {
+  /**
+   * 끼니의 30분 단위 시간 중 고를 수 있는 것 (서버도 같은 규칙으로 검사한다)
+   * 오늘이면 지금 이후만, 미래 날짜면 전부
+   */
+  function availableTimes(mealType, date) {
+    const target = date || state.partyDate;
+    if (!partyApi.isToday(target)) {
+      return TIME_OPTIONS[mealType].slice();
+    }
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     return TIME_OPTIONS[mealType].filter((time) => {
@@ -298,6 +365,7 @@
     try {
       const result = await partyApi.create({
         restaurantId: state.restaurant.restaurantId,
+        partyDate: state.partyDate,
         mealType: state.mealType,
         mealTime: timeSelect.value,
         capacity: state.capacity,
@@ -313,6 +381,10 @@
         initMealType();
         setMessage(timeMessage, err.message + ' 시간을 다시 골라 주세요.', TIME_HINT);
         timeSelect.focus();
+      } else if (err.error === 'INVALID_REQUEST' && !partyApi.isSelectableDate(state.partyDate)) {
+        // 화면을 열어 둔 사이 날짜가 바뀌어 범위를 벗어난 경우 → 달력 범위를 새로 맞춘다
+        initDate();
+        setMessage(dateMessage, '날짜가 바뀌었어요. 날짜를 다시 골라 주세요.', DATE_HINT);
       } else if (err.error === 'RESTAURANT_NOT_FOUND') {
         clearRestaurant();
         setMessage(restaurantMessage, err.message, RESTAURANT_HINT);

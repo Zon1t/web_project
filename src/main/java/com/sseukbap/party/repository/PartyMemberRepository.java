@@ -90,4 +90,16 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
     List<PartyMember> findAllByMemberIdAndPartyDate(@Param("memberId") Long memberId,
                                                     @Param("partyDate") LocalDate partyDate,
                                                     @Param("excludedStatuses") Collection<PartyStatus> excludedStatuses);
+
+    /**
+     * 이 회원이 fromDate ~ toDate(포함)에 참여한 팟의 참여 정보 (팟·식당까지 한 번에)
+     * 메인 '참여 중인 식사팟'(오늘 ~ 14일 후)에서 쓴다.
+     */
+    @Query("select pm from PartyMember pm join fetch pm.party p join fetch p.restaurant "
+            + "where pm.member.memberId = :memberId and p.partyDate between :fromDate and :toDate "
+            + "and p.status not in :excludedStatuses")
+    List<PartyMember> findAllByMemberIdAndPartyDateBetween(@Param("memberId") Long memberId,
+                                                           @Param("fromDate") LocalDate fromDate,
+                                                           @Param("toDate") LocalDate toDate,
+                                                           @Param("excludedStatuses") Collection<PartyStatus> excludedStatuses);
 }

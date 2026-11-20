@@ -1,10 +1,11 @@
 /*
  * party-list.js — S-07 식사팟 목록 (A)
  *
- * 주소: /party-list.html (탭을 기억하려고 ?mealType=LUNCH|DINNER 를 붙인다)
+ * 주소: /party-list.html (날짜·탭을 기억하려고 ?date=YYYY-MM-DD&mealType=LUNCH|DINNER 를 붙인다)
  *
  * 만든 것
- *   - 점심 / 저녁 탭: 기본은 15시 전 점심, 이후 저녁. 탭에 건수 표시
+ *   - 날짜: 달력에서 고르기 + 전날/다음 날 버튼, 오늘 ~ 14일 후 (11/20 추가). 기본은 오늘
+ *   - 점심 / 저녁 탭: 오늘은 15시 전 점심·이후 저녁, 다른 날짜는 점심이 기본. 탭에 건수 표시
  *   - 목록: 식사 시간 빠른 순(서버 정렬). 인원 막대·상태, 한마디
  *   - 버튼: 참여 중 → [상세 보기] / 모집중·일정 확정 → [참여하기](참여 후 상세로 이동) / 정원·모집 마감 → [마감] 비활성
  *   - 행을 누르면 상세(S-12)로 이동
@@ -17,22 +18,32 @@
   const STATUS_LABELS = partyApi.STATUS_LABELS;
   const MEAL_TYPE_LABELS = partyApi.MEAL_TYPE_LABELS;
   const CATEGORY_LABELS = restaurantApi.CATEGORY_LABELS;
-  const LUNCH_TAB_UNTIL_HOUR = 15; // 15시 전에는 점심 탭이 기본
-  const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  const LUNCH_TAB_UNTIL_HOUR = 15; // 오늘은 15시 전에 점심 탭이 기본
 
   const root = document.getElementById('party-list-root');
   const message = document.getElementById('list-message');
   const tabs = Array.from(document.querySelectorAll('.party-tabs__tab'));
+  const datePrev = document.getElementById('date-prev');
+  const dateNext = document.getElementById('date-next');
+  const dateToday = document.getElementById('date-today');
+  const listTitle = document.getElementById('list-title');
+  const dateLabel = document.getElementById('today-label');
+  const createLink = document.getElementById('create-link');
 
+  const params = new URLSearchParams(location.search);
   const state = {
-    mealType: initialMealType(),
+    date: partyApi.isSelectableDate(params.get('date')) ? params.get('date') : partyApi.today(),
+    mealType: null,
     joining: false,
   };
+  state.mealType = initialMealType(params.get('mealType'));
 
   /* ---------- 시작 ---------- */
 
-  document.getElementById('today-label').textContent = formatToday();
-
+  const picker = createDatePicker();
+  datePrev.addEventListener('click', () => selectDate(partyApi.addDays(state.date, -1)));
+  dateNext.addEventListener('click', () => selectDate(partyApi.addDays(state.date, 1)));
+  dateToday.addEventListener('click', () => selectDate(partyApi.today()));
   tabs.forEach((tab) => {
     tab.addEventListener('click', () => selectTab(tab.dataset.mealType));
     tab.addEventListener('keydown', onTabKeydown);
@@ -41,11 +52,45 @@
 
   selectTab(state.mealType);
 
-  /** 주소에 ?mealType이 있으면 그 탭, 없으면 현재 시각 기준 (15시 전 점심) */
-  function initialMealType() {
-    const fromUrl = new URLSearchParams(location.search).get('mealType');
+  /** 주소에 ?mealType이 있으면 그 탭. 없으면 오늘은 15시 기준, 다른 날짜는 점심 */
+  function initialMealType(fromUrl) {
     if (fromUrl === 'LUNCH' || fromUrl === 'DINNER') return fromUrl;
+    if (!partyApi.isToday(state.date)) return 'LUNCH';
     return new Date().getHours() < LUNCH_TAB_UNTIL_HOUR ? 'LUNCH' : 'DINNER';
+  }
+
+  /* ---------- 날짜 ---------- */
+
+  function createDatePicker() {
+    return datePicker.create(document.getElementById('date-picker'), {
+      value: state.date,
+      min: partyApi.today(),
+      max: partyApi.addDays(partyApi.today(), partyApi.MAX_DAYS_AHEAD),
+      formatLabel: (d) => (partyApi.isToday(d) ? '오늘 · ' + partyApi.fullDateLabel(d) : partyApi.relativeDateLabel(d)),
+      hint: '오늘부터 2주 후까지 볼 수 있어요.',
+      label: '조회 날짜',
+      onChange: selectDate,
+    });
+  }
+
+  /** 날짜를 바꾸면 그 날짜 기본 탭으로 목록을 다시 불러온다 */
+  function selectDate(date) {
+    if (date === state.date || !partyApi.isSelectableDate(date)) return;
+    state.date = date;
+    picker.setValue(date);
+    selectTab(initialMealType(null));
+  }
+
+  /** 제목·달력·전날/다음 날 버튼·[식사팟 만들기] 링크를 지금 고른 날짜에 맞춘다 */
+  function syncDateUi() {
+    const isToday = partyApi.isToday(state.date);
+    // 오늘: '오늘의 식사팟 11월 20일 (금)' / 다른 날짜: '식사팟 내일 · 11월 21일 (토)'
+    listTitle.textContent = isToday ? '오늘의 식사팟' : '식사팟';
+    dateLabel.textContent = isToday ? partyApi.fullDateLabel(state.date) : partyApi.relativeDateLabel(state.date);
+    createLink.href = partyApi.createUrl(null, isToday ? null : state.date);
+    datePrev.disabled = !partyApi.isSelectableDate(partyApi.addDays(state.date, -1));
+    dateNext.disabled = !partyApi.isSelectableDate(partyApi.addDays(state.date, 1));
+    dateToday.hidden = isToday;
   }
 
   /* ---------- 탭 ---------- */
@@ -58,8 +103,9 @@
       tab.tabIndex = isSelected ? 0 : -1;
     });
     root.setAttribute('aria-labelledby', 'tab-' + mealType);
-    // 뒤로 가기로 돌아와도 같은 탭이 보이도록 주소에 남긴다 (새 기록은 만들지 않음)
-    history.replaceState(null, '', '?mealType=' + mealType);
+    syncDateUi();
+    // 뒤로 가기로 돌아와도 같은 날짜·탭이 보이도록 주소에 남긴다 (새 기록은 만들지 않음)
+    history.replaceState(null, '', '?date=' + state.date + '&mealType=' + mealType);
     loadList();
   }
 
@@ -79,11 +125,13 @@
   /* ---------- 조회 ---------- */
 
   async function loadList() {
-    const requested = state.mealType;
+    const requestedMeal = state.mealType;
+    const requestedDate = state.date;
     showLoading();
     try {
-      const result = await partyApi.getList({ mealType: requested });
-      if (requested !== state.mealType) return; // 그 사이 다른 탭을 눌렀으면 무시
+      const result = await partyApi.getList({ date: requestedDate, mealType: requestedMeal });
+      // 그 사이 다른 탭·날짜를 눌렀으면 늦게 온 응답은 무시
+      if (requestedMeal !== state.mealType || requestedDate !== state.date) return;
       setCounts(result.lunchCount, result.dinnerCount);
       if (result.parties.length === 0) {
         showEmpty();
@@ -156,11 +204,13 @@
 
   function showEmpty() {
     const label = MEAL_TYPE_LABELS[state.mealType];
+    const isToday = partyApi.isToday(state.date);
+    const when = isToday ? '오늘' : partyApi.relativeDateLabel(state.date);
     root.innerHTML =
       '<div class="state state--empty party-empty">' +
-      '<p class="state__title">오늘 모집 중인 ' + label + ' 식사팟이 없습니다</p>' +
-      '<p class="state__desc">첫 식사팟을 만들어 보세요. 식사가 끝난 팟은 목록에서 빠집니다.</p>' +
-      '<a class="btn btn--primary" href="/party-create.html">식사팟 만들기</a>' +
+      '<p class="state__title">' + esc(when) + ' 모집 중인 ' + label + ' 식사팟이 없습니다</p>' +
+      '<p class="state__desc">첫 식사팟을 만들어 보세요.' + (isToday ? ' 식사가 끝난 팟은 목록에서 빠집니다.' : '') + '</p>' +
+      '<a class="btn btn--primary" href="' + partyApi.createUrl(null, isToday ? null : state.date) + '">식사팟 만들기</a>' +
       '</div>';
   }
 
@@ -210,15 +260,5 @@
       await loadList();
       message.textContent = err.message;
     }
-  }
-
-  /* ---------- 날짜 ---------- */
-
-  /** 오늘 → '2026-11-19 (목)' */
-  function formatToday() {
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
-      ' (' + WEEKDAYS[now.getDay()] + ')';
   }
 })();

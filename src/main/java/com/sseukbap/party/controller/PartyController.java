@@ -49,20 +49,21 @@ public class PartyController {
     }
 
     /**
-     * 식사팟 목록 (오늘, FINISHED·DELETED 제외)
+     * 식사팟 목록 (date 날짜, 없으면 오늘. FINISHED·DELETED 제외)
      * 파라미터는 모두 선택값. 잘못된 값이면 Service에서 400 "조회 조건을 확인해 주세요."
      * (문자열로 받는 이유: 타입이 틀린 값도 같은 문구로 응답하기 위해)
      */
     @GetMapping("/list")
-    public ApiResponse<PartyListResponse> getPartyList(@RequestParam(required = false) String mealType,
+    public ApiResponse<PartyListResponse> getPartyList(@RequestParam(required = false) String date,
+                                                       @RequestParam(required = false) String mealType,
                                                        @RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String excludeJoined,
                                                        @RequestParam(required = false) String limit,
                                                        @LoginMember Long memberId) {
-        return ApiResponse.success(partyService.getPartyList(mealType, status, excludeJoined, limit, memberId));
+        return ApiResponse.success(partyService.getPartyList(date, mealType, status, excludeJoined, limit, memberId));
     }
 
-    /** 내가 참여 중인 오늘 식사팟 (최대 2개, 메인 카드용) */
+    /** 내가 참여 중인 식사팟 (오늘 ~ 14일 후 중 가까운 2개, 메인 카드용) */
     @GetMapping("/my/today")
     public ApiResponse<List<PartyMyTodayResponse>> getMyTodayPartyList(@LoginMember Long memberId) {
         return ApiResponse.success(partyService.getMyTodayPartyList(memberId));

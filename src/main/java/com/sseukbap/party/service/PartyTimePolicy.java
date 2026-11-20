@@ -25,6 +25,17 @@ public final class PartyTimePolicy {
     /** 확정 취소·나가기 마감: 기준 시간 몇 분 전까지 */
     public static final int DEADLINE_MINUTES_BEFORE = 30;
 
+    /** 식사팟을 만들고 조회할 수 있는 날짜: 오늘 ~ 오늘 + 14일 (11/20 변경, 기존 당일만) */
+    public static final int MAX_DAYS_AHEAD = 14;
+
+    /**
+     * 식사 날짜가 모집 가능한 범위(오늘 ~ 오늘+14일)인지
+     * 예) 오늘 11/20 → 11/20 true, 12/4 true(14일 후), 12/5 false, 11/19 false
+     */
+    public static boolean isWithinDateRange(LocalDate partyDate, LocalDate today) {
+        return !partyDate.isBefore(today) && !partyDate.isAfter(today.plusDays(MAX_DAYS_AHEAD));
+    }
+
     private static final LocalTime LUNCH_START = LocalTime.of(11, 0);
     private static final LocalTime LUNCH_END = LocalTime.of(13, 30);
     private static final LocalTime DINNER_START = LocalTime.of(17, 0);

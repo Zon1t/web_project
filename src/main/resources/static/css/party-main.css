@@ -135,6 +135,27 @@
   border-color: var(--color-border);
 }
 
+/* 참여 중인 팟 중 오늘 팟은 강조, 다가오는 팟은 그대로 (11/20) */
+.pm-card--today {
+  border: 2px solid var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.pm-card__when {
+  align-self: flex-start;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.pm-card__when--today {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
 .pm-card__top {
   display: flex;
   align-items: center;

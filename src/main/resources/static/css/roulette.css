@@ -2,10 +2,6 @@
  * roulette.css — 메뉴 룰렛 화면 (S-11, C)
  * 색·간격은 tokens.css 변수만 사용한다.
  */
-.roulette-page .page-title {
-  margin-bottom: var(--space-4);
-}
-
 .roulette-categories {
   display: flex;
   flex-wrap: wrap;
@@ -199,9 +195,49 @@
 }
 
 /* 효과음 켜기·끄기 */
+.roulette-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-4) * -1);
+}
+
+.roulette-refill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-refill [data-ui-icon] {
+  display: inline-flex;
+}
+
+.roulette-refill:not(:disabled):hover [data-ui-icon] {
+  transform: rotate(-90deg);
+  transition: transform 0.3s ease;
+}
+
+/* 다시 채우기: 접혔다가(out) 펴진다(in). 휠 자체는 회전값(inline)을 쓰므로 안쪽 svg에 준다 */
+.roulette-wheel.is-refill-out svg {
+  transform: scale(0.82) rotate(-25deg);
+  opacity: 0.2;
+  transition: transform 0.26s ease-in, opacity 0.26s ease-in;
+}
+
+.roulette-wheel.is-refill-in svg {
+  animation: roulette-refill-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes roulette-refill-in {
+  from { transform: scale(0.82) rotate(25deg); opacity: 0.2; }
+  to { transform: none; opacity: 1; }
+}
+
 .roulette-sound {
   gap: 6px;
-  margin-top: calc(var(--space-4) * -1);
   color: var(--color-text-sub);
   font-size: var(--font-size-sm);
 }
@@ -238,6 +274,7 @@
 
 /* ---------- ⑤ 결과 카드 ---------- */
 .roulette-result {
+  position: relative;   /* 컨페티 기준 */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -335,4 +372,43 @@
   .roulette-result__actions .btn {
     flex: 1 1 100%;
   }
+}
+
+.roulette-refill:disabled {
+  border-color: transparent;
+  background: none;
+}
+
+/* ---------- 당첨 컨페티 (roulette.js burstConfetti) ---------- */
+.roulette-confetti {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.roulette-confetti span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: roulette-confetti 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.roulette-confetti span.is-round {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+@keyframes roulette-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(0.6); }
+  35% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--rot) * 0.5)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.1), calc(var(--dy) + var(--fall))) rotate(var(--rot)) scale(0.9); }
 }

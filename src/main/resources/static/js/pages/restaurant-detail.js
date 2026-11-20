@@ -148,18 +148,24 @@
     interest.count = d.interestCount;
 
     document.getElementById('info-section').innerHTML =
+      // 머리: 식당 아바타 + 이름 + 카테고리·주소 (2026-11-20 개편)
+      '<div class="detail-hero">' +
+      ui.avatar(d.cafeteria ? 'CAFETERIA' : d.category, 64) +
+      '<div class="detail-hero__text">' +
       '<div class="detail-info__title-row">' +
       '<h1 id="restaurant-name" class="detail-info__name">' + esc(d.name) + '</h1>' +
       '<span class="badge detail-info__category">' + esc(CATEGORY_LABELS[d.category] || d.category) + '</span>' +
       '</div>' +
-      (d.address ? '<p class="detail-info__address">' + esc(d.address) + '</p>' : '') +
-      renderTopTags(d.topTags) +
-      '<div class="detail-stats">' +
-      '<span class="detail-stats__item">' + utils.thumbsUpIcon() +
-      '따봉 <strong>' + d.thumbsCount30d + '</strong> <span class="text-muted">(최근 30일)</span></span>' +
-      '<span class="detail-stats__item">관심 <strong id="interest-count">' + d.interestCount + '</strong></span>' +
-      '<span class="detail-stats__item">리뷰 <strong>' + d.reviewCount + '</strong></span>' +
+      (d.address ? '<p class="detail-info__address">' + ui.icon('pin', 16) + esc(d.address) + '</p>' : '') +
       '</div>' +
+      '</div>' +
+      // 숫자 타일
+      '<div class="detail-stats">' +
+      '<div class="detail-stat detail-stat--thumbs"><span class="detail-stat__label">' + ui.icon('thumbs', 16) + '따봉 (최근 30일)</span><strong>' + d.thumbsCount30d + '</strong></div>' +
+      '<div class="detail-stat"><span class="detail-stat__label">관심</span><strong id="interest-count">' + d.interestCount + '</strong></div>' +
+      '<div class="detail-stat"><span class="detail-stat__label">리뷰</span><strong>' + d.reviewCount + '</strong></div>' +
+      '</div>' +
+      renderTopTags(d.topTags) +
       renderMapLink(d.mapUrl) +
       '<div class="detail-actions">' +
       // 관심: 누를 때마다 등록 ↔ 해제. 상태는 aria-pressed와 채워진 하트로 표시
@@ -177,16 +183,21 @@
     renderInterest();
   }
 
+  /** 많이 선택된 태그 TOP 3: 막대그래프 (가장 많은 태그 = 100%) */
   function renderTopTags(tags) {
     if (!tags || tags.length === 0) return ''; // 선택된 태그가 없으면 줄 자체를 숨긴다
+    const max = Math.max.apply(null, tags.map((t) => t.count)) || 1;
     return (
       '<div class="detail-tags">' +
-      '<span class="detail-tags__label">많이 선택된 태그</span>' +
-      tags
-        .map((tag) =>
-          '<span class="detail-tag">#' + esc(tag.name) +
-          '<span class="detail-tag__count">' + tag.count + '</span></span>')
-        .join('') +
+      '<p class="detail-tags__label">이 식당을 이렇게 말해요</p>' +
+      '<ul class="detail-tagbars">' +
+      tags.map((tag) =>
+        '<li class="detail-tagbar">' +
+        '<span class="detail-tagbar__name">#' + esc(tag.name) + '</span>' +
+        '<span class="detail-tagbar__track"><span style="width:' + Math.round((tag.count / max) * 100) + '%"></span></span>' +
+        '<span class="detail-tagbar__count">' + tag.count + '</span>' +
+        '</li>').join('') +
+      '</ul>' +
       '</div>'
     );
   }
@@ -201,18 +212,14 @@
   }
 
   function showLoading() {
-    root.innerHTML =
-      '<div class="state state--loading">' +
-      '<span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">식당 정보를 불러오는 중…</p>' +
-      '</div>';
+    root.innerHTML = ui.skeleton('card', 2);
   }
 
   function showNotFound() {
-    document.title = '식당을 찾을 수 없습니다 | 슥밥';
+    document.title = '식당을 찾을 수 없어요 | 슥밥';
     root.innerHTML =
       '<div class="state state--empty">' +
-      '<p class="state__title">식당을 찾을 수 없습니다</p>' +
+      '<p class="state__title">식당을 찾을 수 없어요</p>' +
       '<p class="state__desc">주소가 올바른지 확인해 주세요.</p>' +
       '<a class="btn" href="/restaurant-list.html">식당 목록으로</a>' +
       '</div>';
@@ -221,7 +228,7 @@
   function showError(message) {
     root.innerHTML =
       '<div class="state state--error">' +
-      '<p class="state__title">식당 정보를 불러오지 못했습니다</p>' +
+      '<p class="state__title">식당 정보를 불러오지 못했어요</p>' +
       '<p class="state__desc">' + esc(message) + '</p>' +
       '<button type="button" class="btn" data-action="retry">다시 시도</button>' +
       '</div>';

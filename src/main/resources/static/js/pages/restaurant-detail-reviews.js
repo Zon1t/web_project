@@ -207,13 +207,15 @@
     /* ---------- 삭제 ---------- */
 
     async function deleteReview(reviewId, button) {
-      if (!global.confirm('리뷰를 삭제할까요? 삭제하면 되돌릴 수 없습니다.')) return;
+      const ok = await global.ui.confirm({ title: '리뷰를 삭제할까요?', message: '삭제하면 되돌릴 수 없어요.', confirmText: '삭제', danger: true });
+      if (!ok) return;
 
       button.disabled = true;
       try {
         await reviewApi.delete(reviewId);
         await loadFirstPage();
         onChange();
+        global.ui.toast('리뷰를 삭제했어요.');
       } catch (err) {
         if (err.statusCode === 401) return;
         if (err.error === 'REVIEW_NOT_FOUND') {
@@ -223,7 +225,7 @@
           return;
         }
         button.disabled = false;
-        global.alert(err.message);
+        global.ui.toast(err.message, { type: 'error' });
       }
     }
 
@@ -294,17 +296,13 @@
     }
 
     function showLoading() {
-      els.listArea.innerHTML =
-        '<div class="state state--loading">' +
-        '<span class="spinner" aria-hidden="true"></span>' +
-        '<p class="state__desc">리뷰를 불러오는 중…</p>' +
-        '</div>';
+      els.listArea.innerHTML = global.ui.skeleton('row', 3);
     }
 
     function showListError(message) {
       els.listArea.innerHTML =
         '<div class="state state--error">' +
-        '<p class="state__title">리뷰를 불러오지 못했습니다</p>' +
+        '<p class="state__title">리뷰를 불러오지 못했어요</p>' +
         '<p class="state__desc">' + esc(message) + '</p>' +
         '<button type="button" class="btn" data-action="retry-reviews">다시 시도</button>' +
         '</div>';

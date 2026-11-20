@@ -197,13 +197,6 @@
   transform: rotate(180deg);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .roulette-fab,
-  .roulette-fab svg,
-  .roulette-fab__label {
-    transition: none;
-  }
-}
 
 /* ---------- 아바타 + 닉네임 버튼 ---------- */
 .app-header__user-btn {
@@ -293,11 +286,6 @@
   color: var(--color-text-sub);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .app-header__chevron {
-    transition: none;
-  }
-}
 
 /* ---------- 좁은 화면: 아바타만 ---------- */
 @media (max-width: 640px) {

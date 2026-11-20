@@ -476,3 +476,124 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- 2026-11-20 개편: 머리·숫자 타일·태그 막대 ---------- */
+.is-embed .detail-breadcrumb {
+  display: none;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.detail-hero__text {
+  min-width: 0;
+}
+
+.detail-info__address {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-sub);
+}
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.detail-stat__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.detail-stat strong {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.detail-stat--thumbs {
+  background: var(--color-accent-soft);
+}
+
+.detail-stat--thumbs strong,
+.detail-stat--thumbs .detail-stat__label {
+  color: var(--color-accent-strong);
+}
+
+.detail-tags {
+  display: block;
+  margin-top: var(--space-5);
+}
+
+.detail-tags__label {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.detail-tagbars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 480px;
+}
+
+.detail-tagbar {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.detail-tagbar__name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.detail-tagbar__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.detail-tagbar__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transform-origin: left;
+  animation: detail-bar 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+@keyframes detail-bar {
+  from { transform: scaleX(0); }
+}
+
+.detail-tagbar__count {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.detail-map-link {
+  display: inline-block;
+  margin-top: var(--space-4);
+}

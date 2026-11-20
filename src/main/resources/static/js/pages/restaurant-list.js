@@ -28,6 +28,10 @@
   // 빠르게 칩을 여러 번 누르면 응답 순서가 뒤바뀔 수 있다. 마지막 요청의 응답만 화면에 그린다.
   let requestSeq = 0;
 
+  // 식당 상세 카드 (아래 '식당 상세 카드' 참고)
+  let detailModal = null;
+  let detailPushed = false;   // 카드를 열면서 주소 기록을 하나 추가했는지 (닫을 때 뒤로가기로 되돌림)
+
   /* ---------- 시작 ---------- */
 
   readConditionFromUrl();
@@ -35,7 +39,9 @@
   bindEvents();
   restaurantMap.init(document.getElementById('restaurant-map')); // 지도는 목록과 따로 불러온다
   restaurantMap.onHover(highlightFromMap);                       // 지도 핀에 마우스 → 목록 항목 강조
+  restaurantMap.onSelect((id) => openDetail(id));                // 지도 핀 클릭 → 식당 상세 카드
   loadList();
+  openDetailFromUrl();
 
   /* ---------- 조건 ---------- */
 
@@ -53,9 +59,74 @@
     const params = new URLSearchParams();
     if (condition.keyword) params.set('keyword', condition.keyword);
     if (condition.category) params.set('category', condition.category);
+    // 상세 카드가 열려 있으면 주소의 restaurantId는 남겨 둔다
+    const openId = new URLSearchParams(location.search).get('restaurantId');
+    if (openId) params.set('restaurantId', openId);
     const query = params.toString();
-    history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
+    history.replaceState(history.state, '', location.pathname + (query ? '?' + query : ''));
   }
+
+  /* ---------- 식당 상세 카드 (2026-11-20) ----------
+   * 목록 항목이나 지도 핀을 누르면 지도 위에 식당 상세 카드가 뜬다. 뒤 지도는 어둡고 흐려진다.
+   * 카드 안은 기존 식당 상세 화면(restaurant-detail.html?embed=1)을 헤더·푸터 없이 그대로 쓴다.
+   * 주소에 ?restaurantId=가 붙어서 링크 공유·뒤로가기로 닫기가 된다. [X]·Esc·바깥 클릭으로 닫으면 지도로 돌아온다.
+   */
+  function openDetail(restaurantId, fromHistory) {
+    const id = String(restaurantId);
+    if (detailModal) detailModal.close('replace');
+
+    detailModal = ui.modal({
+      size: 'xl',
+      flush: true,
+      html:
+        '<div class="rd-frame">' +
+        '<div class="rd-frame__loading">' + ui.skeleton('row', 5) + '</div>' +
+        '<iframe class="rd-frame__iframe" title="식당 상세" src="/restaurant-detail.html?id=' + encodeURIComponent(id) + '&embed=1"></iframe>' +
+        '</div>',
+      onClose: (reason) => {
+        detailModal = null;
+        if (reason === 'replace' || reason === 'popstate') return;
+        if (detailPushed) {
+          detailPushed = false;
+          history.back();
+        } else {
+          setDetailInUrl(null, false);
+        }
+      },
+    });
+    const frame = detailModal.body.querySelector('.rd-frame');
+    frame.querySelector('iframe').addEventListener('load', () => frame.classList.add('is-loaded'));
+
+    if (!fromHistory) {
+      setDetailInUrl(id, true);
+      detailPushed = true;
+    }
+  }
+
+  function openDetailFromUrl() {
+    const id = new URLSearchParams(location.search).get('restaurantId');
+    if (id) openDetail(id, true);
+  }
+
+  function setDetailInUrl(id, push) {
+    const params = new URLSearchParams(location.search);
+    if (id) params.set('restaurantId', id); else params.delete('restaurantId');
+    const query = params.toString();
+    const url = location.pathname + (query ? '?' + query : '');
+    if (push) history.pushState({ restaurantId: id }, '', url);
+    else history.replaceState(null, '', url);
+  }
+
+  // 브라우저 뒤로가기·앞으로가기
+  window.addEventListener('popstate', () => {
+    const id = new URLSearchParams(location.search).get('restaurantId');
+    if (id && !detailModal) {
+      openDetail(id, true);
+    } else if (!id && detailModal) {
+      detailPushed = false;
+      detailModal.close('popstate');
+    }
+  });
 
   /* ---------- 이벤트 ---------- */
 
@@ -78,9 +149,14 @@
       loadList();
     });
 
-    // 오류 화면의 [다시 시도]
+    // 오류 화면의 [다시 시도] / 목록 항목 → 식당 상세 카드 (Ctrl·Shift 클릭은 새 탭 등 기본 동작)
     els.result.addEventListener('click', (event) => {
       if (event.target.closest('[data-action="retry"]')) loadList();
+      const item = event.target.closest('.restaurant-item');
+      if (item && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) {
+        event.preventDefault();
+        openDetail(decodeURIComponent(item.dataset.restaurantId));
+      }
     });
 
     // 목록 항목에 마우스를 올리거나 키보드로 포커스하면 지도 핀 강조
@@ -157,11 +233,12 @@
     restaurantMap.setRestaurants(list); // 지도 핀도 같은 목록으로
 
     if (list.length === 0) {
-      els.result.innerHTML =
-        '<div class="state state--empty">' +
-        '<p class="state__title">조건에 맞는 식당이 없습니다</p>' +
-        '<p class="state__desc">검색어나 카테고리를 바꿔 보세요.</p>' +
-        '</div>';
+      els.result.innerHTML = ui.empty({
+        illust: 'map',
+        title: '조건에 맞는 식당이 없어요',
+        desc: '검색어나 카테고리를 바꾸거나, 새 식당을 등록해 보세요.',
+        actionHtml: '<a class="btn btn--primary" href="/restaurant-register.html">식당 등록</a>',
+      });
       return;
     }
 
@@ -178,6 +255,7 @@
       '<li>' +
       '<a class="restaurant-item" href="/restaurant-detail.html?id=' + encodeURIComponent(r.restaurantId) + '"' +
       ' data-restaurant-id="' + encodeURIComponent(r.restaurantId) + '">' +
+      ui.avatar(r.cafeteria ? 'CAFETERIA' : r.category, 40) +
       '<span class="restaurant-item__info">' +
       '<span class="restaurant-item__name">' + esc(r.name) + '</span>' +
       '<span class="restaurant-item__meta">' + esc(meta) + '</span>' +
@@ -194,18 +272,14 @@
 
   function showLoading() {
     els.summary.textContent = '';
-    els.result.innerHTML =
-      '<div class="state state--loading">' +
-      '<span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">식당을 불러오는 중…</p>' +
-      '</div>';
+    els.result.innerHTML = ui.skeleton('row', 5);
   }
 
   function showError(message) {
     els.summary.textContent = '';
     els.result.innerHTML =
       '<div class="state state--error">' +
-      '<p class="state__title">식당 목록을 불러오지 못했습니다</p>' +
+      '<p class="state__title">식당 목록을 불러오지 못했어요</p>' +
       '<p class="state__desc">' + utils.escapeHtml(message) + '</p>' +
       '<button type="button" class="btn" data-action="retry">다시 시도</button>' +
       '</div>';

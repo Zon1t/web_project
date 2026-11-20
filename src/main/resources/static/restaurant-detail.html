@@ -5,11 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>식당 상세 | 슥밥</title>
   <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <script>
+    // 지도 화면의 상세 카드(iframe)로 열릴 때(?embed=1): 헤더·푸터 없이, 링크는 바깥 화면에서 열리게
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.classList.add('is-embed');
+      document.write('<base target="_top">');
+    }
+  </script>
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/restaurant-detail.css">
 </head>
 <body>
@@ -61,6 +69,7 @@
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/review.js"></script>
   <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/restaurant-detail-reviews.js"></script>

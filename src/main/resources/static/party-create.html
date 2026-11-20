@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/date-picker.css">
   <link rel="stylesheet" href="/css/party-create.css">
 </head>
@@ -18,7 +19,13 @@
   <header id="app-header" class="app-header"></header>
 
   <main class="container party-create-page">
-    <h1 class="page-title">식사팟 만들기</h1>
+    <a class="ui-back" href="/party-list.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>뒤로</a>
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">식사팟 만들기</h1>
+        <p class="ui-page-head__desc">식당과 시간을 정하면 같이 먹을 사람을 모을 수 있어요.</p>
+      </div>
+    </div>
 
     <form id="party-form" class="party-form" novalidate>
       <!-- 식당: 식당 상세에서 오면 고정, 아니면 이름 검색 -->
@@ -78,8 +85,8 @@
 
       <!-- 한마디 -->
       <div class="field">
-        <label class="field__label" for="memo">한마디</label>
-        <input id="memo" class="input" type="text" maxlength="50" placeholder="예: 빨리 먹고 복귀해요">
+        <label class="field__label" for="memo">방 설명</label>
+        <input id="memo" class="input" type="text" maxlength="50" placeholder="예: 빨리 먹고 복귀해요 / 조용히 먹고 싶은 분">
         <p class="field__message"><span id="memo-count">0</span> / 50자</p>
       </div>
 
@@ -101,6 +108,7 @@
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/party.js"></script>
   <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/components/date-picker.js"></script>

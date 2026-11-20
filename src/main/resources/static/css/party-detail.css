@@ -414,3 +414,234 @@
     margin-left: 0;
   }
 }
+
+/* ===================== 리뉴얼 (방 설명·내 진행·할 일·참여자 칩·말풍선) ===================== */
+.party-head__desc {
+  margin-top: calc(var(--space-1) * -1);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-md);
+  overflow-wrap: anywhere;
+}
+
+/* 내 진행 3단계 */
+.my-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.my-progress__item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.my-progress__item:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  min-width: 12px;
+  border-radius: 1px;
+  background: var(--color-border-light);
+}
+
+.my-progress__item.is-done:not(:last-child)::after {
+  background: var(--color-primary);
+}
+
+.my-progress__dot {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.my-progress__label small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.my-progress__item.is-done {
+  color: var(--color-text);
+}
+
+.my-progress__item.is-done .my-progress__dot {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.my-progress__item.is-current {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.my-progress__item.is-current .my-progress__dot {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+/* 할 일 상자 */
+.party-todo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.party-todo > svg {
+  flex-shrink: 0;
+  color: var(--color-accent-strong);
+}
+
+.party-todo p {
+  flex: 1;
+  min-width: 180px;
+}
+
+.party-todo .btn {
+  flex-shrink: 0;
+}
+
+.party-todo--wait {
+  background: var(--color-surface);
+}
+
+.party-todo--wait > svg {
+  color: var(--color-text-muted);
+}
+
+/* 참여자 아바타 칩 */
+.party-members__item {
+  align-items: center;
+}
+
+.party-members__name {
+  flex: 1;
+}
+
+.member-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.member-avatar.is-confirmed {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.member-avatar--sm {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-xs);
+}
+
+.party-members__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 말풍선 */
+.chat-msg {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 82%;
+}
+
+.chat-msg__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-msg--mine .chat-msg__main {
+  align-items: flex-end;
+}
+
+.chat-msg__line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.chat-msg--mine .chat-msg__line {
+  flex-direction: row-reverse;
+}
+
+.chat-msg__bubble {
+  border: none;
+  border-radius: 4px 16px 16px 16px;
+  background: var(--color-surface);
+}
+
+.chat-msg--mine .chat-msg__bubble {
+  border-radius: 16px 4px 16px 16px;
+}
+
+.chat-msg__time {
+  flex-shrink: 0;
+}
+
+@keyframes chat-pop {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.chat-msg,
+.chat-system {
+  animation: chat-pop 0.22s ease-out;
+}
+
+@media (max-width: 480px) {
+  .my-progress__label small {
+    display: none;
+  }
+  .my-progress__item {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* 대화창 배경(회색) 위에서 남의 말풍선·아바타가 보이도록 흰 바탕 */
+.chat-msg:not(.chat-msg--mine) .chat-msg__bubble {
+  background: var(--color-bg);
+  box-shadow: 0 1px 2px rgba(27, 36, 48, 0.08);
+}
+
+.chat-msg__avatar {
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-border-light);
+}

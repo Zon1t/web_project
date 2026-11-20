@@ -25,7 +25,7 @@
     idNeedCheck: '아이디 중복 확인을 해 주세요.',
     passwordFormat: '비밀번호는 8~20자로 입력해 주세요.',
     passwordConfirmEmpty: '비밀번호를 한 번 더 입력해 주세요.',
-    passwordMismatch: '비밀번호가 일치하지 않습니다.',
+    passwordMismatch: '비밀번호가 일치하지 않아요.',
     passwordMatch: '비밀번호가 일치합니다.',
     nicknameFormat: '닉네임은 2~10자로 입력해 주세요.',
     nicknameAvailable: '사용할 수 있는 닉네임입니다.',

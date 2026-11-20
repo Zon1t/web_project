@@ -5,7 +5,8 @@
  *
  * 만든 것
  *   - 제목·상태 4단계, 일정 정보, 참여자 목록
- *   - 내 버튼: 참여하기 / 참여 확정 / 확정 취소 / 나가기 / 초대 링크 복사 (내 역할·상태에 따라)
+ *   - 내 버튼: 참여하기 / 참석 확정 / 확정 취소 / 나가기 / 초대 링크 복사 (내 역할·상태에 따라)
+ *   - 내 진행: ① 팟 참여 → ② 일정 확정(방장) → ③ 내 참석 확정, 할 일이 있으면 안내 상자
  *   - 방장 메뉴: 일정 확정·수정(창), 모집 마감·재개, 팟 삭제
  *   - 대화: 참여자만. 처음엔 전체, 이후 3초마다 새 메시지만(afterId 폴링). 식사 완료면 읽기 전용
  *   - 로딩 / 없는 팟 / 삭제된 팟 / 오류 화면
@@ -127,6 +128,7 @@
       '</h1>' +
       '<span class="text-muted">' + esc(CATEGORY_LABELS[d.category] || '') + '</span>' +
       '</div>' +
+      (d.memo ? '<p class="party-head__desc">' + esc(d.memo) + '</p>' : '') +
       renderSteps(d.status) +
       '</section>'
     );
@@ -159,11 +161,10 @@
         '확정 일정',
         schedule
           ? '<span class="party-info__schedule">' + esc(schedule.confirmedTime) + ' · ' + esc(schedule.meetPlace) + '</span>'
-          : '<span class="text-muted">방장이 아직 일정을 확정하지 않았습니다</span>',
+          : '<span class="text-muted">방장이 아직 일정을 정하지 않았어요</span>',
       ],
     ];
-    if (schedule && schedule.confirmMemo) rows.push(['방장 메모', esc(schedule.confirmMemo)]);
-    rows.push(['한마디', d.memo ? esc(d.memo) : '<span class="text-muted">없음</span>']);
+    if (schedule && schedule.confirmMemo) rows.push(['일정 메모', esc(schedule.confirmMemo)]);
 
     return (
       '<dl class="party-info">' +
@@ -179,24 +180,22 @@
     let body;
 
     if (d.status === 'FINISHED') {
-      body = '<p class="party-actions__done">식사가 완료된 식사팟입니다. 대화는 읽기만 할 수 있어요.</p>';
+      body = '<p class="party-actions__done">식사가 끝난 식사팟이에요. 대화는 읽기만 할 수 있어요.</p>';
     } else if (!isMember) {
       body = isJoinable
         ? row(button('join', '참여하기', 'btn--primary')) +
-          hint('참여하면 대화에 들어갈 수 있어요. 방장이 일정을 확정하면 참여를 확정해 주세요.')
+          hint('참여하면 대화방에 들어가요. 방장이 일정을 정하면 참석 확정을 한 번 더 해 주세요.')
         : row(button('', '마감', 'btn--primary', true)) +
-          hint(d.status === 'FULL' ? '정원이 가득 찼습니다.' : '방장이 모집을 마감했습니다.');
+          hint(d.status === 'FULL' ? '정원이 가득 찼어요.' : '방장이 모집을 마감했어요.');
     } else {
       const deadlinePassed = new Date() > new Date(d.cancelDeadline);
       const deadlineTime = esc(String(d.cancelDeadline).substring(11, 16));
       const buttons = [];
       const hints = [];
 
-      if (!d.schedule) {
-        hints.push('방장이 일정을 확정하면 [참여 확정]을 할 수 있어요.');
-      } else if (!d.myConfirmed) {
-        buttons.push(button('confirm', '참여 확정', 'btn--primary'));
-      } else {
+      if (d.schedule && !d.myConfirmed) {
+        // 할 일 상자 안에 [참석 확정] 버튼이 있으므로 여기서는 생략
+      } else if (d.myConfirmed) {
         buttons.push(button('cancel-confirm', '확정 취소', '', deadlinePassed));
       }
 
@@ -212,7 +211,7 @@
       if (isJoinable) {
         buttons.push(button('invite', '초대 링크 복사'));
       }
-      body = row(buttons.join('')) + hints.map(hint).join('');
+      body = renderMyProgress(d) + renderTodo(d) + row(buttons.join('')) + hints.map(hint).join('');
     }
 
     return (
@@ -221,6 +220,36 @@
       renderFeedback() +
       '</section>'
     );
+  }
+
+  /** 내 진행 3단계: ① 팟 참여 → ② 일정 확정(방장) → ③ 내 참석 확정 */
+  function renderMyProgress(d) {
+    const done = [true, !!d.schedule, !!d.myConfirmed];
+    const labels = ['팟 참여', '일정 확정 <small>방장</small>', '내 참석 확정'];
+    const current = done.indexOf(false);
+    const items = labels.map((label, i) => {
+      const cls = done[i] ? ' is-done' : i === current ? ' is-current' : '';
+      const mark = done[i] ? ui.icon('check', 14) : String(i + 1);
+      return '<li class="my-progress__item' + cls + '"' + (i === current ? ' aria-current="step"' : '') + '>' +
+        '<span class="my-progress__dot">' + mark + '</span>' +
+        '<span class="my-progress__label">' + label + '</span></li>';
+    });
+    return '<ol class="my-progress" aria-label="내 진행 상황">' + items.join('') + '</ol>';
+  }
+
+  /** 지금 내가 할 일이 있으면 눈에 띄는 상자로 */
+  function renderTodo(d) {
+    if (!d.schedule) {
+      return '<div class="party-todo party-todo--wait">' + ui.icon('clock', 18) +
+        '<p><b>방장이 일정을 정하는 중이에요.</b><br>일정이 정해지면 여기서 참석 확정을 할 수 있어요.</p></div>';
+    }
+    if (!d.myConfirmed) {
+      return '<div class="party-todo">' + ui.icon('calendar', 18) +
+        '<p><b>' + esc(d.schedule.confirmedTime) + ' · ' + esc(d.schedule.meetPlace) + '</b>(으)로 정해졌어요.<br>' +
+        '갈 수 있으면 참석 확정을 눌러 주세요.</p>' +
+        button('confirm', '참석 확정', 'btn--primary') + '</div>';
+    }
+    return '';
   }
 
   function renderFeedback() {
@@ -233,19 +262,25 @@
     const items = d.members.map((m) => {
       const name = esc(m.nickname) + (m.host ? ' <span class="badge">방장</span>' : '');
       const stateText = m.confirmed
-        ? '<span class="party-members__state is-confirmed">확정</span>'
-        : '<span class="party-members__state">미확정</span>';
-      return '<li class="party-members__item"><span class="party-members__name">' + name + '</span>' + stateText + '</li>';
+        ? '<span class="party-members__state is-confirmed">' + ui.icon('check', 12) + ' 참석 확정</span>'
+        : '<span class="party-members__state">확인 전</span>';
+      return '<li class="party-members__item">' +
+        '<span class="member-avatar' + (m.confirmed ? ' is-confirmed' : '') + '" aria-hidden="true">' + esc(initialOf(m.nickname)) + '</span>' +
+        '<span class="party-members__name">' + name + '</span>' + stateText + '</li>';
     });
     return (
       '<section aria-labelledby="members-title">' +
       '<div class="party-members__head">' +
       '<h2 id="members-title"><b>참여자 ' + d.memberCount + ' / ' + d.capacity + '명</b></h2>' +
-      '<span class="text-muted">확정 ' + d.confirmedCount + '명</span>' +
+      '<span class="text-muted">참석 확정 ' + d.confirmedCount + '명</span>' +
       '</div>' +
       '<ul>' + items.join('') + '</ul>' +
       '</section>'
     );
+  }
+
+  function initialOf(name) {
+    return String(name || '?').trim().charAt(0) || '?';
   }
 
   /** 방장 메뉴: 방장에게만, 식사 완료 전까지 */
@@ -258,7 +293,7 @@
       '<section class="party-host" aria-labelledby="host-title">' +
       '<h2 id="host-title" class="text-muted">방장 메뉴</h2>' +
       '<div class="party-host__buttons">' +
-      button('open-schedule', d.schedule ? '일정 수정' : '일정 확정') +
+      button('open-schedule', d.schedule ? '일정 수정' : '일정 정하기', d.schedule ? '' : 'btn--primary') +
       statusButton +
       button('delete', '팟 삭제', 'btn--danger') +
       '</div>' +
@@ -285,18 +320,14 @@
   /* ---------- 상태 화면 ---------- */
 
   function showLoading() {
-    root.innerHTML =
-      '<div class="state state--loading">' +
-      '<span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">식사팟을 불러오는 중…</p>' +
-      '</div>';
+    root.innerHTML = ui.skeleton('card', 3);
   }
 
   function showNotFound() {
     stopChat();
     root.innerHTML =
       '<div class="state state--empty">' +
-      '<p class="state__title">식사팟을 찾을 수 없습니다</p>' +
+      '<p class="state__title">식사팟을 찾을 수 없어요</p>' +
       '<p class="state__desc">주소가 맞는지 확인해 주세요.</p>' +
       '<a class="btn" href="' + partyApi.LIST_URL + '">식사팟 목록으로</a>' +
       '</div>';
@@ -307,7 +338,7 @@
     if (dialog.open) dialog.close();
     root.innerHTML =
       '<div class="state state--empty">' +
-      '<p class="state__title">삭제된 식사팟입니다</p>' +
+      '<p class="state__title">삭제된 식사팟이에요</p>' +
       '<p class="state__desc">방장이 식사팟을 삭제했어요. 다른 식사팟을 찾아보세요.</p>' +
       '<a class="btn btn--primary" href="' + partyApi.LIST_URL + '">식사팟 목록으로</a>' +
       '</div>';
@@ -316,7 +347,7 @@
   function showError(message) {
     root.innerHTML =
       '<div class="state state--error">' +
-      '<p class="state__title">식사팟을 불러오지 못했습니다</p>' +
+      '<p class="state__title">식사팟을 불러오지 못했어요</p>' +
       '<p class="state__desc">' + esc(message) + '</p>' +
       '<button type="button" class="btn" data-action="retry">다시 시도</button>' +
       '</div>';
@@ -341,13 +372,13 @@
         loadDetail(true);
         break;
       case 'join':
-        runAction(() => partyApi.join(partyId), '참여했습니다. 이제 대화에 참여할 수 있어요.');
+        joinParty();
         break;
       case 'confirm':
-        runAction(() => partyApi.confirm(partyId), '참여를 확정했습니다.');
+        runAction(() => partyApi.confirm(partyId), '참석 확정했어요. 맛있게 드세요!');
         break;
       case 'cancel-confirm':
-        runAction(() => partyApi.cancelConfirm(partyId), '참여 확정을 취소했습니다.');
+        cancelConfirm();
         break;
       case 'leave':
         leaveParty();
@@ -359,10 +390,10 @@
         openScheduleDialog();
         break;
       case 'close':
-        runAction(() => partyApi.close(partyId), '모집을 마감했습니다.');
+        runAction(() => partyApi.close(partyId), '모집을 마감했어요.');
         break;
       case 'reopen':
-        runAction(() => partyApi.reopen(partyId), '모집을 다시 열었습니다.');
+        runAction(() => partyApi.reopen(partyId), '모집을 다시 열었어요.');
         break;
       case 'delete':
         deleteParty();
@@ -381,7 +412,8 @@
     setButtonsDisabled(true);
     try {
       await call();
-      state.feedback = { type: 'success', text: successText };
+      state.feedback = null;
+      ui.toast(successText, { type: 'success' });
     } catch (err) {
       if (err.statusCode === 401) return;
       if (err.error === 'PARTY_DELETED') return showDeleted();
@@ -399,12 +431,37 @@
     if (!disabled) render();
   }
 
+  async function joinParty() {
+    const d = state.detail;
+    const ok = await partyJoin.ask({
+      restaurantName: d.restaurantName, category: d.category, mealType: d.mealType, time: d.mealTime,
+      partyDate: d.partyDate, memberCount: d.memberCount, capacity: d.capacity, memo: d.memo,
+    });
+    if (!ok) return;
+    runAction(() => partyApi.join(partyId), '참여했어요. 대화방에서 인사해 보세요!');
+  }
+
+  async function cancelConfirm() {
+    const ok = await ui.confirm({
+      title: '참석 확정을 취소할까요?',
+      message: '팟에는 그대로 남아 있어요. 마음이 바뀌면 다시 확정할 수 있어요.',
+      confirmText: '확정 취소',
+    });
+    if (!ok) return;
+    runAction(() => partyApi.cancelConfirm(partyId), '참석 확정을 취소했어요.');
+  }
+
   async function leaveParty() {
     const isHost = state.detail.myRole === 'HOST';
-    const question = isHost
-      ? '방장이 나가면 식사팟이 삭제됩니다. 나갈까요?'
-      : '식사팟에서 나갈까요?';
-    if (!window.confirm(question)) return;
+    const ok = await ui.confirm({
+      title: isHost ? '나가면 식사팟이 삭제돼요' : '식사팟에서 나갈까요?',
+      message: isHost
+        ? '방장이 나가면 팟이 삭제되고 되돌릴 수 없어요. 그래도 나갈까요?'
+        : '나가면 대화방에서도 빠져요.',
+      confirmText: '나가기',
+      danger: true,
+    });
+    if (!ok) return;
 
     if (state.busy) return;
     state.busy = true;
@@ -422,7 +479,13 @@
   }
 
   async function deleteParty() {
-    if (!window.confirm('식사팟을 삭제할까요? 삭제하면 되돌릴 수 없어요.')) return;
+    const ok = await ui.confirm({
+      title: '식사팟을 삭제할까요?',
+      message: '삭제하면 되돌릴 수 없어요. 참여자들에게도 사라져요.',
+      confirmText: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
 
     if (state.busy) return;
     state.busy = true;
@@ -446,7 +509,7 @@
       const text = link.text + '\n' + location.origin + link.path;
       try {
         await navigator.clipboard.writeText(text);
-        setFeedback('success', '초대 링크를 복사했습니다. 메신저에 붙여 넣어 보내 주세요.');
+        ui.toast('초대 링크를 복사했어요. 메신저에 붙여 넣어 보내 주세요.', { type: 'success' });
       } catch (copyErr) {
         // 클립보드를 쓸 수 없는 브라우저: 직접 복사할 수 있게 보여 준다
         window.prompt('아래 내용을 복사해 주세요.', text);
@@ -469,7 +532,7 @@
       return new Date(d.partyDate + 'T' + time + ':00') > now;
     });
     if (options.length === 0) {
-      setFeedback('error', '지금 고를 수 있는 시간이 없습니다. 끼니 시간이 이미 지났어요.');
+      setFeedback('error', '지금 고를 수 있는 시간이 없어요. 끼니 시간이 이미 지났어요.');
       return;
     }
 
@@ -479,7 +542,7 @@
       .join('');
     schedulePlace.value = isUpdate ? d.schedule.meetPlace : '';
     scheduleMemo.value = isUpdate && d.schedule.confirmMemo ? d.schedule.confirmMemo : '';
-    scheduleTitle.textContent = isUpdate ? '일정 수정' : '일정 확정';
+    scheduleTitle.textContent = isUpdate ? '일정 수정' : '일정 정하기';
     scheduleNotice.hidden = !isUpdate;
     scheduleMessage.textContent = '';
     schedulePlace.classList.remove('input--error');
@@ -507,12 +570,10 @@
         confirmMemo: confirmMemo || null,
       });
       dialog.close();
-      state.feedback = {
-        type: 'success',
-        text: result.confirmationsReset
-          ? '일정을 수정했습니다. 모든 참여자의 확정이 초기화되어 다시 확정을 받아야 해요.'
-          : '일정을 확정했습니다. 참여자들이 참여 확정을 할 수 있어요.',
-      };
+      state.feedback = null;
+      ui.toast(result.confirmationsReset
+        ? '일정을 바꿨어요. 모두의 참석 확정이 초기화되어 다시 받아야 해요.'
+        : '일정을 정했어요. 이제 참여자들이 참석 확정을 할 수 있어요.', { type: 'success', duration: 4000 });
       await loadDetail(false);
     } catch (err) {
       if (err.statusCode === 401) return;
@@ -580,7 +641,7 @@
         loadDetail(false);
         return;
       }
-      chatMessage.textContent = '대화를 불러오지 못했습니다. 잠시 후 다시 시도합니다.';
+      chatMessage.textContent = '대화를 불러오지 못했어요. 잠시 후 다시 시도할게요.';
     } finally {
       chat.loading = false;
       if (chat.again) {
@@ -592,7 +653,7 @@
 
   function appendChats(chats, isFirst) {
     if (chats.length === 0) {
-      if (isFirst) chatBody.innerHTML = '<p class="state__desc">아직 대화가 없습니다.</p>';
+      if (isFirst) chatBody.innerHTML = '<p class="state__desc">아직 대화가 없어요. 먼저 인사해 보세요!</p>';
       return;
     }
     // 맨 아래를 보고 있었으면 새 메시지도 따라 내려간다 (위로 올려 읽는 중이면 그대로)
@@ -615,9 +676,12 @@
     const time = esc(String(c.createdAt).substring(11, 16));
     return (
       '<div class="chat-msg' + (c.mine ? ' chat-msg--mine' : '') + '">' +
-      '<span class="chat-msg__name">' + (c.mine ? '나' : esc(c.nickname)) + '</span>' +
-      '<p class="chat-msg__bubble">' + esc(c.content) + '</p>' +
-      '<span class="chat-msg__time">' + time + '</span>' +
+      (c.mine ? '' : '<span class="member-avatar member-avatar--sm chat-msg__avatar" aria-hidden="true">' + esc(initialOf(c.nickname)) + '</span>') +
+      '<div class="chat-msg__main">' +
+      (c.mine ? '' : '<span class="chat-msg__name">' + esc(c.nickname) + '</span>') +
+      '<div class="chat-msg__line"><p class="chat-msg__bubble">' + esc(c.content) + '</p>' +
+      '<span class="chat-msg__time">' + time + '</span></div>' +
+      '</div>' +
       '</div>'
     );
   }
@@ -627,7 +691,7 @@
     chat.readOnly = readOnly;
     chatInput.disabled = readOnly;
     chatSubmit.disabled = readOnly;
-    chatInput.placeholder = readOnly ? '식사가 완료되어 메시지를 보낼 수 없습니다' : '메시지를 입력하세요';
+    chatInput.placeholder = readOnly ? '식사가 끝나서 메시지를 보낼 수 없어요' : '메시지를 입력해 주세요';
   }
 
   async function onChatSubmit(event) {

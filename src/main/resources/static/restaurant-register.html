@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/restaurant-register.css">
 </head>
 <body>
@@ -17,7 +18,13 @@
   <header id="app-header" class="app-header"></header>
 
   <main class="container register-page">
-    <h1 class="page-title">식당 등록</h1>
+    <a class="ui-back" href="/restaurant-list.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>뒤로</a>
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">식당 등록</h1>
+        <p class="ui-page-head__desc">알고 있는 맛집을 등록하면 모두가 지도에서 볼 수 있어요.</p>
+      </div>
+    </div>
 
     <form id="register-form" class="register-form" novalidate>
       <!-- 1. 네이버 지도 URL -->
@@ -41,7 +48,7 @@
         <label class="field__label" for="restaurant-name">식당 이름 <span class="register-form__required" aria-hidden="true">*</span></label>
         <input id="restaurant-name" class="input" type="text" maxlength="30" autocomplete="off" required
                placeholder="예: OO국밥 세종대점" aria-describedby="name-hint">
-        <p id="name-hint" class="field__message">지점이 여러 곳이면 지점명까지 입력해 주세요. 이 이름으로 네이버에서 주소를 찾습니다.</p>
+        <p id="name-hint" class="field__message">지점이 여러 곳이면 지점명까지 입력해 주세요. 이 이름으로 네이버에서 주소를 찾아요.</p>
         <div id="similar-names" class="similar-names" aria-live="polite"></div>
       </div>
 
@@ -75,6 +82,7 @@
   <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/restaurant-register.js"></script>

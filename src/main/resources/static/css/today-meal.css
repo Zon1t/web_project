@@ -236,15 +236,17 @@
 
 /* ---------- 버튼 ---------- */
 .tm-btn--accent {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  /* 흰 글자 대비 4.5:1 이상이 되도록 진한 주황 */
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-strong);
   color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
 }
 
 .tm-btn--accent:hover {
-  border-color: var(--color-accent-hover);
-  background: var(--color-accent-hover);
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-strong);
+  filter: brightness(0.9);
 }
 
 .tm-btn--accent svg {

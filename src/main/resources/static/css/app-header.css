@@ -1,6 +1,6 @@
 /*
- * app-header.css — 공통 헤더 오른쪽(닉네임·로그아웃) 보충 (C)
- * header.css(B)를 고치지 않고 덧붙인다. B가 공통 헤더를 확정하면 header.css로 옮겨도 된다.
+ * app-header.css — 공통 헤더 오른쪽(닉네임·로그아웃) (C, 2026-11-20 확정)
+ * header.css(로고·메뉴)에 덧붙이는 파일. 공통 헤더 HTML 전체는 header.css 맨 위 주석 참고.
  *
  * HTML에서 header.css 다음에 불러온다.
  *   <link rel="stylesheet" href="/css/header.css">

@@ -7,10 +7,11 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/restaurant-list.css">
 </head>
 <body>
-  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
+  <!-- 공통 헤더 (header.css + app-header.css + app-header.js) -->
   <header class="app-header">
     <div class="app-header__inner">
       <a class="app-header__logo" href="/">슥밥</a>
@@ -20,6 +21,10 @@
         <a class="app-header__link" href="/party-list.html">식사팟</a>
         <a class="app-header__link" href="/ranking.html">랭킹</a>
       </nav>
+      <div class="app-header__user">
+        <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
+        <button id="header-logout" class="btn" type="button">로그아웃</button>
+      </div>
     </div>
   </header>
 
@@ -56,9 +61,11 @@
   <script src="/js/config.js"></script>
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
   <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
   <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
   <script src="/js/api/restaurant.js"></script>
+  <script src="/js/components/app-header.js"></script>
   <script src="/js/pages/restaurant-map.js"></script>
   <script src="/js/pages/restaurant-list.js"></script>
 </body>

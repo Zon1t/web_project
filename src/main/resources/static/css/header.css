@@ -1,8 +1,36 @@
 /*
- * header.css — 임시 공통 헤더 (B)
+ * header.css — 공통 헤더 (B 작성, 2026-11-20 확정)
  *
- * 공통 헤더(닉네임·로그아웃 포함)는 팀 논의 후 확정한다.
- * 확정되면 이 파일과 각 HTML의 <header class="app-header"> 부분을 교체한다.
+ * 로그인 후 모든 화면(로그인·회원가입 제외)이 같은 헤더를 쓴다.
+ * 이 파일(로고·메뉴) + app-header.css(닉네임·로그아웃) + app-header.js(동작)를 함께 쓴다.
+ *
+ * ▼ 새 화면을 만들 때 복사할 헤더 (현재 메뉴에 class="is-active" aria-current="page")
+ *
+ *   <link rel="stylesheet" href="/css/header.css">
+ *   <link rel="stylesheet" href="/css/app-header.css">
+ *
+ *   <header class="app-header">
+ *     <div class="app-header__inner">
+ *       <a class="app-header__logo" href="/">슥밥</a>
+ *       <nav class="app-header__nav" aria-label="주 메뉴">
+ *         <a class="app-header__link" href="/">구내식당</a>
+ *         <a class="app-header__link" href="/restaurant-list.html">식당</a>
+ *         <a class="app-header__link" href="/party-list.html">식사팟</a>
+ *         <a class="app-header__link" href="/ranking.html">랭킹</a>
+ *       </nav>
+ *       <div class="app-header__user">
+ *         <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
+ *         <button id="header-logout" class="btn" type="button">로그아웃</button>
+ *       </div>
+ *     </div>
+ *   </header>
+ *
+ *   <script src="/js/api/client.js"></script>
+ *   <script src="/js/utils.js"></script>
+ *   <script src="/js/api/auth.js"></script>
+ *   ... 도메인 API JS ...
+ *   <script src="/js/components/app-header.js"></script>
+ *   <script src="/js/pages/화면.js"></script>
  */
 .app-header {
   position: sticky;

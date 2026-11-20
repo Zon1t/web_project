@@ -1,0 +1,552 @@
+/*
+ * ui.css — 공통 부품(js/components/ui.js)과 화면 전체 움직임 (B, 2026-11-20)
+ *
+ * - 화면 이동: 같은 사이트 안에서 페이지를 옮기면 부드럽게 바뀐다 (View Transitions, 지원 브라우저)
+ *              + 화면이 열릴 때 본문이 살짝 떠오르며 나타난다
+ * - 호버: 카드는 살짝 떠오르고, 버튼은 누를 때 살짝 눌린다
+ * - 이 움직임들은 작고 짧아서 OS '애니메이션 줄이기' 설정과 관계없이 보여 준다 (팀 결정, 2026-11-20)
+ */
+
+/* ---------- 화면 이동 ---------- */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: ui-page-out 0.18s ease-in both;
+}
+
+::view-transition-new(root) {
+  animation: ui-page-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* 헤더는 화면이 바뀌어도 그대로 있는 것처럼 */
+.app-header {
+  view-transition-name: app-header;
+}
+
+@keyframes ui-page-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes ui-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+/* 화면이 처음 열릴 때 본문이 살짝 떠오른다 */
+body > main {
+  animation: ui-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes ui-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+/* ---------- 호버·누름 ---------- */
+.btn {
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.btn--primary:not(:disabled):hover {
+  box-shadow: 0 6px 14px rgba(45, 108, 223, 0.28);
+}
+
+/* 떠오르는 카드: 화면마다 쓰는 카드 클래스에 공통 적용 */
+.ui-lift,
+.pm-card,
+.tm-card,
+.today-meal__party,
+.main-card,
+.cafeteria-meal,
+.party-card,
+.rk-podium__item,
+.rk-row {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, border-color 0.2s;
+}
+
+.ui-lift:hover,
+.pm-card:hover,
+.party-card:hover,
+.rk-podium__item:hover,
+.rk-row:hover,
+.cafeteria-meal:hover,
+.main-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.chip {
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+a,
+.app-header__link {
+  transition: color 0.15s;
+}
+
+/* ---------- 식당 아바타 ---------- */
+.ui-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 28%;
+}
+
+.ui-avatar svg {
+  width: 64%;
+  height: 64%;
+}
+
+.ui-avatar--korean    { background: #fdeee3; color: #d8641c; }
+.ui-avatar--chinese   { background: #fde8e8; color: #c94040; }
+.ui-avatar--japanese  { background: #ddf6ef; color: #0b7360; }
+.ui-avatar--western   { background: #e3eeff; color: #2459bd; }
+.ui-avatar--snack     { background: #fff3cf; color: #a46a00; }
+.ui-avatar--etc       { background: #eceff3; color: #4a5563; }
+.ui-avatar--cafeteria { background: #e8f0ff; color: #2d6cdf; }
+
+/* ---------- 일러스트 · 빈 상태 ---------- */
+.ui-illust {
+  display: block;
+  width: 160px;
+  height: 120px;
+}
+
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.ui-empty__illust {
+  width: 128px;
+  height: 96px;
+  margin-bottom: var(--space-2);
+}
+
+.ui-empty__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.ui-empty__desc {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.ui-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* ---------- 토스트 ---------- */
+.ui-toasts {
+  position: fixed;
+  bottom: var(--space-8);
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(480px, calc(100vw - 32px));
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  box-shadow: var(--shadow-md);
+  color: var(--color-on-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: ui-toast-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.ui-toast--success .ui-icon { color: #7ee2c6; }
+.ui-toast--error .ui-icon   { color: #ff9b9b; }
+
+.ui-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+@keyframes ui-toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+}
+
+/* ---------- 모달 ---------- */
+html.has-modal {
+  overflow: hidden;
+}
+
+.ui-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+
+.ui-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(27, 36, 48, 0.42);
+  backdrop-filter: blur(4px);
+  animation: ui-fade-in 0.2s ease both;
+}
+
+.ui-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - var(--space-12));
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--color-bg);
+  box-shadow: 0 24px 60px rgba(27, 36, 48, 0.28);
+  animation: ui-modal-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.ui-modal--sm .ui-modal__panel { max-width: 400px; }
+.ui-modal--md .ui-modal__panel { max-width: 520px; }
+.ui-modal--lg .ui-modal__panel { max-width: 760px; }
+.ui-modal--xl .ui-modal__panel { max-width: 960px; height: calc(100vh - var(--space-12)); }
+
+.ui-modal__head {
+  padding: var(--space-6) var(--space-12) 0 var(--space-6);
+}
+
+.ui-modal__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.ui-modal__close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-sub);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.ui-modal__close:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  transform: rotate(90deg);
+}
+
+.ui-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
+.ui-modal--flush .ui-modal__body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ui-modal.is-leaving .ui-modal__backdrop { animation: ui-fade-out 0.2s ease both; }
+.ui-modal.is-leaving .ui-modal__panel    { animation: ui-modal-out 0.2s ease both; }
+
+@keyframes ui-fade-in  { from { opacity: 0; } }
+@keyframes ui-fade-out { to { opacity: 0; } }
+
+@keyframes ui-modal-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+}
+
+@keyframes ui-modal-out {
+  to { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+
+.ui-confirm__message {
+  color: var(--color-text-sub);
+  white-space: pre-line;
+}
+
+.ui-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+/* ---------- 스켈레톤 ---------- */
+.ui-skels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-skels--card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.ui-skel {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.ui-skel--card {
+  flex-direction: column;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+
+.ui-skel--row {
+  align-items: center;
+  padding: var(--space-3) 0;
+}
+
+.ui-skel__stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-skel__circle,
+.ui-skel__line {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #eef1f5 0%, #f7f9fb 40%, #eef1f5 80%);
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.2s linear infinite;
+}
+
+.ui-skel__circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 28%;
+}
+
+.ui-skel__line {
+  width: 70%;
+  height: 12px;
+}
+
+.ui-skel__line--lg { width: 45%; height: 16px; }
+.ui-skel__line--sm { width: 30%; }
+
+@keyframes ui-shimmer {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+
+/* ---------- 화면 제목 영역 (모든 화면 공통 틀) ---------- */
+.ui-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.ui-page-head__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+}
+
+.ui-page-head__desc {
+  margin-top: var(--space-1);
+  color: var(--color-text-sub);
+}
+
+.ui-page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .ui-modal {
+    align-items: end;
+    padding: 0;
+  }
+
+  .ui-modal__panel {
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .ui-modal--xl .ui-modal__panel {
+    height: 92vh;
+  }
+}
+
+/* ---------- 지도 화면의 식당 상세 카드 (restaurant-detail.html?embed=1을 iframe으로) ---------- */
+.is-embed .app-footer,
+.is-embed .roulette-fab {
+  display: none;
+}
+
+.is-embed body > main {
+  animation: none;
+}
+
+.rd-frame {
+  position: relative;
+  height: 100%;
+}
+
+.rd-frame__loading {
+  position: absolute;
+  inset: 0;
+  padding: var(--space-10) var(--space-8);
+  background: var(--color-bg);
+  transition: opacity 0.2s;
+}
+
+.rd-frame.is-loaded .rd-frame__loading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rd-frame__iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ===================== 식사팟 참여 확인 창 (party-join.js) ===================== */
+.pj-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.pj-summary__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pj-summary__text {
+  min-width: 0;
+}
+
+.pj-summary__name {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.pj-summary__name small {
+  margin-left: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.pj-summary__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.pj-summary__desc {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.pj-badge {
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.pj-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.pj-steps li b:first-child {
+  display: inline-block;
+  min-width: 44px;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pj-steps li.is-now,
+.pj-steps li.is-now b:first-child {
+  color: var(--color-primary);
+}
+
+/* ===================== 뒤로 가기 링크 (data-ui-back) ===================== */
+.ui-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 var(--space-3) calc(var(--space-2) * -1);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-back:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ui-back [data-ui-icon] {
+  display: inline-flex;
+  transform: rotate(180deg);   /* 오른쪽 화살표를 뒤집어 '‹' 로 */
+}

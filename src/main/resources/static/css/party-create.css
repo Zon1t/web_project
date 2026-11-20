@@ -126,7 +126,7 @@
 .party-form__toggle-btn[aria-pressed="true"] {
   border: 2px solid var(--color-primary);
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-primary-hover);   /* 연파랑 바탕 위 글자 대비 */
   font-weight: var(--font-weight-bold);
 }
 

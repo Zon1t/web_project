@@ -49,6 +49,7 @@
   const pointerEl = document.getElementById('roulette-pointer');
   const spinButton = document.getElementById('roulette-spin');
   const soundButton = document.getElementById('roulette-sound');
+  const refillButton = document.getElementById('roulette-refill');
   const resultEl = document.getElementById('roulette-result');
 
   let category = null;            // null = 전체
@@ -61,6 +62,8 @@
   let lastTickAt = 0;
   let soundOn = readSoundSetting();
   let audioCtx = null;
+  let refilling = false;
+  let lastTotalCount = 0;
 
   /* ---------- 시작 ---------- */
 
@@ -82,6 +85,7 @@
   });
 
   spinButton.addEventListener('click', spin);
+  refillButton.addEventListener('click', refill);
 
   // 룰렛판을 눌러도 돌아간다 (안내·오류 상자를 누른 경우는 제외)
   wheelBoxEl.addEventListener('click', (event) => {
@@ -121,16 +125,22 @@
 
   /* ---------- ③ 후보 + 휠 ---------- */
 
-  async function loadCandidates() {
+  /**
+   * 후보를 불러와 휠을 그린다.
+   * quiet: '다시 채우기'일 때는 로딩 상자를 띄우지 않는다 (휠이 접혔다 펴지는 애니메이션으로 대신)
+   * 서버가 무작위로 고른 후보를 주지만, 후보 수가 적으면 같은 식당만 올 수 있어 순서도 한 번 섞는다.
+   */
+  async function loadCandidates(quiet) {
     const seq = ++loadSeq;
     spinnable = false;
     updateControls();
-    showWheelState('<span class="spinner" aria-hidden="true"></span><p class="state__desc">룰렛을 준비하는 중…</p>');
+    if (!quiet) showWheelState('<span class="spinner" aria-hidden="true"></span><p class="state__desc">룰렛을 준비하는 중…</p>');
 
     try {
       const result = await rouletteApi.getCandidates(category);
-      if (seq !== loadSeq) return;
-      candidates = result.candidates;
+      if (seq !== loadSeq) return null;
+      candidates = shuffle(result.candidates.slice());
+      lastTotalCount = result.totalCount;
       spinnable = result.spinnable && candidates.length >= MIN_CANDIDATES;
 
       resetRotation();
@@ -144,15 +154,50 @@
           '<p class="state__desc">다른 카테고리를 골라 보세요.</p>');
       }
     } catch (err) {
-      if (seq !== loadSeq || err.statusCode === 401) return;   // 401은 client.js가 로그인 화면으로 이동
+      if (seq !== loadSeq || err.statusCode === 401) return null;   // 401은 client.js가 로그인 화면으로 이동
       candidates = [];
       drawWheel();
       showWheelState(
         '<p class="state__title">룰렛 후보를 불러오지 못했어요</p>' +
         '<p class="state__desc">' + esc(err.message) + '</p>' +
         '<button class="btn" type="button" data-action="retry">다시 시도</button>', true);
+      updateControls();
+      return false;
     }
     updateControls();
+    return true;
+  }
+
+  /** [다시 채우기]: 휠이 접혔다가 새 후보로 펴진다 */
+  async function refill() {
+    if (spinning || refilling) return;
+    refilling = true;
+    updateControls();
+    wheelEl.classList.remove('is-refill-in');
+    wheelEl.classList.add('is-refill-out');
+    const [ok] = await Promise.all([loadCandidates(true), wait(260)]);
+    wheelEl.classList.remove('is-refill-out');
+    void wheelEl.offsetWidth;
+    wheelEl.classList.add('is-refill-in');
+    refilling = false;
+    updateControls();
+    if (ok && spinnable) {
+      ui.toast(lastTotalCount > candidates.length
+        ? '후보 식당을 새로 골랐어요 (' + lastTotalCount + '곳 중 ' + candidates.length + '곳)'
+        : '후보 순서를 새로 섞었어요');
+    }
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function shuffle(list) {
+    for (let i = list.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
   }
 
   /** 칸 i의 색: 짝수 연파랑(blue) · 홀수 연주황(orange). 홀수 개면 마지막 칸은 흰색(plain) */
@@ -466,6 +511,70 @@
     if (svg) svg.classList.add('has-winner');
     if (slice) slice.classList.add('is-winner');
     renderResult(winner);
+    burstConfetti();
+    playFanfare();
+  }
+
+  /* ---------- 당첨 축하: 컨페티 + '따단~' ---------- */
+
+  // 색은 tokens.css 변수에서 가져온다
+  const CONFETTI_TOKENS = ['--color-primary', '--color-accent', '--color-success', '--color-tile-purple',
+    '--color-primary-soft', '--color-accent-soft', '--color-warning'];
+  const CONFETTI_COUNT = 56;
+
+  /** 결과 카드 위쪽 가운데에서 종이 조각이 '빵' 하고 터져 흩어진다. 1.6초 뒤 지운다 */
+  function burstConfetti() {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const colors = CONFETTI_TOKENS.map((name) => rootStyle.getPropertyValue(name).trim()).filter(Boolean);
+    const layer = document.createElement('div');
+    layer.className = 'roulette-confetti';
+    layer.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < CONFETTI_COUNT; i += 1) {
+      const piece = document.createElement('span');
+      const angle = (Math.random() * 160 + 190) * Math.PI / 180;   // 위쪽 반원으로 퍼진다
+      const distance = 120 + Math.random() * 160;
+      piece.style.setProperty('--dx', Math.round(Math.cos(angle) * distance) + 'px');
+      piece.style.setProperty('--dy', Math.round(Math.sin(angle) * distance) + 'px');
+      piece.style.setProperty('--fall', Math.round(120 + Math.random() * 140) + 'px');
+      piece.style.setProperty('--rot', Math.round(Math.random() * 720 - 360) + 'deg');
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = Math.round(Math.random() * 80) + 'ms';
+      if (i % 3 === 0) piece.classList.add('is-round');
+      layer.appendChild(piece);
+    }
+    resultEl.appendChild(layer);
+    setTimeout(() => layer.remove(), 1600);
+  }
+
+  /** '따-단~': 짧은 두 음 + 화음. 효과음을 켰을 때만 */
+  function playFanfare() {
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime + 0.05;
+      // [시작(초), 길이(초), 주파수들] — 솔(G5) 짧게 → 도·미·솔(C6 화음) 길게
+      const notes = [
+        [0, 0.14, [784]],
+        [0.16, 0.7, [1047, 1319, 1568]],
+      ];
+      notes.forEach(([start, length, freqs]) => {
+        freqs.forEach((freq) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, t + start);
+          gain.gain.setValueAtTime(0.0001, t + start);
+          gain.gain.exponentialRampToValueAtTime(0.12 / freqs.length + 0.03, t + start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + start + length);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(t + start);
+          osc.stop(t + start + length + 0.05);
+        });
+      });
+    } catch (e) {
+      // 소리를 못 내는 브라우저면 조용히 넘어간다
+    }
   }
 
   function clearWinnerHighlight() {
@@ -475,7 +584,8 @@
   }
 
   function updateControls() {
-    spinButton.disabled = spinning || !spinnable;
+    spinButton.disabled = spinning || refilling || !spinnable;
+    refillButton.disabled = spinning || refilling || (!spinnable && candidates.length === 0);
     wheelBoxEl.classList.toggle('is-clickable', spinnable && !spinning);
     spinButton.textContent = spinning ? '돌리는 중…' : '룰렛 돌리기';
     renderCategories();

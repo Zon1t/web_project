@@ -6,9 +6,9 @@
  * 만든 것
  *   - 날짜: 달력에서 고르기 + 전날/다음 날 버튼, 오늘 ~ 14일 후 (11/20 추가). 기본은 오늘
  *   - 점심 / 저녁 탭: 오늘은 15시 전 점심·이후 저녁, 다른 날짜는 점심이 기본. 탭에 건수 표시
- *   - 목록: 식사 시간 빠른 순(서버 정렬). 인원 막대·상태, 한마디
- *   - 버튼: 참여 중 → [상세 보기] / 모집중·일정 확정 → [참여하기](참여 후 상세로 이동) / 정원·모집 마감 → [마감] 비활성
- *   - 행을 누르면 상세(S-12)로 이동
+ *   - 목록: 식사 시간 빠른 순(서버 정렬). 카드에 자리 막대·상태·'곧 마감'/'곧 시작' 뱃지, 방 설명
+ *   - 버튼: 참여 중 → [상세 보기] / 모집중·일정 확정 → [참여하기](확인 창 → 참여 후 상세로 이동) / 정원·모집 마감 → [마감] 비활성
+ *   - 카드를 누르면 상세(S-12)로 이동
  *   - 로딩 / 빈 상태 / 오류 화면
  */
 (function () {
@@ -35,6 +35,7 @@
     date: partyApi.isSelectableDate(params.get('date')) ? params.get('date') : partyApi.today(),
     mealType: null,
     joining: false,
+    parties: [],
   };
   state.mealType = initialMealType(params.get('mealType'));
 
@@ -133,6 +134,7 @@
       // 그 사이 다른 탭·날짜를 눌렀으면 늦게 온 응답은 무시
       if (requestedMeal !== state.mealType || requestedDate !== state.date) return;
       setCounts(result.lunchCount, result.dinnerCount);
+      state.parties = result.parties;
       if (result.parties.length === 0) {
         showEmpty();
       } else {
@@ -147,33 +149,58 @@
   /* ---------- 그리기 ---------- */
 
   function renderList(parties) {
-    root.innerHTML =
-      '<div class="party-rows__head" aria-hidden="true">' +
-      '<span>식당</span><span>시간</span><span>인원 · 상태</span><span>한마디</span><span></span>' +
-      '</div>' +
-      '<ul class="party-rows">' + parties.map(renderRow).join('') + '</ul>';
+    root.innerHTML = '<ul class="party-cards">' + parties.map(renderCard).join('') + '</ul>';
   }
 
-  function renderRow(p) {
+  /** 카드: 아바타·식당·시간 / 방 설명 / 자리 막대·뱃지 / 버튼 */
+  function renderCard(p) {
     const detailUrl = partyApi.detailUrl(p.partyId);
-    const percent = Math.min(100, Math.round((p.memberCount / p.capacity) * 100));
     const category = CATEGORY_LABELS[p.category] || '';
+    const left = p.capacity - p.memberCount;
+    const isOpen = p.status === 'RECRUITING' || p.status === 'SCHEDULED';
 
     return (
-      '<li class="party-row" data-party-id="' + p.partyId + '" data-href="' + detailUrl + '">' +
-      '<div class="party-row__name">' +
-      '<a class="party-row__link" href="' + detailUrl + '">' + esc(p.restaurantName) + '</a>' +
-      '<span class="party-row__category">' + esc(category) + '</span>' +
+      '<li class="party-card' + (isOpen || p.joined ? '' : ' is-closed') + '" data-party-id="' + p.partyId + '" data-href="' + detailUrl + '">' +
+      '<div class="party-card__top">' +
+      ui.avatar(p.category, 44) +
+      '<div class="party-card__title">' +
+      '<a class="party-card__link" href="' + detailUrl + '">' + esc(p.restaurantName) + '</a>' +
+      '<span class="party-card__category">' + esc(category) + '</span>' +
       '</div>' +
-      '<div class="party-row__time"><span class="sr-only">시간 </span>' + esc(p.time) + '</div>' +
-      '<div class="party-row__people">' +
-      '<span class="party-row__count">' + p.memberCount + ' / ' + p.capacity + '명 ' + statusBadge(p.status) + '</span>' +
-      '<div class="party-row__bar" aria-hidden="true"><div class="party-row__bar-fill" style="width: ' + percent + '%"></div></div>' +
+      '<span class="party-card__time">' + ui.icon('clock', 14) + '<span class="sr-only">시간 </span>' + esc(p.time) + '</span>' +
       '</div>' +
-      '<div class="party-row__memo">' + (p.memo ? esc(p.memo) : '<span class="text-muted">-</span>') + '</div>' +
-      '<div class="party-row__action">' + actionButton(p, detailUrl) + '</div>' +
+      '<p class="party-card__desc">' + (p.memo ? esc(p.memo) : '<span class="text-muted">방 설명이 없어요</span>') + '</p>' +
+      '<div class="party-card__people">' +
+      seatsHtml(p.memberCount, p.capacity) +
+      '<span class="party-card__count">' + p.memberCount + ' / ' + p.capacity + '명</span>' +
+      '</div>' +
+      '<div class="party-card__foot">' +
+      '<span class="party-card__badges">' + statusBadge(p.status) + extraBadges(p, left, isOpen) + '</span>' +
+      actionButton(p, detailUrl) +
+      '</div>' +
       '</li>'
     );
+  }
+
+  /** 자리 막대: 정원만큼 칸, 찬 칸은 색칠 */
+  function seatsHtml(count, capacity) {
+    const seats = [];
+    for (let i = 0; i < capacity; i += 1) {
+      seats.push('<span class="party-seat' + (i < count ? ' is-taken' : '') + '"></span>');
+    }
+    return '<span class="party-seats" aria-hidden="true">' + seats.join('') + '</span>';
+  }
+
+  /** '곧 마감'(한 자리 남음), '곧 시작'(오늘·1시간 안) 뱃지 */
+  function extraBadges(p, left, isOpen) {
+    let html = '';
+    if (p.joined) html += '<span class="badge party-badge--joined">참여 중</span>';
+    if (isOpen && left === 1) html += '<span class="badge party-badge--hot">곧 마감</span>';
+    if (isOpen && partyApi.isToday(state.date) && p.time) {
+      const diff = (new Date(state.date + 'T' + p.time + ':00') - new Date()) / 60000;
+      if (diff > 0 && diff <= 60) html += '<span class="badge party-badge--soon">곧 시작</span>';
+    }
+    return html;
   }
 
   /** 버튼: 참여 중 → 상세 보기 / 모집중·일정 확정 → 참여하기 / 마감 → 비활성 */
@@ -195,32 +222,28 @@
 
   function showLoading() {
     message.textContent = '';
-    root.innerHTML =
-      '<div class="state state--loading">' +
-      '<span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">식사팟을 불러오는 중…</p>' +
-      '</div>';
+    root.innerHTML = ui.skeleton('card', 4);
   }
 
   function showEmpty() {
     const label = MEAL_TYPE_LABELS[state.mealType];
     const isToday = partyApi.isToday(state.date);
     const when = isToday ? '오늘' : partyApi.relativeDateLabel(state.date);
-    root.innerHTML =
-      '<div class="state state--empty party-empty">' +
-      '<p class="state__title">' + esc(when) + ' 모집 중인 ' + label + ' 식사팟이 없습니다</p>' +
-      '<p class="state__desc">첫 식사팟을 만들어 보세요.' + (isToday ? ' 식사가 끝난 팟은 목록에서 빠집니다.' : '') + '</p>' +
-      '<a class="btn btn--primary" href="' + partyApi.createUrl(null, isToday ? null : state.date) + '">식사팟 만들기</a>' +
-      '</div>';
+    root.innerHTML = ui.empty({
+      illust: 'tray',
+      title: esc(when) + ' 모집 중인 ' + label + ' 식사팟이 없어요',
+      desc: '첫 식사팟을 만들어 보세요.' + (isToday ? ' 식사가 끝난 팟은 목록에서 빠져요.' : ''),
+      actionHtml: '<a class="btn btn--primary" href="' + partyApi.createUrl(null, isToday ? null : state.date) + '">식사팟 만들기</a>',
+    });
   }
 
   function showError(text) {
-    root.innerHTML =
-      '<div class="state state--error">' +
-      '<p class="state__title">식사팟 목록을 불러오지 못했습니다</p>' +
-      '<p class="state__desc">' + esc(text) + '</p>' +
-      '<button type="button" class="btn" data-action="retry">다시 시도</button>' +
-      '</div>';
+    root.innerHTML = ui.empty({
+      illust: 'bowl',
+      title: '식사팟 목록을 불러오지 못했어요',
+      desc: esc(text),
+      actionHtml: '<button type="button" class="btn" data-action="retry">다시 시도</button>',
+    });
   }
 
   /* ---------- 클릭 ---------- */
@@ -233,17 +256,22 @@
 
     // 링크·버튼이 아닌 곳을 눌러도 행 전체가 상세로 이동 (키보드 사용자는 식당 이름 링크로 이동)
     if (event.target.closest('a, button')) return;
-    const row = event.target.closest('.party-row');
-    if (row) location.href = row.dataset.href;
+    const card = event.target.closest('.party-card');
+    if (card) location.href = card.dataset.href;
   }
 
-  /** 참여하기(1차) → 성공하면 상세로 이동. 실패하면 그 행에 이유를 보여 주고 목록을 새로 불러온다 */
+  /** 참여하기 → 확인 창 → 성공하면 상세로 이동. 실패하면 이유를 보여 주고 목록을 새로 불러온다 */
   async function joinParty(button) {
     if (state.joining) return;
+    const card = button.closest('.party-card');
+    const partyId = card.dataset.partyId;
+    const p = state.parties.find((item) => String(item.partyId) === String(partyId));
+    if (p) {
+      const ok = await partyJoin.ask(Object.assign({ mealType: state.mealType, partyDate: state.date }, p));
+      if (!ok) return;
+    }
     state.joining = true;
     button.disabled = true;
-    const row = button.closest('.party-row');
-    const partyId = row.dataset.partyId;
 
     try {
       await partyApi.join(partyId);

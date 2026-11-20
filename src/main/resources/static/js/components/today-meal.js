@@ -8,14 +8,15 @@
  *   - POST /api/parties/{id}/members, /members/me/confirm, /thumbs
  *
  * 카드 구성: [머리: 오늘 점심 · 날짜 · 상태] [본문: 시간 블록 | 식당·장소·인원 | 지금 할 일] [진행 막대]
- * 진행 막대: 참여 → 일정 확정 → 참여 확정 → 식사 → 따봉
+ * 진행 막대: 참여 → 일정 확정 → 참석 확정 → 식사 → 따봉
  *
  * 상태
  *   ① 오늘 참여한 팟 없음   → 모집 중인 팟 3개 미리 보기([참여]) + [식사팟 만들기] 강조 + 룰렛
  *   ② 참여 중, 일정 미정    → 방장이 일정을 정하는 중
- *   ③ 일정 확정, 내 확정 전 → [참여 확정]
- *   ④ 참여 확정 완료        → 몇 시간 뒤 어디서 만나는지
- *   ⑤ 식사 완료             → 따봉 대상이면 [따봉]
+ *   ③ 일정 확정, 내 확정 전 → [참석 확정]
+ *   ④ 참석 확정 완료        → 몇 시간 뒤 어디서 만나는지
+ *   ⑤ 식사 완료             → 따봉 대상일 때만 [따봉] 카드. 그 외 끝난 팟(일정 미확정·확정 안 함·따봉 완료)은
+ *                             없는 것으로 보고 ①처럼 다음 끼니를 안내한다 (2026-11-20, 끝난 팟이 자정까지 남던 문제)
  *   + 오늘이 아닌 다음 식사팟이 있으면 카드 아래에 한 줄
  *
  * HTML:  <section id="today-meal" class="today-meal" aria-labelledby="today-meal-title"></section>
@@ -38,7 +39,7 @@
   const LUNCH_END = '14:00';
   const DINNER_END = '20:00';
 
-  const STEPS = ['참여', '일정 확정', '참여 확정', '식사', '따봉'];
+  const STEPS = ['참여', '일정 확정', '참석 확정', '식사', '따봉'];
 
   const ICONS = {
     pin:
@@ -83,12 +84,18 @@
 
     const todays = myParties.filter((p) => !p.partyDate || partyApi.isToday(p.partyDate));
     const upcoming = myParties.find((p) => p.partyDate && !partyApi.isToday(p.partyDate));
-    const party = todays.find((p) => p.status !== 'FINISHED') ||
-      todays.filter((p) => p.status === 'FINISHED').pop();
+    // 진행 중인 오늘 팟이 먼저. 없으면 끝난 팟은 '내가 따봉을 남길 수 있는 팟'일 때만 보여 준다.
+    // (일정 미확정·확정 안 함·따봉 완료로 끝난 팟은 할 일이 없으니, 없는 것으로 보고 다음 끼니를 안내한다)
+    let party = todays.find((p) => p.status !== 'FINISHED');
+    let pending = null;
+    if (!party) {
+      pending = await loadThumbsPending();
+      party = pending && todays.find((p) => p.status === 'FINISHED' && Number(p.partyId) === Number(pending.partyId));
+    }
 
     let card;
     if (!party) card = await emptyCardHtml();
-    else if (party.status === 'FINISHED') card = await finishedCardHtml(party);
+    else if (party.status === 'FINISHED') card = finishedCardHtml(party);
     else if (!party.meetPlace) card = waitingCardHtml(party);
     else if (!party.myConfirmed) card = needConfirmCardHtml(party);
     else card = confirmedCardHtml(party);
@@ -141,7 +148,7 @@
     } else if (preview.length === 0) {
       listHtml = '<p class="tm-list__empty">지금 모집 중인 ' + mealLabel + ' 식사팟이 없어요.</p>';
     } else {
-      listHtml = '<ul class="tm-list">' + preview.map(previewRowHtml).join('') + '</ul>';
+      listHtml = '<ul class="tm-list">' + preview.map((p) => previewRowHtml(Object.assign({ mealType: meal }, p))).join('') + '</ul>';
     }
 
     return cardHtml({
@@ -179,6 +186,8 @@
       '<span class="tm-row__meta">' + p.memberCount + (p.capacity ? ' / ' + p.capacity : '') + '명' +
       (p.status === 'SCHEDULED' ? ' · 일정 확정' : '') + '</span>' +
       '<button type="button" class="btn tm-row__join" data-action="join" data-party-id="' + p.partyId + '"' +
+      ' data-party="' + esc(JSON.stringify({ restaurantName: p.restaurantName, category: p.category, time: p.time,
+        memberCount: p.memberCount, capacity: p.capacity, memo: p.memo, mealType: p.mealType || null })) + '"' +
       (full ? ' disabled' : '') + '>참여</button>' +
       '</li>'
     );
@@ -210,49 +219,48 @@
       step: 2,
       timeTone: 'primary',
       timeSub: untilText(p.time),
-      facts: [factHtml('pin', esc(p.meetPlace)), factHtml('people', '확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명')],
-      ctaNote: '참여를 확정해 주세요',
+      facts: [factHtml('pin', esc(p.meetPlace)), factHtml('people', '참석 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명')],
+      ctaNote: '갈 수 있으면 참석 확정을 눌러 주세요',
       ctaTone: 'warning',
       hint: '확정해야 식사 후 따봉을 남길 수 있어요.' + (deadline ? ' 확정 취소는 ' + deadline + '까지 가능해요.' : ''),
       actions: detailLink(p, false) +
-        '<button type="button" class="btn btn--primary" data-action="confirm" data-party-id="' + p.partyId + '">참여 확정</button>',
+        '<button type="button" class="btn btn--primary" data-action="confirm" data-party-id="' + p.partyId + '">참석 확정</button>',
     });
   }
 
-  // ④ 참여 확정 완료
+  // ④ 참석 확정 완료
   function confirmedCardHtml(p) {
     return partyCardHtml(p, {
       step: 3,
       timeTone: 'primary',
       timeSub: untilText(p.time),
-      facts: [factHtml('pin', esc(p.meetPlace) + '에서 만나요'), factHtml('people', '확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명')],
+      facts: [factHtml('pin', esc(p.meetPlace) + '에서 만나요'), factHtml('people', '참석 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명')],
       actions: detailLink(p, true),
     });
   }
 
-  // ⑤ 식사 완료
-  async function finishedCardHtml(p) {
-    let pending = null;
-    try {
-      pending = await partyApi.getThumbsPending();
-    } catch (err) {
-      // 따봉 버튼 없이 보여 준다
-    }
-    const canThumbs = pending && Number(pending.partyId) === Number(p.partyId);
-    const thumbed = p.myConfirmed && !canThumbs;
+  // ⑤ 식사 완료: render()가 따봉 대상인 팟만 넘긴다 (= 내가 참여 확정했고 아직 따봉을 안 남김)
+  function finishedCardHtml(p) {
     return partyCardHtml(p, {
-      step: canThumbs ? 4 : (thumbed ? 5 : 2),
-      stepLabel: p.myConfirmed ? null : '참여 확정 안 함',
+      step: 4,
       timeTone: 'accent',
       timeSub: '식사 완료',
-      facts: [factHtml('people', p.memberCount + '명이 함께 먹었어요')],
-      ctaNote: canThumbs ? '식사는 어땠나요?' : (thumbed ? '맛있게 드셨나요?' : ''),
+      facts: [factHtml('people', p.confirmedCount + '명이 함께 먹었어요')],
+      ctaNote: '식사는 어땠나요?',
       ctaTone: 'accent',
-      actions: canThumbs
-        ? '<button type="button" class="btn tm-btn--accent" data-action="thumbs" data-party-id="' + p.partyId + '">' +
-          utils.thumbsUpIcon(16) + '따봉</button>'
-        : detailLink(p, false),
+      actions:
+        '<button type="button" class="btn tm-btn--accent" data-action="thumbs" data-party-id="' + p.partyId + '">' +
+        utils.thumbsUpIcon(16) + '따봉</button>',
     });
+  }
+
+  /** 따봉 요청 대상 1건. 없거나 못 불러오면 null (끝난 팟 카드 없이 다음 끼니를 안내한다) */
+  async function loadThumbsPending() {
+    try {
+      return await partyApi.getThumbsPending();
+    } catch (err) {
+      return null;
+    }
   }
 
   /* ===================== 카드 조각 ===================== */
@@ -345,6 +353,11 @@
     const partyId = button.dataset.partyId;
     const action = button.dataset.action;
     const message = button.closest('.tm-card').querySelector('.tm-message');
+    if (action === 'join' && button.dataset.party) {
+      // 참여 전에 확인 창 (식당·시간·인원·방 설명, 다음 단계 안내)
+      const ok = await partyJoin.ask(JSON.parse(button.dataset.party));
+      if (!ok) return;
+    }
     button.disabled = true;
     if (message) message.textContent = '';
 

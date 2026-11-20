@@ -5,7 +5,7 @@
  *   restaurantSuggestion.open(restaurantId);   // 링크를 누르면 입력 창 열기
  *
  * 입력 창: restaurant-detail.html의 <dialog id="suggestion-dialog">
- *   제출 성공 → 창을 닫고 '제안이 접수되었습니다' 안내 / 실패 → 창 안에 오류 문구
+ *   제출 성공 → 창을 닫고 '제안을 보냈어요' 안내 / 실패 → 창 안에 오류 문구
  *   제안 처리 방식은 미정이라 서버는 저장만 한다.
  */
 (function (global) {
@@ -74,7 +74,7 @@
       await restaurantApi.createSuggestion(currentRestaurantId, content);
       submitting = false;
       close();
-      showToast('제안이 접수되었습니다. 고마워요!');
+      showToast('제안을 보냈어요. 고마워요!');
     } catch (err) {
       if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
       setMessage(err.message);

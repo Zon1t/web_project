@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/roulette.css">
 </head>
 <body>
@@ -17,7 +18,13 @@
   <header id="app-header" class="app-header"></header>
 
   <main class="container roulette-page">
-    <h1 class="page-title">오늘 뭐 먹지? 메뉴 룰렛</h1>
+    <a class="ui-back" href="/" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>뒤로</a>
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">오늘 뭐 먹지?</h1>
+        <p class="ui-page-head__desc">고민될 땐 룰렛에 맡겨 보세요. 정해진 식당으로 바로 식사팟도 만들 수 있어요.</p>
+      </div>
+    </div>
 
     <!-- ② 카테고리 선택 (단일 선택, 기본 '전체') -->
     <div id="roulette-categories" class="roulette-categories" role="group" aria-label="카테고리 선택"></div>
@@ -34,7 +41,12 @@
           <div id="roulette-wheel-state" class="roulette-wheel-state" aria-live="polite" hidden></div>
         </div>
         <button id="roulette-spin" class="btn btn--primary roulette-spin" type="button" disabled>룰렛 돌리기</button>
-        <button id="roulette-sound" class="btn btn--text roulette-sound" type="button" aria-pressed="false">효과음 끔</button>
+        <div class="roulette-tools">
+          <button id="roulette-refill" class="btn btn--text roulette-refill" type="button" disabled>
+            <span data-ui-icon="refresh" data-size="18"></span>다시 채우기
+          </button>
+          <button id="roulette-sound" class="btn btn--text roulette-sound" type="button" aria-pressed="false">효과음 끔</button>
+        </div>
       </div>
 
       <!-- ⑤ 결과 카드 -->
@@ -52,6 +64,7 @@
   <script src="/js/api/party.js"></script>
   <script src="/js/api/roulette.js"></script>
   <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/roulette.js"></script>

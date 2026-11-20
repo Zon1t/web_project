@@ -1,7 +1,7 @@
 /*
  * mypage.js — 마이페이지 화면 (S-10, C)
  *
- * - 프로필: 닉네임, 아이디, 활동 건수 4개 (건수를 누르면 해당 탭으로 이동)
+ * - 프로필: 닉네임, 아이디 + '나의 슥밥 기록' 카드 4개 (카드를 누르면 해당 탭으로 이동)
  * - 탭: 내 리뷰(기본) / 참여한 식사팟 / 등록한 식당 / 관심 식당
  *   · 탭은 처음 열 때 한 번만 불러오고 이후에는 저장해 둔 목록을 쓴다
  *   · 주소에 ?tab=parties 처럼 붙이면 그 탭으로 바로 연다
@@ -25,6 +25,8 @@
       itemHtml: reviewHtml,
       emptyTitle: '아직 작성한 리뷰가 없어요',
       emptyDesc: '다녀온 식당에 한줄평을 남겨 보세요.',
+      illust: 'chat',
+      emptyAction: '<a class="btn" href="/restaurant-list.html">식당 둘러보기</a>',
       countKey: 'reviewCount',
     },
     parties: {
@@ -32,6 +34,8 @@
       itemHtml: partyHtml,
       emptyTitle: '참여한 식사팟이 없어요',
       emptyDesc: '식사팟에 참여해서 함께 밥 먹어요.',
+      illust: 'tray',
+      emptyAction: '<a class="btn btn--primary" href="/party-list.html">식사팟 찾기</a>',
       countKey: 'partyCount',
     },
     restaurants: {
@@ -39,6 +43,8 @@
       itemHtml: restaurantHtml,
       emptyTitle: '등록한 식당이 없어요',
       emptyDesc: '알고 있는 맛집을 등록해 보세요.',
+      illust: 'map',
+      emptyAction: '<a class="btn" href="/restaurant-register.html">식당 등록하기</a>',
       countKey: 'restaurantCount',
     },
     interests: {
@@ -46,6 +52,7 @@
       itemHtml: interestHtml,
       emptyTitle: '관심 식당이 없어요',
       emptyDesc: '식당 상세에서 관심 식당으로 등록할 수 있어요.',
+      illust: 'thumbs',
       countKey: 'interestCount',
     },
   };
@@ -103,38 +110,43 @@
   /* ---------- 프로필 ---------- */
 
   async function loadSummary() {
-    profileEl.innerHTML =
-      '<div class="state state--loading"><span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">내 정보를 불러오는 중…</p></div>';
+    profileEl.innerHTML = ui.skeleton('card', 1);
     try {
       summary = await mypageApi.getSummary();
       renderSummary();
     } catch (err) {
       if (err.statusCode === 401) return;   // client.js가 로그인 화면으로 이동
       profileEl.innerHTML =
-        '<div class="state state--error"><p class="state__title">내 정보를 불러오지 못했습니다</p>' +
+        '<div class="state state--error"><p class="state__title">내 정보를 불러오지 못했어요</p>' +
         '<p class="state__desc">' + esc(err.message) + '</p>' +
         '<button class="btn" type="button" data-action="retry-summary">다시 시도</button></div>';
     }
   }
 
   function renderSummary() {
+    // [탭, 이름, 건수, 단위, 아이콘, 색 톤]
     const stats = [
-      ['reviews', '리뷰', summary.reviewCount],
-      ['parties', '참여 식사팟', summary.partyCount],
-      ['restaurants', '등록 식당', summary.restaurantCount],
-      ['interests', '관심 식당', summary.interestCount],
+      ['reviews', '남긴 리뷰', summary.reviewCount, '개', 'star', 'blue'],
+      ['parties', '함께한 식사팟', summary.partyCount, '번', 'people', 'orange'],
+      ['restaurants', '등록한 식당', summary.restaurantCount, '곳', 'pin', 'green'],
+      ['interests', '관심 식당', summary.interestCount, '곳', 'thumbs', 'purple'],
     ];
+    const nickname = String(summary.nickname || '');
     profileEl.innerHTML =
       '<div class="mypage-profile__who">' +
-      '<p class="mypage-profile__nickname">' + esc(summary.nickname) + '</p>' +
+      '<span class="mypage-profile__avatar" aria-hidden="true">' + esc(nickname.charAt(0) || '?') + '</span>' +
+      '<div>' +
+      '<p class="mypage-profile__nickname">' + esc(nickname) + ' 님</p>' +
       '<p class="mypage-profile__login-id">' + esc(summary.loginId) + '</p>' +
       '</div>' +
+      '</div>' +
+      '<h2 class="mypage-record__title">나의 슥밥 기록</h2>' +
       '<ul class="mypage-stats">' +
-      stats.map(([tab, label, count]) =>
-        '<li><button class="mypage-stat" type="button" data-tab="' + tab + '">' +
-        '<span class="mypage-stat__count">' + count + '</span>' +
+      stats.map(([tab, label, count, unit, icon, tone]) =>
+        '<li><button class="mypage-stat mypage-stat--' + tone + '" type="button" data-tab="' + tab + '">' +
+        '<span class="mypage-stat__icon">' + ui.icon(icon, 20) + '</span>' +
         '<span class="mypage-stat__label">' + label + '</span>' +
+        '<span class="mypage-stat__count">' + count + '<small>' + unit + '</small></span>' +
         '</button></li>').join('') +
       '</ul>';
   }
@@ -173,9 +185,7 @@
       renderList(tab);
       return;
     }
-    panelEl.innerHTML =
-      '<div class="state state--loading"><span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">불러오는 중…</p></div>';
+    panelEl.innerHTML = ui.skeleton('row', 3);
     try {
       const items = await TABS[tab].load();
       lists[tab] = items;
@@ -184,9 +194,8 @@
       if (err.statusCode === 401) return;
       if (currentTab !== tab) return;
       panelEl.innerHTML =
-        '<div class="state state--error mypage-state"><p class="state__title">목록을 불러오지 못했습니다</p>' +
-        '<p class="state__desc">' + esc(err.message) + '</p>' +
-        '<button class="btn" type="button" data-action="retry">다시 시도</button></div>';
+        ui.empty({ illust: 'bowl', title: '목록을 불러오지 못했어요', desc: esc(err.message),
+          actionHtml: '<button class="btn" type="button" data-action="retry">다시 시도</button>' });
     }
   }
 
@@ -194,9 +203,8 @@
     const config = TABS[tab];
     const items = lists[tab];
     if (!items.length) {
-      panelEl.innerHTML =
-        '<div class="state mypage-state"><p class="state__title">' + config.emptyTitle + '</p>' +
-        '<p class="state__desc">' + config.emptyDesc + '</p></div>';
+      panelEl.innerHTML = ui.empty({ illust: config.illust, title: config.emptyTitle, desc: config.emptyDesc,
+        actionHtml: config.emptyAction || '' });
       return;
     }
     panelEl.innerHTML = '<ul class="mypage-list">' + items.map(config.itemHtml).join('') + '</ul>';
@@ -235,7 +243,7 @@
     const badges =
       '<span class="badge badge--' + esc(party.status.toLowerCase()) + '">' + esc(status) + '</span>' +
       (party.confirmed
-        ? '<span class="badge mypage-badge--confirmed">참여 확정</span>'
+        ? '<span class="badge mypage-badge--confirmed">참석 확정</span>'
         : '<span class="badge">확정 전</span>') +
       (party.host ? '<span class="badge mypage-badge--host">방장</span>' : '');
     return (
@@ -293,7 +301,8 @@
 
   async function deleteReview(button) {
     const reviewId = Number(button.dataset.id);
-    if (!window.confirm('이 리뷰를 삭제할까요? 삭제하면 되돌릴 수 없어요.')) return;
+    const ok = await ui.confirm({ title: '이 리뷰를 삭제할까요?', message: '삭제하면 되돌릴 수 없어요.', confirmText: '삭제', danger: true });
+    if (!ok) return;
 
     button.disabled = true;
     try {
@@ -301,10 +310,11 @@
       lists.reviews = lists.reviews.filter((r) => r.reviewId !== reviewId);
       decreaseCount('reviews');
       if (currentTab === 'reviews') renderList('reviews');
+      ui.toast('리뷰를 삭제했어요.');
     } catch (err) {
       if (err.statusCode === 401) return;
       button.disabled = false;
-      window.alert(err.message);
+      ui.toast(err.message, { type: 'error' });
     }
   }
 
@@ -317,10 +327,11 @@
       lists.interests = lists.interests.filter((i) => i.restaurantId !== restaurantId);
       decreaseCount('interests');
       if (currentTab === 'interests') renderList('interests');
+      ui.toast('관심 식당에서 뺐어요.');
     } catch (err) {
       if (err.statusCode === 401) return;
       button.disabled = false;
-      window.alert(err.message);
+      ui.toast(err.message, { type: 'error' });
     }
   }
 

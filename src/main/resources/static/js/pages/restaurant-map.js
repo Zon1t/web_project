@@ -6,6 +6,7 @@
  *   restaurantMap.setRestaurants(list);   // 목록과 같은 데이터로 핀 다시 그리기 (검색·필터 때마다)
  *   restaurantMap.highlight(12);          // 목록 항목에 마우스를 올리면 핀 강조, null이면 해제
  *   restaurantMap.onHover((id) => { ... }); // 지도 핀에 마우스를 올리면 목록도 강조하도록 (id 또는 null)
+ *   restaurantMap.onSelect((id) => { ... }); // 핀을 누르면 (식당 상세 카드 열기). 등록하지 않으면 말풍선
  *
  * - 지도 키: js/config.js의 window.APP_CONFIG.naverMapKeyId (Git 제외, 견본은 config.example.js)
  * - 가운데: 사옥(구내식당) 위치. 목록에 구내식당 좌표가 없으면 세종대 좌표
@@ -36,6 +37,7 @@
   let highlightedId = null;
   let infoOpenId = null;        // 말풍선이 열린 핀 (툴팁과 겹치지 않게)
   let hoverCallback = null;     // 지도 핀 마우스 → 목록 강조
+  let selectCallback = null;    // 지도 핀 클릭 → 식당 상세 카드
 
   /* ---------- 밖에서 쓰는 함수 ---------- */
 
@@ -43,14 +45,14 @@
     container = element;
     const keyId = global.APP_CONFIG && global.APP_CONFIG.naverMapKeyId;
     if (!keyId) {
-      showError('지도 키가 설정되지 않았습니다', 'js/config.example.js를 config.js로 복사하고 naverMapKeyId를 넣어 주세요.');
+      showError('지도 키가 설정되지 않았어요', 'js/config.example.js를 config.js로 복사하고 naverMapKeyId를 넣어 주세요.');
       return;
     }
 
     showLoading();
     loadScript(keyId)
       .then(createMap)
-      .catch(() => showError('지도를 불러오지 못했습니다', '지도 키와 네이버 클라우드에 등록한 Web 서비스 URL(http://localhost)을 확인해 주세요.'));
+      .catch(() => showError('지도를 불러오지 못했어요', '지도 키와 네이버 클라우드에 등록한 Web 서비스 URL(http://localhost)을 확인해 주세요.'));
   }
 
   function setRestaurants(list) {
@@ -63,6 +65,10 @@
 
   function onHover(callback) {
     hoverCallback = callback;
+  }
+
+  function onSelect(callback) {
+    selectCallback = callback;
   }
 
   function highlight(restaurantId) {
@@ -136,7 +142,10 @@
           icon: pinIcon(restaurant, false),
           zIndex: restaurant.cafeteria ? 50 : 10,
         });
-        maps.Event.addListener(marker, 'click', () => openInfo(restaurant, marker));
+        maps.Event.addListener(marker, 'click', () => {
+          if (selectCallback) selectCallback(restaurant.restaurantId);
+          else openInfo(restaurant, marker);
+        });
         maps.Event.addListener(marker, 'mouseover', () => {
           highlight(restaurant.restaurantId);
           if (hoverCallback) hoverCallback(restaurant.restaurantId);
@@ -237,5 +246,5 @@
       '</div>';
   }
 
-  global.restaurantMap = { init, setRestaurants, highlight, onHover };
+  global.restaurantMap = { init, setRestaurants, highlight, onHover, onSelect };
 })(window);

@@ -125,3 +125,16 @@
     display: none;
   }
 }
+
+/* 아주 좁은 화면(휴대폰): 메뉴 다섯 개가 한 줄에 들어가도록 간격을 더 줄인다 */
+@media (max-width: 420px) {
+  .app-header__inner,
+  .app-header--wide .app-header__inner {
+    gap: var(--space-3);
+    padding: 0 var(--space-3);
+  }
+
+  .app-header__nav {
+    gap: var(--space-3);
+  }
+}

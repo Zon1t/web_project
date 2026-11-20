@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
   <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/party-main.css">
   <link rel="stylesheet" href="/css/today-meal.css">
@@ -20,6 +21,9 @@
 
   <main class="container main-page">
     <h1 class="sr-only">슥밥 메인</h1>
+
+    <!-- 시간대 인사 (main.js renderGreeting) -->
+    <section id="main-greeting" class="main-greeting" aria-label="인사"></section>
 
     <!-- 오늘의 한 끼 (js/components/today-meal.js): 오늘 내 식사 상황에 따라 바뀌는 카드. 참여 중인 식사팟 영역을 대신한다 -->
     <section id="today-meal" class="today-meal" aria-labelledby="today-meal-title"></section>
@@ -49,7 +53,8 @@
 
       <!-- ⑦ 메뉴 룰렛 배너 (P1, 룰렛 화면 S-11이 생기면 main.js의 ROULETTE_READY를 true로) -->
       <section id="main-roulette" class="main-section main-roulette" aria-labelledby="roulette-title" hidden>
-        <div>
+        <span id="main-roulette-illust" class="main-roulette__illust" aria-hidden="true"></span>
+        <div class="main-roulette__text">
           <h2 id="roulette-title" class="main-roulette__title">오늘 뭐 먹지?</h2>
           <p class="main-roulette__desc">메뉴 룰렛으로 식당을 정해 보세요.</p>
         </div>
@@ -69,6 +74,8 @@
   <script src="/js/api/cafeteria.js"></script>
   <script src="/js/api/ranking.js"></script>
   <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/party-join.js"></script>
   <script src="/js/components/app-header.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/components/party-main.js"></script>

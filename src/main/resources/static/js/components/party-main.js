@@ -168,7 +168,7 @@
    * 오늘 팟은 강조(테두리·배경·'오늘' 표시), 다가오는 팟은 날짜만 붙인 평범한 카드.
    */
   function myPartyCard(p) {
-    const place = p.meetPlace ? '만날 장소: ' + esc(p.meetPlace) : '방장이 아직 일정을 확정하지 않았어요';
+    const place = p.meetPlace ? '만날 장소: ' + esc(p.meetPlace) : '방장이 아직 일정을 정하지 않았어요';
     const isToday = !p.partyDate || partyApi.isToday(p.partyDate);
     const when = isToday
       ? '<span class="pm-card__when pm-card__when--today">오늘</span>'
@@ -178,7 +178,7 @@
       when +
       '<span class="pm-card__top"><b class="pm-card__name">' + esc(p.restaurantName) + '</b>' + statusBadge(p.status) + '</span>' +
       '<span class="pm-card__info">' + esc(MEAL_TYPE_LABELS[p.mealType]) + ' ' + esc(p.time) +
-      ' · 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명' +
+      ' · 참석 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명' +
       (p.myConfirmed ? ' · <span class="pm-card__mine">내 참여 확정</span>' : '') + '</span>' +
       '<span class="pm-card__sub">' + place + ' · 상세 보기 &gt;</span>' +
       '</a></li>'

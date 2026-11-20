@@ -2,25 +2,35 @@
  * mypage.css — 마이페이지 화면 (S-10, C)
  * 색·간격은 tokens.css 변수만 사용한다.
  */
-.mypage .page-title {
-  margin-bottom: var(--space-6);
-}
-
-/* ---------- 프로필 ---------- */
+/* ---------- 프로필 + 나의 슥밥 기록 ---------- */
 .mypage-profile {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
   margin-bottom: var(--space-8);
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
 }
 
 .mypage-profile .state {
   width: 100%;
   padding: var(--space-6);
+}
+
+.mypage-profile__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.mypage-profile__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
 }
 
 .mypage-profile__nickname {
@@ -35,44 +45,84 @@
   font-size: var(--font-size-sm);
 }
 
+.mypage-record__title {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
 .mypage-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(80px, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .mypage-stat {
+  --stat-bg: var(--color-surface);
+  --stat-fg: var(--color-text-sub);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
+  align-items: flex-start;
+  gap: var(--space-2);
   width: 100%;
-  min-height: var(--control-height);
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-4);
   border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  background: var(--stat-bg);
   color: var(--color-text);
   font: inherit;
+  text-align: left;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .mypage-stat:hover {
-  background: var(--color-surface-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.mypage-stat__count {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
+.mypage-stat--blue { --stat-bg: var(--color-primary-soft); --stat-fg: var(--color-primary); }
+.mypage-stat--orange { --stat-bg: var(--color-accent-soft); --stat-fg: var(--color-accent-strong); }
+.mypage-stat--green { --stat-bg: var(--color-success-soft); --stat-fg: var(--color-success); }
+.mypage-stat--purple { --stat-bg: var(--color-tile-purple-bg); --stat-fg: var(--color-tile-purple); }
+
+.mypage-stat__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--stat-fg);
 }
 
 .mypage-stat__label {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
   white-space: nowrap;
+}
+
+.mypage-stat__count {
+  color: var(--stat-fg);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+}
+
+.mypage-stat__count small {
+  margin-left: 2px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 640px) {
+  .mypage-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---------- 탭 ---------- */
@@ -233,20 +283,6 @@ a.mypage-item__title:hover {
 
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 640px) {
-  .mypage-profile {
-    flex-direction: column;
-    align-items: stretch;
-    padding: var(--space-4);
-  }
-
-  .mypage-stats {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .mypage-stat__count {
-    font-size: var(--font-size-lg);
-  }
-
   .mypage-tab {
     padding: 0 var(--space-3);
     font-size: var(--font-size-sm);

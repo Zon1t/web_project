@@ -38,8 +38,34 @@
   // TODO(C와 확인): 로그인 화면 파일 이름
   const LOGIN_PAGE = '/login.html';
 
-  const NETWORK_ERROR_MESSAGE = '서버와 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
-  const UNKNOWN_ERROR_MESSAGE = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  const NETWORK_ERROR_MESSAGE = '서버와 연결할 수 없어요. 잠시 후 다시 시도해 주세요.';
+  const UNKNOWN_ERROR_MESSAGE = '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  /*
+   * 서버 문구(합쇼체)를 화면 말투(해요체)로 바꾼다. 서버 코드는 그대로 두고 화면에서만 바꾼다.
+   *   '아이디 또는 비밀번호가 일치하지 않습니다.' → '아이디 또는 비밀번호가 일치하지 않아요.'
+   * 자주 나오는 끝맺음만 바꾸고, 표에 없는 문장은 그대로 둔다.
+   */
+  const POLITE_ENDINGS = [
+    ['없습니다', '없어요'], ['있습니다', '있어요'], ['않습니다', '않아요'],
+    ['했습니다', '했어요'], ['였습니다', '였어요'], ['었습니다', '었어요'], ['았습니다', '았어요'],
+    ['됐습니다', '됐어요'], ['됩니다', '돼요'], ['합니다', '해요'],
+    ['주십시오', '주세요'], ['하십시오', '하세요'],
+  ];
+
+  function toFriendly(message) {
+    if (!message) return message;
+    let text = String(message);
+    POLITE_ENDINGS.forEach(([from, to]) => {
+      text = text.split(from).join(to);
+    });
+    // '…입니다' → 받침이 있으면 '이에요', 없으면 '예요' (예: '필수 항목입니다' → '필수 항목이에요')
+    text = text.replace(/([가-힣])입니다/g, (all, prev) => {
+      const hasFinal = (prev.charCodeAt(0) - 0xac00) % 28 !== 0;
+      return prev + (hasFinal ? '이에요' : '예요');
+    });
+    return text;
+  }
 
   /* ---------- 오류 객체 ---------- */
 
@@ -50,7 +76,7 @@
   //   }
   class ApiError extends Error {
     constructor(statusCode, error, message) {
-      super(message || UNKNOWN_ERROR_MESSAGE);
+      super(toFriendly(message) || UNKNOWN_ERROR_MESSAGE);
       this.name = 'ApiError';
       this.statusCode = statusCode; // HTTP 상태 (네트워크 오류면 0)
       this.error = error;           // 오류 코드 (예: 'RESTAURANT_NOT_FOUND')

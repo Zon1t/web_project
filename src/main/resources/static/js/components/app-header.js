@@ -47,6 +47,11 @@
 
   const header = document.getElementById('app-header');
   if (!header) return;
+  // 지도 화면의 식당 상세 카드 안(iframe, ?embed=1)에서는 헤더·알림·플로팅 버튼을 그리지 않는다
+  if (document.documentElement.classList.contains('is-embed')) {
+    header.remove();
+    return;
+  }
 
   const isSimple = header.dataset.variant === 'simple';
   if (header.dataset.layout === 'wide') header.classList.add('app-header--wide'); // 지도처럼 화면 전체를 쓰는 화면

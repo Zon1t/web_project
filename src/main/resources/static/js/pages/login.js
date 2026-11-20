@@ -58,7 +58,7 @@
       await authApi.login(loginId, password);
       location.replace(target);
     } catch (err) {
-      showNotice(err.message, 'error');   // 서버 문구: '아이디 또는 비밀번호가 일치하지 않습니다.'
+      showNotice(err.message, 'error');   // 서버 문구는 client.js가 해요체로 바꿔 준다 ('…일치하지 않아요.')
       passwordInput.value = '';
       passwordInput.focus();
       setLoading(false);
@@ -91,7 +91,7 @@
     }
     if (loginId === null) return;
 
-    showNotice('회원가입이 완료되었습니다. 로그인해 주세요.', 'success');
+    showNotice('가입을 마쳤어요. 로그인해 주세요.', 'success');
     idInput.value = loginId;
   }
 

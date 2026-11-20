@@ -27,7 +27,7 @@
 
   const CONTENT_MAX = 100;
   const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-  const IMAGE_ERROR_MESSAGE = 'jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다.'; // 서버 INVALID_IMAGE와 같은 문구
+  const IMAGE_ERROR_MESSAGE = 'jpg·png 형식, 5MB 이하 사진만 올릴 수 있어요.'; // 서버 INVALID_IMAGE 문구를 해요체로
 
   function reviewsPath(restaurantId) {
     return '/restaurants/' + encodeURIComponent(restaurantId) + '/reviews';

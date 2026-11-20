@@ -1,0 +1,165 @@
+/*
+ * date-picker.css — 달력 부품 (A), js/components/date-picker.js 와 함께 쓴다.
+ * 색·간격·글꼴은 tokens.css 변수만 쓴다.
+ */
+
+.date-picker {
+  position: relative;
+  display: inline-block;
+}
+
+/* ---------- 날짜 버튼 ---------- */
+.date-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.date-picker__trigger:hover {
+  background: var(--color-surface);
+}
+
+.date-picker__trigger[aria-expanded="true"] {
+  border-color: var(--color-primary);
+}
+
+.date-picker__icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+/* ---------- 달력 창 ---------- */
+.date-picker__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  width: 304px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.date-picker__panel[hidden] {
+  display: none;
+}
+
+.date-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.date-picker__month {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.date-picker__nav {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.date-picker__nav:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.date-picker__nav:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* ---------- 날짜 칸 ---------- */
+.date-picker__grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.date-picker__weekday {
+  padding-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.date-picker__grid td {
+  padding: 2px;
+  text-align: center;
+}
+
+.date-picker__day {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.date-picker__day:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+/* 오늘: 테두리로 표시 */
+.date-picker__day.is-today {
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 고른 날짜: 채운 원 */
+.date-picker__day.is-selected {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.date-picker__day.is-sunday:not(:disabled):not(.is-selected),
+.date-picker__weekday.is-sunday {
+  color: var(--color-danger);
+}
+
+/* 고를 수 없는 날짜: 흐리게 */
+.date-picker__day:disabled {
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+.date-picker__hint {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* 좁은 화면: 달력이 화면 밖으로 나가지 않게 */
+@media (max-width: 400px) {
+  .date-picker__panel {
+    left: 50%;
+    width: min(304px, calc(100vw - var(--space-8)));
+    transform: translateX(-50%);   /* 버튼 가운데 아래로 */
+  }
+
+  .date-picker__day {
+    width: 32px;
+    height: 32px;
+  }
+}

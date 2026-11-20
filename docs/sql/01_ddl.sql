@@ -113,7 +113,7 @@ CREATE TABLE MEAL_PARTY (
     PARTY_ID        NUMBER                               NOT NULL,
     RESTAURANT_ID   NUMBER                               NOT NULL,
     HOST_ID         NUMBER                               NOT NULL,   -- 방장 → MEMBER
-    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(오늘~7일 후), 시간 없이 TRUNC 값
+    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(오늘~14일 후), 시간 없이 TRUNC 값
     MEAL_TYPE       VARCHAR2(10)                         NOT NULL,   -- LUNCH / DINNER
     MEAL_TIME       VARCHAR2(5)                          NOT NULL,   -- 예정 시간 'HH:mm'
     CAPACITY        NUMBER(2)     DEFAULT 4              NOT NULL,   -- 방장 포함 2~12

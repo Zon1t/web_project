@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
@@ -68,27 +69,33 @@ public class PartyService {
      */
     @Transactional
     PartyCreateResponse createParty(PartyCreateRequest request, Long memberId, LocalDateTime now) {
-        // 1. 필수값·형식·범위 검증은 PartyCreateRequest의 @Valid에서 끝났다.
+        // 1. 필수값·형식·범위 검증은 PartyCreateRequest의 @Valid에서 끝났다. 날짜가 없으면 오늘.
+        LocalDate today = now.toLocalDate();
+        LocalDate partyDate = request.partyDate() != null ? request.partyDate() : today;
 
-        // 2. 끼니 시간대 + 30분 단위
+        // 2. 날짜는 오늘 ~ 14일 후
+        if (!PartyTimePolicy.isWithinDateRange(partyDate, today)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // 3. 끼니 시간대 + 30분 단위
         if (!PartyTimePolicy.isValidMealTime(request.mealType(), request.mealTime())) {
             throw new BusinessException(ErrorCode.INVALID_MEAL_TIME);
         }
 
-        // 3. 오늘 날짜 + 식사 시간이 현재 시각 이후인지
-        LocalDate today = now.toLocalDate();
-        if (!PartyTimePolicy.isAfterNow(today, request.mealTime(), now)) {
+        // 4. 식사 날짜 + 시간이 현재 시각 이후인지 (미래 날짜는 항상 통과)
+        if (!PartyTimePolicy.isAfterNow(partyDate, request.mealTime(), now)) {
             throw new BusinessException(ErrorCode.INVALID_MEAL_TIME);
         }
 
-        // 4. 식당 확인
+        // 5. 식당 확인
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
         Member host = partyFinder.getMember(memberId);
 
-        // 5~7. 팟 저장 → 방장을 참여자로 저장(확정 N) → 시스템 메시지 (하나의 트랜잭션)
+        // 6~8. 팟 저장 → 방장을 참여자로 저장(확정 N) → 시스템 메시지 (하나의 트랜잭션)
         MealParty party = mealPartyRepository.save(MealParty.create(
-                restaurant, host, today, request.mealType(), request.mealTime(),
+                restaurant, host, partyDate, request.mealType(), request.mealTime(),
                 request.capacity(), request.memo()));
         partyMemberRepository.save(PartyMember.create(party, host));
         partyChatRepository.save(PartyChat.createSystem(party, host.getNickname() + "님이 식사팟을 만들었습니다"));
@@ -148,8 +155,11 @@ public class PartyService {
             throw new BusinessException(ErrorCode.INVALID_STATUS, "마감되었거나 완료된 식사팟은 초대할 수 없습니다.");
         }
 
-        // 4. 문구 + 상세 화면 경로
-        String text = me.getMember().getNickname() + "님이 " + party.getRestaurant().getName() + " "
+        // 4. 문구 + 상세 화면 경로. 오늘이 아닌 팟은 날짜도 넣는다 (예: 11월 21일 홍반점 점심 식사)
+        String when = party.getPartyDate().equals(LocalDate.now())
+                ? ""
+                : party.getPartyDate().getMonthValue() + "월 " + party.getPartyDate().getDayOfMonth() + "일 ";
+        String text = me.getMember().getNickname() + "님이 " + when + party.getRestaurant().getName() + " "
                 + toKorean(party.getMealType()) + " 식사에 초대하셨습니다~";
         return new PartyInviteLinkResponse(text, PARTY_DETAIL_PATH + partyId);
     }
@@ -165,23 +175,23 @@ public class PartyService {
      * 식사팟 목록 (오늘, FINISHED·DELETED 제외). 식사팟 목록 화면과 메인 '오늘의 식사팟'에서 쓴다.
      * 파라미터는 모두 선택값이라 문자열로 받아 여기서 검사한다. (잘못된 값은 "조회 조건을 확인해 주세요.")
      */
-    public PartyListResponse getPartyList(String mealType, String status, String excludeJoined,
+    public PartyListResponse getPartyList(String date, String mealType, String status, String excludeJoined,
                                           String limit, Long memberId) {
-        // 1. 파라미터 검증
+        // 1. 파라미터 검증 (date가 없으면 오늘, 오늘 ~ 14일 후만)
+        LocalDate partyDate = parseListDate(date, LocalDate.now());
         MealType mealTypeFilter = parseMealType(mealType);
         PartyStatus statusFilter = parseListStatus(status);
         boolean isExcludeJoined = parseBoolean(excludeJoined);
         Integer limitValue = parseLimit(limit);
 
-        // 2. 오늘 + FINISHED·DELETED 제외 + 요청 조건(status, excludeJoined)
+        // 2. 그 날짜 + FINISHED·DELETED 제외 + 요청 조건(status, excludeJoined)
         //    하루치라 개수가 적어서 한 번에 가져와 자바에서 거른다.
-        LocalDate today = LocalDate.now();
-        List<MealParty> todayParties = mealPartyRepository.findAllByPartyDateExcludingStatuses(
-                today, EnumSet.of(PartyStatus.FINISHED, PartyStatus.DELETED));
-        Set<Long> joinedPartyIds = getJoinedPartyIds(memberId, today);
+        List<MealParty> dayParties = mealPartyRepository.findAllByPartyDateExcludingStatuses(
+                partyDate, EnumSet.of(PartyStatus.FINISHED, PartyStatus.DELETED));
+        Set<Long> joinedPartyIds = getJoinedPartyIds(memberId, partyDate);
 
         // 3. 정렬: 기준 시간 → partyId
-        List<MealParty> filtered = todayParties.stream()
+        List<MealParty> filtered = dayParties.stream()
                 .filter(p -> statusFilter == null || p.getStatus() == statusFilter)
                 .filter(p -> !isExcludeJoined || !joinedPartyIds.contains(p.getPartyId()))
                 .sorted(Comparator.comparing(MealParty::getBaseTime).thenComparing(MealParty::getPartyId))
@@ -214,13 +224,15 @@ public class PartyService {
      * DELETED는 빼고 FINISHED(식사 완료)는 포함한다. 없으면 빈 배열.
      */
     public List<PartyMyTodayResponse> getMyTodayPartyList(Long memberId) {
-        // 1. 오늘 + DELETED 제외 + 내가 참여한 팟
-        List<PartyMember> myParties = partyMemberRepository.findAllByMemberIdAndPartyDate(
-                memberId, LocalDate.now(), EnumSet.of(PartyStatus.DELETED));
+        // 1. 오늘 ~ 14일 후 + DELETED 제외 + 내가 참여한 팟 (11/20 변경: 오늘만 → 오늘~14일 후)
+        LocalDate today = LocalDate.now();
+        List<PartyMember> myParties = partyMemberRepository.findAllByMemberIdAndPartyDateBetween(
+                memberId, today, today.plusDays(PartyTimePolicy.MAX_DAYS_AHEAD), EnumSet.of(PartyStatus.DELETED));
 
-        // 2. 정렬: FINISHED가 아닌 팟 먼저 → 기준 시간 → partyId, 4. 최대 2개
+        // 2. 정렬: FINISHED가 아닌 팟 먼저 → 날짜 → 기준 시간 → partyId, 4. 최대 2개
         List<PartyMember> top = myParties.stream()
                 .sorted(Comparator.comparing((PartyMember pm) -> pm.getParty().isFinished())
+                        .thenComparing(pm -> pm.getParty().getPartyDate())
                         .thenComparing(pm -> pm.getParty().getBaseTime())
                         .thenComparing(pm -> pm.getParty().getPartyId()))
                 .limit(MY_TODAY_LIMIT)
@@ -302,6 +314,22 @@ public class PartyService {
         }
         if ("true".equalsIgnoreCase(value)) {
             return true;
+        }
+        throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
+    }
+
+    /** 목록 날짜: 없으면 오늘. 'YYYY-MM-DD' 형식이고 오늘 ~ 14일 후여야 한다 */
+    private static LocalDate parseListDate(String value, LocalDate today) {
+        if (isBlank(value)) {
+            return today;
+        }
+        try {
+            LocalDate date = LocalDate.parse(value.trim());
+            if (PartyTimePolicy.isWithinDateRange(date, today)) {
+                return date;
+            }
+        } catch (DateTimeParseException e) {
+            // 아래에서 처리
         }
         throw new BusinessException(ErrorCode.INVALID_REQUEST, LIST_INVALID_MESSAGE);
     }

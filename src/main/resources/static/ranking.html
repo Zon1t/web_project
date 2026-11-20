@@ -4,29 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>랭킹 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
   <link rel="stylesheet" href="/css/ranking.css">
 </head>
 <body>
-  <!-- ① 공통 헤더 (S-01과 동일, '랭킹' 메뉴 강조) -->
-  <header class="app-header">
-    <div class="app-header__inner">
-      <a class="app-header__logo" href="/">슥밥</a>
-      <nav class="app-header__nav" aria-label="주 메뉴">
-        <a class="app-header__link" href="/">구내식당</a>
-        <a class="app-header__link" href="/restaurant-list.html">식당</a>
-        <a class="app-header__link" href="/party-list.html">식사팟</a>
-        <a class="app-header__link is-active" href="/ranking.html" aria-current="page">랭킹</a>
-      </nav>
-      <div class="app-header__user">
-        <a id="header-nickname" class="app-header__nickname" href="/mypage.html" hidden></a>
-        <button id="header-logout" class="btn" type="button">로그아웃</button>
-      </div>
-    </div>
-  </header>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
 
   <main class="container ranking-page">
     <!-- ② 랭킹 기준 안내 -->
@@ -41,12 +29,17 @@
     <div id="ranking-body" aria-live="polite"></div>
   </main>
 
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
   <script src="/js/api/auth.js"></script>
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/ranking.js"></script>
+  <script src="/js/components/brand.js"></script>
   <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/ranking.js"></script>
 </body>
 </html>

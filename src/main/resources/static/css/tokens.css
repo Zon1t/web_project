@@ -13,6 +13,12 @@
   --color-primary-soft: #e3eeff;     /* 연한 파랑 배경 (선택된 칩 등) */
   --color-on-primary: #ffffff;       /* primary 배경 위 글자 */
 
+  /* 보조색(주황): 따봉·룰렛·구내식당 핀·강조 배지에만 쓴다. 글자색으로 쓸 땐 --color-accent-strong */
+  --color-accent: #e8772e;
+  --color-accent-hover: #cf6420;
+  --color-accent-strong: #b0520f;    /* 흰 바탕 위 글자 (명도 대비 4.5:1 이상) */
+  --color-accent-soft: #fdeee3;
+
   --color-text: #1b2430;             /* 본문 */
   --color-text-sub: #4a5563;         /* 보조 설명 */
   --color-text-muted: #5a6675;       /* 날짜·건수 같은 약한 정보 */

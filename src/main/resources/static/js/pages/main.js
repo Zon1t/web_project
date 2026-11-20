@@ -3,7 +3,9 @@
  *
  * C가 그리는 영역: ③ 오늘의 구내식당 ⑥ 이달의 따봉 TOP 3 ⑦ 룰렛 배너(P1)
  *   (① 헤더의 닉네임·로그아웃은 js/components/app-header.js)
- * A가 그리는 영역: ② 따봉 배너 ④ 참여 중인 식사팟 ⑤ 오늘의 식사팟
+ * A가 그리는 영역: ⑤ 오늘의 식사팟
+ * 따봉 요청: 헤더 종 알림(app-header.js)과 '오늘의 한 끼' 카드가 맡는다. (2026-11-20, 홈 따봉 배너 제거)
+ * 오늘의 한 끼 카드: js/components/today-meal.js (2026-11-20, 기존 '참여 중인 식사팟' 영역을 대신함)
  *
  * A 부품 (js/components/party-main.js, css/party-main.css) — 사용법은 그 파일 맨 위 주석
  *   - 자리: <div id="thumbs-banner">, <div id="my-parties">, <div id="today-parties">
@@ -37,7 +39,7 @@
   mountPartyParts();
   document.getElementById('main-roulette').hidden = !ROULETTE_READY;
 
-  document.addEventListener('sseukbap:thumbs-added', loadTop3);   // A의 따봉 배너에서 따봉 성공 시
+  document.addEventListener('sseukbap:thumbs-added', loadTop3);   // 헤더 알림·오늘의 한 끼에서 따봉 성공 시
 
   /* ---------- ③ 오늘의 구내식당 ---------- */
 
@@ -115,9 +117,9 @@
   function mountPartyParts() {
     const parts = window.partyMain;
 
-    mount(parts && parts.renderThumbsBanner, 'thumbs-banner');
-    mount(parts && parts.renderMyParties, 'my-parties');
     mount(parts && parts.renderTodayParties, 'today-parties');
+
+    if (window.todayMeal) window.todayMeal.mount(document.getElementById('today-meal'));
   }
 
   function mount(fn, containerId) {

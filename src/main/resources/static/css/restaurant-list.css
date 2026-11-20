@@ -6,6 +6,11 @@
   height: calc(100vh - var(--header-height));
 }
 
+/* 지도 바로 아래에 푸터가 붙게 (공통 푸터의 위 여백 없앰) */
+.restaurant-page + .app-footer {
+  margin-top: 0;
+}
+
 /* ---------- 왼쪽 패널 ---------- */
 .restaurant-panel {
   display: flex;
@@ -111,42 +116,107 @@
   background: var(--color-surface-hover);
 }
 
-/* ---------- 지도 핀 (네이버 지도 마커 안에 들어가는 HTML) ---------- */
+/* ---------- 지도 핀 (네이버 지도 마커 안에 들어가는 HTML, restaurant-map.js) ---------- */
 .map-pin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--color-bg);
-  border-radius: 50% 50% 50% 0;   /* 물방울 모양 */
-  background: var(--color-text-sub);
-  box-shadow: var(--shadow-sm);
-  transform: rotate(-45deg);
-  transition: transform 0.15s;
+  position: relative;
+  width: 32px;
+  height: 42px;
+  color: var(--color-primary);
+  transform-origin: 50% 100%;   /* 커지거나 튈 때 핀 끝(좌표)은 그대로 */
+  filter: drop-shadow(0 2px 2px rgba(27, 36, 48, 0.25));
+  cursor: pointer;
 }
 
-.map-pin__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg);
+.map-pin__shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-/* 사옥 구내식당: 초록 */
+.map-pin__body {
+  fill: currentColor;
+}
+
+.map-pin__logo {
+  color: currentColor;
+}
+
+/* 사옥 구내식당: 보조색 */
 .map-pin--cafeteria {
-  background: var(--color-success);
+  color: var(--color-accent);
 }
 
-/* 강조 (목록 항목에 마우스를 올렸을 때) */
+/* 강조 (목록 항목·핀에 마우스를 올렸을 때): 통 튀어 올랐다가 살짝 둥실 */
 .map-pin.is-active {
-  background: var(--color-primary);
-  transform: rotate(-45deg) scale(1.25);
+  color: var(--color-primary-hover);
+  filter: drop-shadow(0 8px 6px rgba(27, 36, 48, 0.3));
+  animation: map-pin-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) forwards,
+             map-pin-float 1.4s ease-in-out 0.35s infinite;
 }
 
+.map-pin--cafeteria.is-active {
+  color: var(--color-accent-hover);
+}
+
+@keyframes map-pin-pop {
+  0%   { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-4px) scale(1.3); }
+}
+
+@keyframes map-pin-float {
+  0%, 100% { transform: translateY(-4px) scale(1.3); }
+  50%      { transform: translateY(-8px) scale(1.3); }
+}
+
+/* 핀 위 툴팁: 이름 / 카테고리 · 따봉 수 */
+.map-pin__tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-family);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  pointer-events: none;
+  /* 핀이 1.3배 커진 만큼 툴팁은 줄여서 원래 크기로 보이게 */
+  transform: translateX(-50%) scale(0.77);
+  transform-origin: 50% 100%;
+}
+
+.map-pin__tip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--color-bg);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.map-pin__tip-name {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.map-pin__tip-meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* 움직임 줄이기 설정: 애니메이션 없이 크기만 */
 @media (prefers-reduced-motion: reduce) {
-  .map-pin {
-    transition: none;
+  .map-pin.is-active {
+    animation: none;
+    transform: scale(1.3);
   }
 }
 
@@ -197,5 +267,19 @@
   .restaurant-map {
     height: 320px;
     flex: none;
+  }
+}
+
+/* 지도 화면은 헤더처럼 푸터도 전체 폭 */
+.restaurant-page + .app-footer .app-footer__inner {
+  max-width: none;
+  padding-right: var(--space-12);
+  padding-left: var(--space-12);
+}
+
+@media (max-width: 640px) {
+  .restaurant-page + .app-footer .app-footer__inner {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
   }
 }

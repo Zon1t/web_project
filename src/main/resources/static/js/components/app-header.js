@@ -4,7 +4,7 @@
  * ▼ HTML에는 자리만 둔다
  *   <header id="app-header" class="app-header"></header>                          ← 로그인 후 화면
  *   <header id="app-header" class="app-header" data-variant="simple"></header>    ← 로그인·회원가입 (로고만)
- *   <header id="app-header" class="app-header" data-layout="wide"></header>       ← 지도처럼 화면 전체 폭을 쓰는 화면
+ *   <header id="app-header" class="app-header" data-layout="wide"></header>       ← 지도처럼 화면 전체 폭을 쓰는 화면 (2026-11-23부터 헤더 위치는 다른 화면과 같음)
  *
  * ▼ CSS·JS
  *   <link rel="stylesheet" href="/css/header.css">

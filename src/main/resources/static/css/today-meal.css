@@ -139,13 +139,13 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* 빈 슬롯: 점선 테두리, 전체가 링크 */
+/* 빈 슬롯: 전체가 링크 (2026-11-23: 점선 테두리 → 얇은 실선 + 흰 배경) */
 .tm-slot--empty {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  border: 2px dashed var(--color-primary);
-  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg);
   text-align: center;
 }
 
@@ -155,7 +155,7 @@
 }
 
 a.tm-slot--empty:hover {
-  background: var(--color-bg);
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
 
@@ -198,9 +198,9 @@ a.tm-slot--empty:hover .tm-slot__cta {
   font-weight: var(--font-weight-bold);
 }
 
-/* 지난 끼니: 흐리게, 누를 수 없음 */
+/* 지난 끼니: 흐리게, 누를 수 없음 (테두리 없이 배경색만) */
 .tm-slot--past {
-  border-color: var(--color-border);
+  border-color: transparent;
   background: color-mix(in srgb, var(--color-bg) 45%, transparent);
   color: var(--color-text-muted);
 }

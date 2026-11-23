@@ -1,7 +1,9 @@
 /*
  * ranking.js — 랭킹 화면 (S-09, C · 2026-11-20 개편)
  *
- * - 이달의 식당 배너: 지금 보는 범위(전체/카테고리)의 1위
+ * - 1위 배너: 지금 보는 범위(전체/카테고리)의 1위. 기준이 최근 30일이라 '11월의 식당' 같은 달 표현은 쓰지 않는다 (2026-11-23)
+ * - 1위도 따봉이 0개면(예: 카페) 배너·시상대 없이 안내 문구 + 목록만 보여 준다 (2026-11-23)
+ * - 따봉 0개인 식당은 막대를 그리지 않는다 (2026-11-23)
  * - 1~3위 시상대 (2위 · 1위 · 3위), 4위부터 리스트 (따봉 막대로 1위와 차이 표시)
  * - 카테고리 필터
  *     전체: GET /api/restaurants/rankings?limit=10 (서버 순위)
@@ -71,6 +73,14 @@
         return;
       }
 
+      // 1위도 따봉이 0개: 트로피·시상대가 어색하므로 안내 문구 + 목록만 (주로 카페)
+      if (items[0].thumbsCount30d === 0) {
+        bannerEl.hidden = true;
+        body.innerHTML = noThumbsNoticeHtml() + listHtml(items, 0);
+        fillTags(items, seq);
+        return;
+      }
+
       renderBanner(items[0]);
       body.innerHTML = podiumHtml(items.slice(0, PODIUM)) + listHtml(items.slice(PODIUM), items[0].thumbsCount30d);
       fillTags(items, seq);
@@ -116,14 +126,24 @@
     }).join('');
   }
 
-  /* ---------- 이달의 식당 배너 ---------- */
+  /** 따봉이 아직 없는 범위의 안내 (배너 대신) */
+  function noThumbsNoticeHtml() {
+    const target = category ? CATEGORY_LABELS[category] : '';
+    return (
+      '<div class="rk-notice">' + ui.icon('thumbs', 20) +
+      '<div><p class="rk-notice__title">아직 따봉을 받은 ' + esc(target ? target + ' ' : '') + '식당이 없어요</p>' +
+      '<p class="rk-notice__desc">따봉이 없을 때는 리뷰가 많은 순으로 보여 드려요. 함께 식사하고 따봉을 남기면 순위가 생겨요.</p></div>' +
+      '</div>'
+    );
+  }
+
+  /* ---------- 1위 배너 ---------- */
 
   function renderBanner(top) {
-    const month = new Date().getMonth() + 1;
-    const scope = category ? CATEGORY_LABELS[category] + ' 1위' : (top.thumbsCount30d > 0 ? '최근 30일 따봉 1위' : '랭킹 1위');
+    const scope = category ? CATEGORY_LABELS[category] + ' 따봉 1위' : '따봉 1위';
     bannerEl.innerHTML =
       '<div class="rk-banner__text">' +
-      '<p class="rk-banner__eyebrow">' + ui.icon('trophy', 16) + month + '월의 식당 · ' + esc(scope) + '</p>' +
+      '<p class="rk-banner__eyebrow">' + ui.icon('trophy', 16) + '최근 30일 · ' + esc(scope) + '</p>' +
       '<h2 class="rk-banner__name"><a href="' + DETAIL_URL + encodeURIComponent(top.restaurantId) + '">' + esc(top.name) + '</a></h2>' +
       '<p class="rk-banner__meta">' + ui.avatar(top.category, 28) +
       '<span>' + esc(CATEGORY_LABELS[top.category] || top.category) + '</span>' +
@@ -181,6 +201,9 @@
 
   function rowHtml(item, topThumbs, i) {
     const ratio = topThumbs ? Math.max(6, Math.round((item.thumbsCount30d / topThumbs) * 100)) : 0;
+    const bar = item.thumbsCount30d > 0
+      ? '<span class="rk-bar" aria-hidden="true"><span style="width:' + ratio + '%"></span></span>'
+      : '';   // 따봉 0개는 막대 없음
     return (
       '<li style="--rk-delay:' + (i * 40) + 'ms">' +
       '<a class="rk-row" href="' + DETAIL_URL + encodeURIComponent(item.restaurantId) + '">' +
@@ -193,7 +216,7 @@
       '</span>' +
       '<span class="rk-row__score">' +
       '<span class="rk-thumbs">' + ui.icon('thumbs', 16) + item.thumbsCount30d + '</span>' +
-      '<span class="rk-bar" aria-hidden="true"><span style="width:' + ratio + '%"></span></span>' +
+      bar +
       '</span>' +
       '</a>' +
       '</li>'

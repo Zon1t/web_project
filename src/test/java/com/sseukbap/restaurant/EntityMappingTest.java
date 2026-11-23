@@ -49,9 +49,9 @@ class EntityMappingTest {
 
     @Test
     void 기존_데이터를_읽을_수_있다() {
-        // 태그는 1~13 고정값
+        // 태그는 1~18 고정값 (14~18은 2026-11-23 추가)
         List<Tag> tags = tagRepository.findAll();
-        assertThat(tags).hasSize(13);
+        assertThat(tags).hasSize(18);
         Tag tag1 = tagRepository.findById(1L).orElseThrow();
         assertThat(tag1.getTagName()).isEqualTo("점심추천");
         assertThat(tag1.getTagCategory()).isEqualTo(TagCategory.MEAL_TYPE);

@@ -76,15 +76,17 @@
 
 | 구분 | 값 |
 | --- | --- |
-| 식당 카테고리 | `CAFETERIA`(구내식당), `KOREAN`(한식), `CHINESE`(중식), `JAPANESE`(일식), `WESTERN`(양식), `SNACK`(분식), `ETC`(기타) |
+| 식당 카테고리 | `CAFETERIA`(구내식당), `KOREAN`(한식), `CHINESE`(중식), `JAPANESE`(일식), `WESTERN`(양식), `SNACK`(분식), `CAFE`(카페), `ETC`(기타). `CAFE`는 2026-11-23 추가: 룰렛·랭킹 '전체'에서 제외, 식당 목록·등록·식사팟에서는 다른 카테고리와 같음 |
 | 끼니 | `LUNCH`, `DINNER` |
 | 식사 시간 범위 | LUNCH 11:00~13:30, DINNER 17:00~19:30, 30분 단위 |
 | 식사팟 상태 | `RECRUITING`, `SCHEDULED`, `FULL`, `CLOSED`, `FINISHED`, `DELETED` (DELETED는 응답에 나오지 않음) |
 | 내 역할 (식사팟) | `HOST`(방장), `MEMBER`(참여자), `NONE`(미참여) |
 | 대화 메시지 유형 | `TEXT`, `SYSTEM` |
-| 리뷰 태그 (tagId) | 13개 고정값. 아래 '리뷰 태그' 표 참고 (FE에 상수로 정의) |
+| 리뷰 태그 (tagId) | 18개 고정값. 아래 '리뷰 태그' 표 참고 (FE에 상수로 정의) |
 
 ### 리뷰 태그
+
+> 2026-11-23 변경: 14~18 추가 (가격 2개, 시간·대기 2개, 접근성 1개). 기존 DB는 docs/sql/06_add_tags.sql 실행
 
 | tagId | 태그 | 분류 (category) | 설명 |
 | --- | --- | --- | --- |
@@ -101,9 +103,14 @@
 | 11 | 주차가능 | ACCESSIBILITY | 주차 공간 이용 가능 |
 | 12 | 포장가능 | ACCESSIBILITY | 음식 포장 가능 |
 | 13 | 단체석 | ACCESSIBILITY | 단체 좌석 보유 |
+| 14 | 만원이하 | PRICE | 1인 1만 원 이하로 식사 가능 |
+| 15 | 양많음 | PRICE | 양이 넉넉함 |
+| 16 | 빨리나와요 | WAITING | 주문 후 음식이 빨리 나옴 |
+| 17 | 예약가능 | WAITING | 예약 가능 |
+| 18 | 도보15분이상 | ACCESSIBILITY | 회사에서 도보 15분 이상 |
 
 - 분류와 관계없이 여러 개 선택 가능, 분류별 선택 개수 제한 없음
-- 식당 상세의 TOP 3는 분류와 관계없이 13개 태그 전체 중 선택 횟수 기준
+- 식당 상세의 TOP 3는 분류와 관계없이 태그 전체(18개) 중 선택 횟수 기준
 - 리뷰 작성 화면은 분류별로 묶어 표시
 - 태그 이름에는 '#'을 붙이지 않고 화면에서 붙여 표시
 - 태그 분류 값 MEAL_TYPE은 식사팟의 끼니 값(mealType: LUNCH/DINNER)과 별개
@@ -597,6 +604,8 @@ null
 > 2026-11-18 이동: `GET /api/rankings/thumbs` → `GET /api/restaurants/rankings`
 >
 > 2026-11-23 변경: 따봉 1건 이상만 → 따봉이 0건인 식당도 리뷰 수·등록 순으로 포함, 구내식당(`CAFETERIA`) 제외
+>
+> 2026-11-23 변경: 카페(`CAFE`)도 제외. 랭킹 화면 '카페' 칩은 식당 목록 API(category=CAFE)로 그린다
 
 **요구사항**: 오늘 기준 최근 30일(오늘 포함) 따봉 수 내림차순으로 식당 랭킹을 반환한다. 랭킹 화면은 limit=10, 메인 '이달의 따봉 TOP 3'는 limit=3으로 호출한다. 따봉이 없는 식당도 리뷰 수 → 등록 순으로 이어서 포함한다. 구내식당은 제외한다.
 
@@ -612,7 +621,7 @@ null
 3. PARTY_MEMBER(thumbs_up_yn = Y)와 MEAL_PARTY를 조인해, party_date가 기간 내인 행을 MEAL_PARTY.restaurant_id별로 집계한다. (집계 기준: 공통 규칙 '따봉 집계')
 4. 식당별 전체 REVIEW 수를 함께 조회한다.
 5. 정렬: 따봉 수 내림차순 → 리뷰 수 내림차순 → 식당 등록 순(restaurant_id 오름차순).
-6. 구내식당(`CAFETERIA`)을 제외하고, 순위(rank)는 정렬 순서대로 1부터 매긴다. (동점도 정렬 기준에 따라 다른 순위, 따봉 0건 식당 포함)
+6. 구내식당(`CAFETERIA`)과 카페(`CAFE`)를 제외하고, 순위(rank)는 정렬 순서대로 1부터 매긴다. (동점도 정렬 기준에 따라 다른 순위, 따봉 0건 식당 포함)
 7. limit만큼 반환한다.
 
 **Response 200 (data)**
@@ -647,6 +656,8 @@ null
 > 2026-11-18 이동: `GET /api/roulette/candidates` → `GET /api/restaurants/roulette/candidates`
 >
 > 2026-11-19 변경: 구내식당(`CAFETERIA`)은 '전체'를 포함해 룰렛 후보에서 항상 제외, `category=CAFETERIA`는 400
+>
+> 2026-11-23 변경: 카페(`CAFE`)는 '전체'에서 제외, `category=CAFE`로는 카페끼리 조회
 
 **요구사항**: 룰렛 화면에서 카테고리를 고르면(최초 진입 시 '전체') 휠에 그릴 식당을 최대 8곳 무작위로 뽑아 반환한다. FE는 이 후보로 휠을 그리고, [룰렛 돌리기] 시 후보 ID 목록을 룰렛 실행 API로 보낸다.
 
@@ -658,7 +669,7 @@ null
 
 **시스템 처리**
 1. category 값이 있으면 유효한지 확인한다. (`CAFETERIA`는 룰렛 카테고리가 아니므로 오류)
-2. 구내식당(`CAFETERIA`)을 제외하고, 조건에 맞는 RESTAURANT를 무작위 순서로 최대 8개 조회한다. (Oracle: ORDER BY DBMS_RANDOM.VALUE)
+2. 구내식당(`CAFETERIA`)을 제외하고(category가 없으면 카페 `CAFE`도 제외), 조건에 맞는 RESTAURANT를 무작위 순서로 최대 8개 조회한다. (Oracle: ORDER BY DBMS_RANDOM.VALUE)
 3. 전체 대상 수와 후보 목록을 반환한다.
 
 **Response 200 (data)**
@@ -675,8 +686,8 @@ null
 ```
 - spinnable: 후보가 2곳 이상이면 true. false면 FE는 '룰렛을 돌릴 식당이 부족합니다'를 표시하고 버튼을 비활성화
 - category를 보내지 않으면 응답의 category는 null
-- totalCount도 구내식당을 제외한 수
-- 룰렛 화면의 카테고리 선택지: 전체 / 한식 / 중식 / 일식 / 양식 / 분식 / 기타 (구내식당 없음)
+- totalCount도 구내식당(전체면 카페 포함)을 제외한 수
+- 룰렛 화면의 카테고리 선택지: 전체 / 한식 / 중식 / 일식 / 양식 / 분식 / 카페 (구내식당 없음, '기타'는 칩 없이 '전체'에 포함, 카페는 '전체'에 미포함)
 
 **오류**
 
@@ -941,7 +952,7 @@ null
 
 **시스템 처리**
 1. restaurantId로 RESTAURANT를 조회한다. 없으면 중단한다.
-2. 해당 식당 리뷰들의 REVIEW_TAG를 태그별로 집계해 상위 3개를 구한다. (13개 태그 전체 대상, 분류와 무관. 동수면 tag_id 오름차순, 선택된 적 없는 태그는 제외)
+2. 해당 식당 리뷰들의 REVIEW_TAG를 태그별로 집계해 상위 3개를 구한다. (태그 전체 대상, 분류와 무관. 동수면 tag_id 오름차순, 선택된 적 없는 태그는 제외)
 3. 최근 30일 따봉 수(공통 규칙 '따봉 집계'), INTEREST 수, REVIEW 수를 집계한다.
 4. 로그인 회원의 INTEREST 존재 여부를 확인한다.
 5. 결과를 반환한다.
@@ -1098,13 +1109,13 @@ null
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
 | content | string | O | 1~100자, 앞뒤 공백 제거 후 빈 값 불가 |
-| tagIds | number (반복) | X | 공통 규칙 '리뷰 태그' 표의 tagId(1~13). 분류와 관계없이 여러 개 선택 가능. 예: tagIds=1&tagIds=4. 중복 값은 1개로 처리 |
+| tagIds | number (반복) | X | 공통 규칙 '리뷰 태그' 표의 tagId(1~18). 분류와 관계없이 여러 개 선택 가능. 예: tagIds=1&tagIds=4. 중복 값은 1개로 처리 |
 | image | file | X | jpg·png, 5MB 이하, 1장 |
 
 **시스템 처리**
 1. content 길이와 빈 값 여부를 검증한다.
 2. RESTAURANT가 있는지 확인한다.
-3. tagIds가 있으면 중복을 제거하고 모두 TAG(1~13)에 존재하는지 확인한다.
+3. tagIds가 있으면 중복을 제거하고 모두 TAG(1~18)에 존재하는지 확인한다.
 4. image가 있으면 확장자·MIME 타입·용량을 검증하고, 서버 업로드 경로에 고유 파일명으로 저장한다.
 5. REVIEW를 저장한다. (image_path = 저장 경로 또는 NULL)
 6. REVIEW_TAG를 저장한다.

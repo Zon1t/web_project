@@ -1,11 +1,11 @@
 -- =====================================================================
 -- 03_init_data.sql : 서비스에 꼭 필요한 초기 데이터 (운영에도 들어가는 값)
---   1) 리뷰 태그 13건 (TAG_ID 1~13 고정, FE 상수와 같아야 함)
+--   1) 리뷰 태그 18건 (TAG_ID 1~18 고정, FE 상수와 같아야 함)
 --   2) 구내식당 식당 1건 (등록자 없음)
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 1. 리뷰 태그 13건
+-- 1. 리뷰 태그 18건 (14~18은 2026-11-23 추가)
 -- ---------------------------------------------------------------------
 INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (1,  '점심추천',   'MEAL_TYPE');
 INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (2,  '저녁추천',   'MEAL_TYPE');
@@ -20,6 +20,11 @@ INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (10, '도보5분이내',
 INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (11, '주차가능',   'ACCESSIBILITY');
 INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (12, '포장가능',   'ACCESSIBILITY');
 INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (13, '단체석',     'ACCESSIBILITY');
+INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (14, '만원이하',   'PRICE');
+INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (15, '양많음',     'PRICE');
+INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (16, '빨리나와요', 'WAITING');
+INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (17, '예약가능',   'WAITING');
+INSERT INTO TAG (TAG_ID, TAG_NAME, TAG_CATEGORY) VALUES (18, '도보15분이상', 'ACCESSIBILITY');
 
 -- ---------------------------------------------------------------------
 -- 2. 구내식당 (세종대학교 계절밥상)

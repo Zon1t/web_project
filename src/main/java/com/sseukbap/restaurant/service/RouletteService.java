@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * 메뉴 룰렛 (API_SPEC 4장, C)
  * 구내식당(CAFETERIA)은 '전체'를 포함해 카테고리 룰렛 후보에서 항상 제외한다.
+ * 카페(CAFE)는 '전체'에서는 빠지고, '카페' 칩(category=CAFE)으로만 나온다. (2026-11-23)
  * 룰렛 실행(spin)은 내 룰렛에서 고른 구내식당도 받는다. (2026-11-23)
  */
 @Service

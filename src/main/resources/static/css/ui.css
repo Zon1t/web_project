@@ -451,6 +451,35 @@ html.has-modal {
 }
 
 /* ===================== 식사팟 참여 확인 창 (party-join.js) ===================== */
+
+/* '같은 시간대에는 식사팟 하나만' 안내 (2026-11-23) */
+.pj-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.pj-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pj-notice__text {
+  color: var(--color-text);
+  word-break: keep-all;
+}
+
+.pj-notice__desc {
+  margin-top: var(--space-1);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  word-break: keep-all;
+}
+
 .pj-summary {
   display: flex;
   flex-direction: column;

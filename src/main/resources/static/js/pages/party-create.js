@@ -385,6 +385,13 @@
         // 화면을 열어 둔 사이 날짜가 바뀌어 범위를 벗어난 경우 → 달력 범위를 새로 맞춘다
         initDate();
         setMessage(dateMessage, '날짜가 바뀌었어요. 날짜를 다시 골라 주세요.', DATE_HINT);
+      } else if (partyJoin.isSameMealError(err)) {
+        // 같은 날짜·끼니에 이미 참여 중인 팟이 있음: 팝업으로 안내 (닫으면 날짜·끼니를 다시 고를 수 있게 그대로 둔다)
+        partyJoin.sameMealNotice({
+          partyDate: state.partyDate,
+          mealType: state.mealType,
+          cancelText: '다른 날짜·끼니 고르기',
+        });
       } else if (err.error === 'RESTAURANT_NOT_FOUND') {
         clearRestaurant();
         setMessage(restaurantMessage, err.message, RESTAURANT_HINT);

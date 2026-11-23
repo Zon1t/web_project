@@ -417,7 +417,13 @@
     } catch (err) {
       if (err.statusCode === 401) return;
       if (err.error === 'PARTY_DELETED') return showDeleted();
-      state.feedback = { type: 'error', text: err.message };
+      if (partyJoin.isSameMealError(err)) {
+        // 같은 시간대에 이미 다른 팟에 참여 중: 문구 대신 팝업으로 안내 (초대 링크로 들어온 경우 포함)
+        const d = state.detail;
+        partyJoin.sameMealNotice({ partyDate: d.partyDate, mealType: d.mealType });
+      } else {
+        state.feedback = { type: 'error', text: err.message };
+      }
     } finally {
       state.busy = false;
     }

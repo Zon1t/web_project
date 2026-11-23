@@ -382,9 +382,15 @@
         return;
       }
       if (action === 'join') {
+        if (partyJoin.isSameMealError(err)) {
+          // 같은 시간대에 이미 다른 팟에 참여 중: 팝업으로 안내 (오늘 지금 끼니 목록이라 날짜는 오늘)
+          button.textContent = '참여 불가';
+          const party = button.dataset.party ? JSON.parse(button.dataset.party) : {};
+          partyJoin.sameMealNotice({ partyDate: party.partyDate, mealType: party.mealType || currentMeal() });
+          return;
+        }
         // 목록 줄에는 메시지 칸이 없어서 버튼 글자로 알려 준다 (예: 그새 마감)
-        button.textContent = err.error === 'PARTY_FULL' ? '마감'
-          : err.error === 'ALREADY_JOINED_SAME_MEAL' ? '참여 불가' : '실패';
+        button.textContent = err.error === 'PARTY_FULL' ? '마감' : '실패';
         button.title = err.message;
         return;
       }

@@ -492,6 +492,11 @@
   min-width: 0;
 }
 
+/* 작은 지도 (2026-11-23, css/map-kit.css의 .mini-map): 이름 바로 아래 */
+.detail-mini-map {
+  margin-top: var(--space-2);
+}
+
 .detail-info__address {
   display: flex;
   align-items: center;

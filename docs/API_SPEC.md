@@ -967,6 +967,8 @@ null
   "cafeteria": false,
   "mapUrl": "https://naver.me/xxxx",
   "address": "서울 광진구 능동로 ...",
+  "lat": 37.5509,
+  "lng": 127.0738,
   "topTags": [
     { "tagId": 5, "name": "혼밥가능", "category": "GROUP_TYPE", "count": 18 },
     { "tagId": 1, "name": "점심추천", "category": "MEAL_TYPE", "count": 11 },
@@ -980,6 +982,7 @@ null
 ```
 - topTags: 0~3개
 - cafeteria: category가 CAFETERIA이면 true
+- lat·lng: 식당 위치(위도·경도). 상세 화면의 작은 지도에 쓴다. 좌표가 없으면 null (2026-11-23 추가)
 
 **오류**
 

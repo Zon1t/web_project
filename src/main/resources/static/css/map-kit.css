@@ -1,0 +1,172 @@
+/*
+ * map-kit.css — 네이버 지도 공통 스타일 (js/components/map-kit.js, B, 2026-11-23)
+ * 지도 핀: 물방울 몸통은 카테고리 색, 가운데 흰 원에 음식 그림.
+ * 카테고리 색은 목록 아바타(css/ui.css의 .ui-avatar--*) 글자색과 같다. 바꿀 때는 두 곳을 같이 바꾼다.
+ */
+
+/* ---------- 지도 핀 (네이버 지도 마커 안에 들어가는 HTML) ---------- */
+.map-pin {
+  position: relative;
+  width: 32px;
+  height: 42px;
+  color: var(--color-text-sub);       /* 아래 카테고리 색이 없을 때 */
+  transform-origin: 50% 100%;   /* 커지거나 튈 때 핀 끝(좌표)은 그대로 */
+  filter: drop-shadow(0 2px 2px rgba(27, 36, 48, 0.25));
+  cursor: pointer;
+}
+
+.map-pin__shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.map-pin__body {
+  fill: currentColor;
+}
+
+.map-pin__glyph {
+  color: currentColor;
+}
+
+/* 카테고리별 색 (ui.css 아바타와 같은 색) */
+.map-pin--korean    { color: #d8641c; }
+.map-pin--chinese   { color: #c94040; }
+.map-pin--japanese  { color: #0b7360; }
+.map-pin--western   { color: #2459bd; }
+.map-pin--snack     { color: #a46a00; }
+.map-pin--etc       { color: #4a5563; }
+.map-pin--cafe      { color: #7a4a26; }
+.map-pin--cafeteria { color: #1c3f8f; }  /* 구내식당: 양식 파랑과 구분되게 남색 + 큰 핀(map-kit.js) */
+
+/* 강조 (목록 항목·핀에 마우스를 올렸을 때): 통 튀어 올랐다가 살짝 둥실. 색은 그대로 */
+.map-pin.is-active {
+  filter: drop-shadow(0 8px 6px rgba(27, 36, 48, 0.3));
+  animation: map-pin-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) forwards,
+             map-pin-float 1.4s ease-in-out 0.35s infinite;
+}
+
+@keyframes map-pin-pop {
+  0%   { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-4px) scale(1.3); }
+}
+
+@keyframes map-pin-float {
+  0%, 100% { transform: translateY(-4px) scale(1.3); }
+  50%      { transform: translateY(-8px) scale(1.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin.is-active {
+    animation: none;
+    transform: translateY(-4px) scale(1.3);
+  }
+}
+
+/* ---------- 작은 지도 (mapKit.mini, 식당 1곳) ---------- */
+.mini-map {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mini-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.mini-map__state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mini-map .map-pin {
+  cursor: default;
+}
+
+/* 왼쪽 위: 오른쪽 위는 확대·축소 버튼, 아래는 네이버 로고 자리라 겹치지 않게 */
+.mini-map__link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.mini-map__link:hover {
+  border-color: var(--color-primary);
+}
+
+.mini-map__link svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 640px) {
+  .mini-map {
+    height: 160px;
+  }
+}
+
+/* 핀 위 툴팁: 이름 / 카테고리 · 따봉 수 */
+.map-pin__tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-family);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  pointer-events: none;
+  /* 핀이 1.3배 커진 만큼 툴팁은 줄여서 원래 크기로 보이게 */
+  transform: translateX(-50%) scale(0.77);
+  transform-origin: 50% 100%;
+}
+
+.map-pin__tip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--color-bg);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.map-pin__tip-name {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.map-pin__tip-meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

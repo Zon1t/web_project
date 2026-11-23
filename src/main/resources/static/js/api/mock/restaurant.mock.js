@@ -224,6 +224,8 @@
       cafeteria: r.category === 'CAFETERIA',
       mapUrl: r.mapUrl,
       address: r.address,
+      lat: r.lat,
+      lng: r.lng,
       topTags: r.topTags,
       thumbsCount30d: r.thumbsCount30d,
       interestCount: r.interestCount,

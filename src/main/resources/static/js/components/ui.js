@@ -8,6 +8,7 @@
  * 쓰는 법
  *   ui.icon('clock', 18)                  선 아이콘 SVG 문자열 (색은 currentColor)
  *   ui.avatar('KOREAN', 44)               식당 아바타 (카테고리별 색 + 음식 아이콘)
+ *   ui.avatarGlyph('KOREAN')              아바타 안의 음식 그림만 (지도 핀용, 40px 격자)
  *   ui.illust('bowl')                     파스텔 일러스트 SVG (빈 상태·배너용)
  *   ui.empty({ illust, title, desc, actionHtml })   빈 상태 화면 HTML (title·desc는 HTML 그대로 — 사용자 입력·서버 문구는 이스케이프해서 넘길 것)
  *   ui.toast('따봉을 남겼어요')            아래에서 올라왔다 사라지는 알림 (type: 'success' | 'error')
@@ -81,6 +82,11 @@
       '<rect x="6" y="11" width="28" height="20" rx="4" fill="currentColor" opacity=".35"/><rect x="9" y="14" width="10" height="7" rx="2" fill="currentColor"/>' +
       '<rect x="21" y="14" width="10" height="7" rx="2" fill="currentColor"/><rect x="9" y="23" width="22" height="5" rx="2" fill="currentColor"/>',
   };
+
+  /** 아바타 안의 음식 그림만 (40px 격자 SVG 안쪽 문자열). 지도 핀(map-kit.js)에서 쓴다 */
+  function avatarGlyph(category) {
+    return AVATAR_GLYPHS[category] || AVATAR_GLYPHS.ETC;
+  }
 
   function avatar(category, size) {
     const key = AVATAR_GLYPHS[category] ? category : 'ETC';
@@ -292,7 +298,7 @@
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
 
-  global.ui = { icon, avatar, illust, empty, toast, modal, confirm, skeleton };
+  global.ui = { icon, avatar, avatarGlyph, illust, empty, toast, modal, confirm, skeleton };
 
   // HTML에 <span data-ui-illust="bowl"></span> / <span data-ui-icon="clock"></span>처럼 적어 두면 그림을 채운다
   function hydrate() {

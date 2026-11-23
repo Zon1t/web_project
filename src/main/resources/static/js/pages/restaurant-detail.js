@@ -3,7 +3,7 @@
  *
  * 주소: /restaurant-detail.html?id=12
  *
- * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 네이버 지도 링크,
+ * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 작은 지도(map-kit.js)·네이버 지도 링크,
  *          [관심] 등록·해제, [식사팟 만들기] 이동, 로딩 / 없는 식당 / 오류 화면
  * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js, 수정 제안 입력 창은 restaurant-detail-suggestion.js
  * (둘 다 이 파일보다 먼저 불러온다)
@@ -18,6 +18,8 @@
 
   const root = document.getElementById('detail-root');
   const restaurantId = new URLSearchParams(location.search).get('id');
+  // 지도 화면 안의 상세 카드(iframe, ?embed=1)에서는 옆에 큰 지도가 있으니 작은 지도를 그리지 않는다
+  const isEmbed = document.documentElement.classList.contains('is-embed');
 
   /* ---------- 시작 ---------- */
 
@@ -147,6 +149,10 @@
     interest.interested = d.interested;
     interest.count = d.interestCount;
 
+    // 작은 지도는 리뷰가 바뀌어 다시 그릴 때마다 새로 만들지 않도록, 이미 있으면 떼어 두었다가 다시 붙인다
+    const keptMap = document.getElementById('detail-mini-map');
+    const showMap = !isEmbed && typeof d.lat === 'number' && typeof d.lng === 'number';
+
     document.getElementById('info-section').innerHTML =
       // 머리: 식당 아바타 + 이름 + 카테고리·주소 (2026-11-20 개편)
       '<div class="detail-hero">' +
@@ -159,6 +165,8 @@
       (d.address ? '<p class="detail-info__address">' + ui.icon('pin', 16) + esc(d.address) + '</p>' : '') +
       '</div>' +
       '</div>' +
+      // 작은 지도 (2026-11-23, js/components/map-kit.js). [네이버 지도에서 보기]는 지도 오른쪽 아래에 들어간다
+      (showMap ? '<div id="detail-mini-map-slot"></div>' : '') +
       // 숫자 타일
       '<div class="detail-stats">' +
       '<div class="detail-stat detail-stat--thumbs"><span class="detail-stat__label">' + ui.icon('thumbs', 16) + '따봉 (최근 30일)</span><strong>' + d.thumbsCount30d + '</strong></div>' +
@@ -166,7 +174,7 @@
       '<div class="detail-stat"><span class="detail-stat__label">리뷰</span><strong>' + d.reviewCount + '</strong></div>' +
       '</div>' +
       renderTopTags(d.topTags) +
-      renderMapLink(d.mapUrl) +
+      (showMap ? '' : renderMapLink(d.mapUrl)) +   // 지도가 없을 때만 따로 링크
       '<div class="detail-actions">' +
       // 관심: 누를 때마다 등록 ↔ 해제. 상태는 aria-pressed와 채워진 하트로 표시
       '<button type="button" id="interest-button" class="btn interest-button" data-action="toggle-interest" aria-pressed="false">' +
@@ -180,6 +188,7 @@
       '</div>' +
       '<p id="interest-message" class="field__message field__message--error detail-interest-message" role="alert"></p>';
 
+    if (showMap) renderMiniMap(d, keptMap);
     renderInterest();
   }
 
@@ -200,6 +209,26 @@
       '</ul>' +
       '</div>'
     );
+  }
+
+  // 작은 지도를 자리(#detail-mini-map-slot)에 넣는다. 이미 그린 지도가 있으면 그것을 다시 붙인다.
+  function renderMiniMap(d, keptMap) {
+    const slot = document.getElementById('detail-mini-map-slot');
+    if (keptMap) {
+      slot.replaceWith(keptMap);
+      return;
+    }
+    const el = document.createElement('div');
+    el.id = 'detail-mini-map';
+    el.className = 'detail-mini-map';
+    if (window.mapKit && window.mapKit.mini(el, d)) slot.replaceWith(el);
+    else slot.replaceWith(htmlToNode(renderMapLink(d.mapUrl)));   // 혹시 못 그리면 링크만
+  }
+
+  function htmlToNode(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    return template.content;
   }
 
   // 네이버 지도 링크는 새 탭으로. http(s) 주소가 아니면 링크를 만들지 않는다.

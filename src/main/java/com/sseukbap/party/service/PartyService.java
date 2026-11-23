@@ -4,6 +4,8 @@ import com.sseukbap.common.enums.MealType;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.member.entity.Member;
+import com.sseukbap.party.dto.PartyActionPendingResponse;
+import com.sseukbap.party.dto.PartyActionPendingResponse.PartyAction;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
@@ -32,6 +34,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -254,6 +257,43 @@ public class PartyService {
                             confirmedCountOf(counts, partyId),
                             pm.isConfirmed());
                 })
+                .toList();
+    }
+
+    /**
+     * 내가 할 일이 있는 식사팟 (헤더 종 알림, 2026-11-23)
+     * - 방장: 아직 일정을 안 정한 팟 → SET_SCHEDULE
+     * - 참여자(방장 포함): 일정은 정해졌는데 내가 참석 확정을 안 한 팟 → CONFIRM
+     * 대상: 오늘 ~ 14일 후, FINISHED·DELETED 제외, 기준 시간이 아직 안 지난 팟. 정렬: 날짜 → 기준 시간 → partyId
+     * 조건이 풀리면(일정 확정·참석 확정·삭제·식사 완료) 목록에서 저절로 빠진다. 읽음 표시는 저장하지 않는다.
+     */
+    public List<PartyActionPendingResponse> getActionPendingList(Long memberId) {
+        return getActionPendingList(memberId, LocalDateTime.now());
+    }
+
+    /** 현재 시각을 밖에서 받는 버전 (테스트용) */
+    List<PartyActionPendingResponse> getActionPendingList(Long memberId, LocalDateTime now) {
+        LocalDate today = now.toLocalDate();
+        List<PartyMember> myParties = partyMemberRepository.findAllByMemberIdAndPartyDateBetween(
+                memberId, today, today.plusDays(PartyTimePolicy.MAX_DAYS_AHEAD),
+                EnumSet.of(PartyStatus.FINISHED, PartyStatus.DELETED));
+
+        return myParties.stream()
+                .filter(pm -> !PartyTimePolicy.isMealTimePassed(
+                        pm.getParty().getPartyDate(), pm.getParty().getBaseTime(), now))
+                .sorted(Comparator.comparing((PartyMember pm) -> pm.getParty().getPartyDate())
+                        .thenComparing(pm -> pm.getParty().getBaseTime())
+                        .thenComparing(pm -> pm.getParty().getPartyId()))
+                .map(pm -> {
+                    MealParty party = pm.getParty();
+                    if (!party.hasSchedule()) {
+                        return party.isHost(memberId)
+                                ? PartyActionPendingResponse.of(party, PartyAction.SET_SCHEDULE)
+                                : null;
+                    }
+                    return pm.isConfirmed() ? null : PartyActionPendingResponse.of(party, PartyAction.CONFIRM);
+                })
+                .filter(Objects::nonNull)
                 .toList();
     }
 

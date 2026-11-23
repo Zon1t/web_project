@@ -200,8 +200,7 @@ class PartyThumbsServiceTest {
         Long partyId = createParty(mealTime);
         partyMemberService.joinParty(partyId, guest.getMemberId());
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(mealTime, "정문", null),
-                host.getMemberId(), NINE_AM);
-        partyMemberService.confirmParty(partyId, host.getMemberId());
+                host.getMemberId(), NINE_AM);   // 방장은 일정을 정하면 자동 확정
         if (guestConfirmed) {
             partyMemberService.confirmParty(partyId, guest.getMemberId());
         }

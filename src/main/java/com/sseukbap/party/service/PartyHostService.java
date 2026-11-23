@@ -8,6 +8,7 @@ import com.sseukbap.party.dto.PartyStatusUpdateRequest;
 import com.sseukbap.party.dto.PartyStatusUpdateResponse;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.entity.PartyChat;
+import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.repository.PartyChatRepository;
 import com.sseukbap.party.repository.PartyMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,12 @@ public class PartyHostService {
 
         // 7~8. 일정 저장 + RECRUITING이면 SCHEDULED (그 외 상태 유지)
         party.updateSchedule(request.confirmedTime(), request.meetPlace(), request.confirmMemo());
+
+        // 8-1. 방장은 일정을 정하면 자동으로 참석 확정 (2026-11-23, 일정 수정으로 초기화돼도 다시 확정)
+        //      6번의 초기화는 DB에 바로 반영되는 UPDATE라, 방장 참여 정보는 반드시 그 뒤에 읽어야 최신 값이다.
+        partyMemberRepository.findByPartyIdAndMemberId(partyId, memberId)
+                .filter(host -> !host.isConfirmed())
+                .ifPresent(PartyMember::confirm);
 
         // 9. 시스템 메시지 (최초 / 수정)
         String schedule = request.confirmedTime().format(HH_MM) + " · " + request.meetPlace();

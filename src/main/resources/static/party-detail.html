@@ -23,7 +23,7 @@
     </nav>
 
     <div class="party-layout">
-      <!-- 왼쪽: 제목·상태, 일정, 내 버튼, 참여자, 방장 메뉴 (로딩 / 없는 팟 / 오류도 여기) -->
+      <!-- 왼쪽: 제목·상태, 진행 3단계, 일정, 내 버튼, 참여자 (로딩 / 없는 팟 / 오류도 여기) -->
       <div id="party-root" class="party-main"></div>
 
       <!-- 오른쪽: 대화 (참여자만) -->
@@ -33,6 +33,8 @@
           <span class="text-muted">식사 완료 후 읽기 전용 · 다음 날 삭제</span>
         </div>
         <div id="chat-body" class="party-chat__body" aria-live="polite"></div>
+        <!-- 방장 메뉴: 입력창 위 버튼 줄 (방장에게만, party-detail.js가 그린다) -->
+        <div id="host-bar" class="party-host-bar" role="toolbar" aria-label="방장 메뉴" hidden></div>
         <form id="chat-form" class="party-chat__form" novalidate>
           <label for="chat-input" class="sr-only">메시지 입력</label>
           <input id="chat-input" class="input" maxlength="200" autocomplete="off" placeholder="메시지를 입력하세요">
@@ -51,7 +53,7 @@
     <form id="schedule-form" class="party-dialog__form" method="dialog" novalidate>
       <h2 id="schedule-title" class="section-title">일정 정하기</h2>
       <p id="schedule-notice" class="party-dialog__notice" hidden>
-        일정을 바꾸면 방장을 포함한 모든 참여자의 확정이 초기화됩니다. 다시 확정을 받아야 합니다.
+        일정을 바꾸면 참여자들의 참석 확정이 초기화되어 다시 받아야 해요. 방장은 자동으로 다시 확정돼요.
       </p>
       <div class="field">
         <label class="field__label" for="schedule-time">확정 시간</label>

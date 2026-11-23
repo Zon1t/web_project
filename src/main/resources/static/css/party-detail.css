@@ -79,36 +79,16 @@
   vertical-align: middle;
 }
 
-/* 상태 4단계: 모집중 › 일정 확정 › 마감 › 식사 완료 (현재 단계 강조) */
-.party-steps {
-  display: flex;
-  flex-wrap: wrap;
+/* 제목 옆: 상태 뱃지 + 카테고리 */
+.party-head__meta {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--font-size-sm);
 }
 
-.party-steps__item {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-full);
-  color: var(--color-text-muted);
-}
-
-.party-steps__item.is-done {
-  border-color: var(--color-border);
-  color: var(--color-text-sub);
-}
-
-.party-steps__item.is-current {
-  border-color: var(--color-text);
-  background: var(--color-text);
-  color: var(--color-bg);
-  font-weight: var(--font-weight-bold);
-}
-
-.party-steps__sep {
-  color: var(--color-text-disabled);
+/* 진행 3단계는 .my-progress 모양을 그대로 쓰고, 제목 아래에서는 위쪽 여백만 준다 */
+.party-flow {
+  margin: var(--space-1) 0 0;
 }
 
 /* ---------- 일정 정보 ---------- */
@@ -192,14 +172,8 @@
   font-size: var(--font-size-sm);
 }
 
-.party-members__head h2,
-.party-host h2 {
+.party-members__head h2 {
   font-size: var(--font-size-md);
-}
-
-.party-host h2 {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-regular);
 }
 
 .party-members__item {
@@ -225,24 +199,39 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* ---------- 방장 메뉴 ---------- */
-.party-host {
+/* ---------- 방장 메뉴: 대화 입력창 위 버튼 줄 ---------- */
+.party-host-bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border-light);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-}
-
-.party-host__buttons {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+  overflow-x: auto;             /* 좁은 화면에서는 줄바꿈 대신 옆으로 밀기 */
 }
 
-.party-host__buttons .btn--danger {
+/* display:flex가 hidden 속성을 덮어쓰지 않도록 (방장이 아니면 숨긴다) */
+.party-host-bar[hidden] {
+  display: none;
+}
+
+.party-host-bar__label {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.party-host-bar .btn {
+  flex-shrink: 0;
+  height: auto;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+}
+
+.party-host-bar .btn--danger {
   margin-left: auto;
 }
 
@@ -408,10 +397,6 @@
 @media (max-width: 640px) {
   .party-info {
     grid-template-columns: 80px 1fr;
-  }
-
-  .party-host__buttons .btn--danger {
-    margin-left: 0;
   }
 }
 

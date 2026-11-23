@@ -202,7 +202,7 @@ class PartyServiceTest {
         Long partyId = createPartyWithGuest();
         partyHostService.updateSchedule(partyId,
                 new PartyScheduleUpdateRequest(LocalTime.of(12, 30), "정문", "늦으면 채팅"), user01.getMemberId(), NINE_AM);
-        partyMemberService.confirmParty(partyId, user01.getMemberId());
+        // 방장 user01은 일정을 정하면 자동 확정
         partyMemberService.confirmParty(partyId, user02.getMemberId());
         em.flush();
         em.clear();

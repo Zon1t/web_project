@@ -16,12 +16,18 @@
  *
  * - GNB: 홈 · 지도 · 식사팟 · 랭킹 · 마이페이지. 현재 주소를 보고 선택 표시를 한다.
  *   메뉴를 바꾸려면 아래 NAV_ITEMS만 고치면 된다.
- * - 오른쪽: [따봉 알림 🔔] [아바타 닉네임 ▾] → 드롭다운(마이페이지, 로그아웃)
+ * - 오른쪽: [알림 🔔] [아바타 닉네임 ▾] → 드롭다운(마이페이지, 로그아웃)
  * - 닉네임은 /api/auth/me로 채운다. 로그인하지 않았으면 client.js가 로그인 화면으로 보낸다.
- * - 따봉 알림(2026-11-20): 식사 완료된 팟 중 내가 확정했고 따봉을 안 남긴 최근 식사 1건 (GET /api/parties/my/thumbs-pending)
- *     대상이 있으면 종에 주황 점. 패널에서 [따봉](POST /api/parties/{id}/thumbs) / [다음에](오늘 하루 점 숨김)
- *     따봉을 남기면 document에 'sseukbap:thumbs-added' (detail.source='header')를 보내고,
- *     다른 곳에서 보낸 같은 이벤트를 받으면 알림을 다시 불러온다.
+ * - 알림 패널 (2026-11-23 개편: 따봉 1건 → 할 일 목록 + 따봉)
+ *   ① 할 일 (GET /api/parties/my/action-pending, A)
+ *       SET_SCHEDULE "일정을 정해 주세요"(방장) / CONFIRM "참석을 확정해 주세요"
+ *       누르면 식사팟 상세로 이동. 처리하면 서버 목록에서 저절로 빠진다 (읽음 저장 없음)
+ *   ② 따봉 (GET /api/parties/my/thumbs-pending): 식사 완료된 팟 중 따봉을 안 남긴 최근 1건
+ *       [따봉](POST /api/parties/{id}/thumbs) / [다음에](오늘 하루 배지에서 뺌)
+ *       따봉을 남기면 document에 'sseukbap:thumbs-added' (detail.source='header')를 보낸다.
+ *   - 종 배지 = 할 일 수 + 따봉(오늘 [다음에]를 안 눌렀으면 1). 0이면 숨김
+ *   - 다시 불러오는 때: 화면 열 때, 종을 열 때, 다른 탭에서 돌아왔을 때,
+ *     'sseukbap:thumbs-added'(다른 곳에서 보낸 것)·'sseukbap:party-joined' 이벤트를 받았을 때 (주기적 확인은 안 함)
  * - 룰렛 플로팅 버튼(2026-11-20): FAB_PATHS 화면에서만 오른쪽 아래에 띄운다. (룰렛·입력 화면에서는 숨김)
  */
 (function (global) {
@@ -75,8 +81,18 @@
 
   const noticeButton = header.querySelector('#header-notice-btn');
   const noticePanel = header.querySelector('#header-notice-panel');
-  const noticeDot = header.querySelector('.app-header__dot');
-  let pendingThumbs = null;
+  const noticeBadge = header.querySelector('.app-header__badge');
+  let pendingThumbs = null;   // 따봉 요청 대상 1건 또는 null
+  let actionItems = [];       // 할 일 목록 (일정 정하기 / 참석 확정)
+  let loadSeq = 0;            // 늦게 온 이전 응답이 새 응답을 덮지 않게
+  let doneMessage = '';       // 따봉을 남긴 직후 패널 위에 잠깐 보여 줄 문구
+  let lastPanelHtml = '';     // 같은 내용이면 다시 그리지 않는다 (포커스가 튀지 않게)
+
+  // 할 일 종류별 문구·아이콘 (A의 action-pending 응답 action 값)
+  const ACTION_TEXT = {
+    SET_SCHEDULE: { title: '일정을 정해 주세요', icon: 'calendar' },
+    CONFIRM: { title: '참석을 확정해 주세요', icon: 'check' },
+  };
 
   noticeButton.addEventListener('click', () => (noticePanel.hidden ? openNotice() : closeNotice(false)));
   noticePanel.addEventListener('click', onNoticeClick);
@@ -84,7 +100,12 @@
     if (event.key === 'Escape') closeNotice(true);
   });
   document.addEventListener('sseukbap:thumbs-added', (event) => {
-    if (!event.detail || event.detail.source !== 'header') loadThumbs();
+    if (!event.detail || event.detail.source !== 'header') loadNotices();
+  });
+  document.addEventListener('sseukbap:party-joined', () => loadNotices());
+  // 다른 탭에서 일정·확정을 하고 돌아왔을 때
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadNotices();
   });
 
   userButton.addEventListener('click', () => (menu.hidden ? openMenu(false) : closeMenu(false)));
@@ -102,7 +123,7 @@
   });
 
   showUser();
-  loadThumbs();
+  loadNotices();
 
   /* ---------- 그리기 ---------- */
 
@@ -122,7 +143,7 @@
       '<button id="header-notice-btn" class="app-header__icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="header-notice-panel" aria-label="알림">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>' +
       '<path d="M10 20.5a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>' +
-      '<span class="app-header__dot" hidden></span>' +
+      '<span class="app-header__badge" aria-hidden="true" hidden></span>' +
       '</button>' +
       '<div id="header-notice-panel" class="app-header__panel" role="dialog" aria-label="알림" hidden></div>' +
       '</div>' +
@@ -189,24 +210,45 @@
     }
   }
 
-  /* ---------- 따봉 알림 ---------- */
+  /* ---------- 알림 (할 일 + 따봉) ---------- */
 
-  async function loadThumbs() {
-    try {
-      pendingThumbs = await global.api.get('/parties/my/thumbs-pending');
-    } catch (err) {
-      pendingThumbs = null;   // 알림은 부가 기능이라 오류면 조용히 비운다 (401은 client.js가 처리)
-    }
-    noticeDot.hidden = !pendingThumbs || isSnoozedToday();
-    noticeButton.setAttribute('aria-label', noticeDot.hidden ? '알림' : '알림 · 따봉을 남길 식사가 있어요');
+  // 할 일과 따봉을 따로 불러온다. 한쪽이 실패해도 다른 쪽은 보여 준다. (401은 client.js가 로그인 화면으로)
+  async function loadNotices() {
+    const seq = ++loadSeq;
+    const [actions, thumbs] = await Promise.allSettled([
+      global.api.get('/parties/my/action-pending'),
+      global.api.get('/parties/my/thumbs-pending'),
+    ]);
+    if (seq !== loadSeq) return;
+    actionItems = actions.status === 'fulfilled' && Array.isArray(actions.value) ? actions.value : [];
+    pendingThumbs = thumbs.status === 'fulfilled' ? thumbs.value || null : null;
+    updateBadge();
     if (!noticePanel.hidden) renderNotice();
   }
 
-  function renderNotice(doneText) {
-    const p = pendingThumbs;
-    let body;
-    if (p) {
-      body =
+  // 종 배지: 할 일 수 + 따봉(오늘 [다음에]를 안 눌렀으면 1)
+  function updateBadge() {
+    const count = actionItems.length + (pendingThumbs && !isSnoozedToday() ? 1 : 0);
+    noticeBadge.hidden = count === 0;
+    noticeBadge.textContent = count > 9 ? '9+' : String(count);
+    noticeButton.setAttribute('aria-label', count === 0 ? '알림' : '알림 ' + count + '개');
+  }
+
+  function renderNotice() {
+    const total = actionItems.length + (pendingThumbs ? 1 : 0);
+    const both = actionItems.length > 0 && pendingThumbs;
+    let body = '';
+
+    if (actionItems.length > 0) {
+      body +=
+        (both ? '<p class="app-header__panel-section">할 일</p>' : '') +
+        '<ul class="app-header__actions">' + actionItems.map(actionItemHtml).join('') + '</ul>';
+    }
+    if (pendingThumbs) {
+      const p = pendingThumbs;
+      body +=
+        (both ? '<p class="app-header__panel-section">따봉</p>' : '') +
+        '<div class="app-header__thumbs' + (both ? ' app-header__thumbs--boxed' : '') + '">' +
         '<p class="app-header__panel-eyebrow">' + esc(whenLabel(p.partyDate) + ' ' + (MEAL_LABELS[p.mealType] || '')) + ' 식사</p>' +
         '<p class="app-header__panel-title"><b>' + esc(p.restaurantName) + '</b>, 식사는 어땠나요?</p>' +
         '<p class="app-header__panel-desc">함께 식사한 식당에 따봉을 남기면 랭킹에 반영돼요.</p>' +
@@ -214,23 +256,59 @@
         '<div class="app-header__panel-actions">' +
         '<button type="button" class="btn app-header__thumbs-btn" data-action="thumbs">' + thumbsIcon() + '따봉</button>' +
         '<button type="button" class="btn" data-action="snooze">다음에</button>' +
+        '</div>' +
         '</div>';
-    } else {
+    }
+    if (total === 0) {
       body = '<p class="app-header__panel-empty">새 알림이 없어요.</p>';
     }
-    noticePanel.innerHTML =
-      '<p class="app-header__panel-head">알림</p>' +
-      (doneText ? '<p class="app-header__panel-done" role="status">' + esc(doneText) + '</p>' : '') +
-      body;
+
+    const html =
+      '<p class="app-header__panel-head"><span>알림</span>' +
+      (total > 0 ? '<span class="app-header__panel-count">' + total + '</span>' : '') + '</p>' +
+      (doneMessage ? '<p class="app-header__panel-done" role="status">' + esc(doneMessage) + '</p>' : '') +
+      '<div class="app-header__panel-body">' + body + '</div>';
+    if (html === lastPanelHtml) return;
+    lastPanelHtml = html;
+    noticePanel.innerHTML = html;
+  }
+
+  // 할 일 한 줄: 누르면 식사팟 상세로
+  function actionItemHtml(item) {
+    const text = ACTION_TEXT[item.action] || { title: '식사팟을 확인해 주세요', icon: 'check' };
+    const meta = [
+      item.restaurantName,
+      actionDateLabel(item.partyDate) + ' ' + (MEAL_LABELS[item.mealType] || '') + ' ' + (item.time || ''),
+    ];
+    if (item.meetPlace) meta.push(item.meetPlace);
+    return '<li>' +
+      '<a class="app-header__action" href="/party-detail.html?partyId=' + encodeURIComponent(item.partyId) + '">' +
+      '<span class="app-header__action-icon app-header__action-icon--' + text.icon + '" aria-hidden="true">' + actionIcon(text.icon) + '</span>' +
+      '<span class="app-header__action-text">' +
+      '<span class="app-header__action-title">' + esc(text.title) + '</span>' +
+      '<span class="app-header__action-meta">' + esc(meta.join(' · ').replace(/\s+/g, ' ').trim()) + '</span>' +
+      '</span>' +
+      '<svg class="app-header__action-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</a></li>';
+  }
+
+  function actionIcon(name) {
+    const paths = {
+      calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+      check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    };
+    return '<svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths[name] + '</svg>';
   }
 
   function openNotice() {
     closeMenu(false);
+    doneMessage = '';
     renderNotice();
     noticePanel.hidden = false;
     noticeButton.setAttribute('aria-expanded', 'true');
-    const first = noticePanel.querySelector('button');
+    const first = noticePanel.querySelector('a, button');
     if (first) first.focus();
+    loadNotices();   // 열 때마다 최신으로 (바뀐 게 있으면 다시 그린다)
   }
 
   function closeNotice(returnFocus) {
@@ -246,7 +324,7 @@
 
     if (button.dataset.action === 'snooze') {
       snoozeToday();
-      noticeDot.hidden = true;
+      updateBadge();       // 따봉만 배지에서 빠진다 (할 일은 그대로)
       closeNotice(true);
       return;
     }
@@ -267,8 +345,9 @@
         return;
       }
     }
-    await loadThumbs();      // 다음 대상이 있으면 이어서 보여 준다
-    renderNotice(doneText);
+    doneMessage = doneText;
+    await loadNotices();     // 다음 따봉 대상이 있으면 이어서 보여 준다
+    renderNotice();
   }
 
   function isSnoozedToday() {
@@ -330,6 +409,19 @@
     if (isNaN(days) || days <= 0) return '오늘';
     if (days === 1) return '어제';
     return days + '일 전';
+  }
+
+  // 앞으로의 식사 날짜 → '오늘' / '내일' / '모레' / '11월 26일' (할 일 알림용)
+  function actionDateLabel(partyDate) {
+    const [y, m, d] = String(partyDate).split('-').map(Number);
+    const meal = new Date(y, m - 1, d);
+    const now = new Date();
+    const days = Math.round((meal - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+    if (isNaN(days)) return '';
+    if (days <= 0) return '오늘';
+    if (days === 1) return '내일';
+    if (days === 2) return '모레';
+    return m + '월 ' + d + '일';
   }
 
   async function logout(event) {

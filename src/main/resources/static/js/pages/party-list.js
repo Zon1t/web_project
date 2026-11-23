@@ -211,7 +211,8 @@
       return '<a class="btn" href="' + detailUrl + '">상세 보기</a>';
     }
     if (state.joinedThisMeal) {
-      return '<button type="button" class="btn" disabled title="같은 시간대에 이미 참여 중인 식사팟이 있어요">참여 불가</button>';
+      // 누르면 이유를 팝업으로 알려 준다 (비활성 버튼은 눌러도 반응이 없고 툴팁은 모바일에서 안 보여서)
+      return '<button type="button" class="btn party-card__blocked" data-action="same-meal" aria-haspopup="dialog">참여 불가</button>';
     }
     if (p.status === 'RECRUITING' || p.status === 'SCHEDULED') {
       return '<button type="button" class="btn btn--primary" data-action="join">참여하기</button>';
@@ -259,6 +260,8 @@
     const joinButton = event.target.closest('[data-action="join"]');
     if (joinButton) return joinParty(joinButton);
 
+    if (event.target.closest('[data-action="same-meal"]')) return showSameMealNotice();
+
     // 링크·버튼이 아닌 곳을 눌러도 행 전체가 상세로 이동 (키보드 사용자는 식당 이름 링크로 이동)
     if (event.target.closest('a, button')) return;
     const card = event.target.closest('.party-card');
@@ -289,9 +292,25 @@
         location.href = partyApi.detailUrl(partyId);
         return;
       }
+      // 같은 시간대에 이미 다른 팟에 참여 중 (다른 탭에서 참여한 직후 등): 팝업으로 안내하고 목록을 최신으로
+      if (partyJoin.isSameMealError(err)) {
+        await loadList();
+        showSameMealNotice();
+        return;
+      }
       // 정원 마감(동시에 마지막 자리)·삭제·완료 등: 이유를 보여 주고 목록을 최신으로
       await loadList();
       message.textContent = err.message;
     }
+  }
+
+  /** '같은 시간대에는 식사팟 하나만' 팝업. 지금 목록에서 내가 참여한 팟을 함께 보여 준다 */
+  function showSameMealNotice() {
+    const joined = (state.parties || []).find((p) => p.joined);
+    partyJoin.sameMealNotice({
+      partyDate: state.date,
+      mealType: state.mealType,
+      joinedParty: joined ? { partyId: joined.partyId, restaurantName: joined.restaurantName, time: joined.time } : null,
+    });
   }
 })();

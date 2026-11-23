@@ -8,6 +8,9 @@
  *   });
  *   if (ok) await partyApi.join(partyId);
  *
+ * '같은 시간대에는 식사팟 하나만' 안내 팝업 (2026-11-23):
+ *   if (partyJoin.isSameMealError(err)) partyJoin.sameMealNotice({ partyDate, mealType });
+ *
  * 필요: utils.js, party.js, restaurant.js, ui.js
  */
 (function (global) {
@@ -49,5 +52,55 @@
     });
   }
 
-  global.partyJoin = { ask };
+  /* ===================== 한 끼에 팟 하나 안내 (2026-11-23) ===================== */
+
+  const SAME_MEAL_ERROR = 'ALREADY_JOINED_SAME_MEAL';
+  const MY_PARTIES_URL = '/mypage.html?tab=parties';
+
+  /** 서버 오류가 '같은 시간대에 이미 참여 중'인지 */
+  function isSameMealError(err) {
+    return !!err && err.error === SAME_MEAL_ERROR;
+  }
+
+  /**
+   * '같은 시간대에는 식사팟 하나만' 안내 팝업.
+   *
+   *   await partyJoin.sameMealNotice({ partyDate, mealType, joinedParty, cancelText });
+   *
+   * - joinedParty: 이미 참여 중인 팟 { partyId, restaurantName, time } (목록 화면처럼 알고 있을 때)
+   *   없으면 그 날짜·끼니 목록에서 내가 참여한 팟을 찾아 본다. 못 찾으면(식사 완료 등) 이름 없이 안내한다.
+   * - [내 식사팟 보기] → 참여 중인 팟 상세, 모르면 마이페이지 '함께한 식사팟' 탭
+   * - cancelText: 닫기 버튼 글자 (기본 '닫기', 식사팟 만들기에서는 '다른 날짜·끼니 고르기')
+   */
+  async function sameMealNotice(o) {
+    const opts = o || {};
+    let joined = opts.joinedParty || null;
+    if (!joined && opts.mealType) {
+      try {
+        const result = await partyApi.getList({ date: opts.partyDate || undefined, mealType: opts.mealType });
+        joined = result.parties.find((p) => p.joined) || null;
+      } catch (e) {
+        joined = null;   // 못 찾아도 안내는 띄운다
+      }
+    }
+
+    const when = (opts.partyDate && !partyApi.isToday(opts.partyDate) ? partyApi.relativeDateLabel(opts.partyDate) : '오늘') +
+      (opts.mealType ? ' ' + partyApi.MEAL_TYPE_LABELS[opts.mealType] : '');
+    const body = joined
+      ? '<p class="pj-notice__text">' + esc(when) + '에 이미 <b>' + esc(joined.restaurantName) + '</b>' +
+        (joined.time ? ' (' + esc(joined.time) + ')' : '') + ' 식사팟에 참여 중이에요.</p>'
+      : '<p class="pj-notice__text">' + esc(when) + '에 이미 참여 중인 식사팟이 있어요.</p>';
+
+    const goMine = await ui.confirm({
+      title: '같은 시간대에는 식사팟 하나만 참여할 수 있어요',
+      html:
+        '<div class="pj-notice">' + ui.icon('people', 20) + '<div>' + body +
+        '<p class="pj-notice__desc">다른 팟에 들어가려면 지금 팟에서 먼저 나와 주세요.</p></div></div>',
+      confirmText: '내 식사팟 보기',
+      cancelText: opts.cancelText || '닫기',
+    });
+    if (goMine) location.href = joined ? partyApi.detailUrl(joined.partyId) : MY_PARTIES_URL;
+  }
+
+  global.partyJoin = { ask, isSameMealError, sameMealNotice };
 })(window);

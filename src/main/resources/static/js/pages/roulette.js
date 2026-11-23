@@ -15,7 +15,15 @@
  *   (Windows '애니메이션 효과' 끔 상태에서 회전 없이 결과만 나와 동작하지 않는 것처럼 보이던 문제, 2026-11-20 수정)
  * - 결과 카드: [식당 상세 보기] → S-05 / [이 식당으로 식사팟 만들기] → S-08(식당 고정) / [다시 돌리기]
  * - 오류는 결과 카드 자리에 문구 + [다시 시도]로 보여 준다 (alert 없음)
- * - 구내식당은 후보에 없다 (서버에서 제외)
+ * - 구내식당은 카테고리 룰렛 후보에 없다 (서버에서 제외). '기타'는 칩만 없고 '전체'에는 나온다 (2026-11-23)
+ *
+ * 내 룰렛 (2026-11-23)
+ * - [카테고리 룰렛 | 내 룰렛] 탭. 내 룰렛은 등록된 식당을 골라 2~8곳을 담고 바로 돌린다.
+ *   구내식당·기타 포함 모든 등록 식당을 담을 수 있다.
+ * - 검색창을 누르면 등록된 식당 전체가 기본 목록으로 열리고(GET /api/restaurants/list, 한 번만 받음),
+ *   이름을 입력하면 그 안에서 좁힌다. 전체 목록을 못 받으면 자동완성 API(최대 5개)로 찾는다.
+ * - 담은 목록은 서버에 저장하지 않고 이 브라우저(localStorage)에만 기억한다. 마지막으로 보던 탭도 기억한다.
+ * - 돌리기·연출·결과 카드는 카테고리 룰렛과 같다. (POST /api/restaurants/roulette/spin에 담은 식당 ID를 보냄)
  */
 (function () {
   'use strict';
@@ -42,6 +50,12 @@
   const TICK_GAP_MS = 45;               // 틱 애니메이션·소리 최소 간격
   const SOUND_KEY = 'sseukbap.roulette.sound';
 
+  /* 내 룰렛 */
+  const MAX_CANDIDATES = 8;
+  const CUSTOM_KEY = 'sseukbap.roulette.custom';   // 담은 식당 [{restaurantId, name, category}]
+  const MODE_KEY = 'sseukbap.roulette.mode';       // 'category' | 'custom'
+  const SEARCH_DELAY_MS = 250;
+
   const categoriesEl = document.getElementById('roulette-categories');
   const wheelBoxEl = document.querySelector('.roulette-wheel-box');
   const wheelEl = document.getElementById('roulette-wheel');
@@ -51,6 +65,22 @@
   const soundButton = document.getElementById('roulette-sound');
   const refillButton = document.getElementById('roulette-refill');
   const resultEl = document.getElementById('roulette-result');
+  const modesEl = document.getElementById('roulette-modes');
+  const customEl = document.getElementById('roulette-custom');
+  const keywordEl = document.getElementById('custom-keyword');
+  const searchResultsEl = document.getElementById('custom-results');
+  const customHintEl = document.getElementById('custom-hint');
+  const pickedEl = document.getElementById('custom-picked');
+  const clearButton = document.getElementById('custom-clear');
+
+  let mode = readMode();          // 'category' | 'custom'
+  let picked = readPicked();      // 내 룰렛에 담은 식당
+  let searchResults = [];
+  let searchHead = '';            // 검색 결과 맨 위 안내 (기본 목록일 때 '등록된 식당 N곳')
+  let allRestaurants = null;      // 등록된 식당 전체 (검색창을 처음 누를 때 한 번 받는다)
+  let allLoading = null;
+  let searchSeq = 0;
+  let searchTimer = null;
 
   let category = null;            // null = 전체
   let candidates = [];
@@ -70,8 +100,8 @@
   renderHubCap();
   renderCategories();
   renderSoundButton();
-  renderResultIntro();
-  loadCandidates();
+  renderPicked();
+  setMode(mode, true);
 
   categoriesEl.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-category]');
@@ -106,8 +136,286 @@
 
   resultEl.addEventListener('click', (event) => {
     if (event.target.closest('[data-action="respin"]')) spin();
-    if (event.target.closest('[data-action="reload"]')) loadCandidates();
+    if (event.target.closest('[data-action="reload"]')) reloadCandidates();
   });
+
+  /* 내 룰렛 이벤트 */
+  modesEl.addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-mode]');
+    if (tab) setMode(tab.dataset.mode);
+  });
+
+  keywordEl.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => searchRestaurants(keywordEl.value), SEARCH_DELAY_MS);
+  });
+
+  keywordEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      hideSearchResults();
+    } else if (event.key === 'Enter') {
+      // Enter: 검색 결과 중 아직 안 담은 첫 식당을 담는다
+      event.preventDefault();
+      const first = searchResults.find((r) => !isPicked(r.restaurantId));
+      if (first) addPicked(first);
+    }
+  });
+
+  // 검색창을 누르면 바로 목록을 연다. 비어 있으면 등록된 식당 전체(기본 목록)
+  keywordEl.addEventListener('focus', openSearchResults);
+  keywordEl.addEventListener('click', openSearchResults);
+
+  searchResultsEl.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-add]');
+    if (!button) return;
+    const item = searchResults.find((r) => String(r.restaurantId) === button.dataset.add);
+    if (item) addPicked(item);
+  });
+
+  pickedEl.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-remove]');
+    if (button) removePicked(Number(button.dataset.remove));
+  });
+
+  clearButton.addEventListener('click', () => {
+    if (spinning) return;
+    picked = [];
+    savePicked();
+    renderPicked();
+    renderSearchResults();
+    applyCustom();
+    keywordEl.focus();
+  });
+
+  // 검색창 밖을 누르면 결과 목록을 닫는다.
+  // [담기]를 누르면 목록이 다시 그려져 누른 버튼이 화면에서 빠지므로, 누른 순간의 경로(composedPath)로 판단한다.
+  const searchBoxEl = keywordEl.closest('.roulette-custom__search');
+  document.addEventListener('click', (event) => {
+    if (!event.composedPath().includes(searchBoxEl)) hideSearchResults();
+  });
+
+  /* ---------- ① 룰렛 종류 ---------- */
+
+  /** 카테고리 룰렛 ↔ 내 룰렛. first: 처음 화면을 열 때 (저장된 탭으로 시작) */
+  function setMode(next, first) {
+    if (spinning) return;
+    if (next !== 'category' && next !== 'custom') next = 'category';
+    if (!first && next === mode) return;
+    mode = next;
+    saveMode(mode);
+
+    modesEl.querySelectorAll('[data-mode]').forEach((tab) => {
+      tab.setAttribute('aria-selected', String(tab.dataset.mode === mode));
+    });
+    categoriesEl.hidden = mode !== 'category';
+    customEl.hidden = mode !== 'custom';
+    refillButton.hidden = mode !== 'category';   // 내 룰렛은 내가 고른 식당이라 '다시 채우기' 없음
+    clearWinnerHighlight();
+    renderResultIntro();
+
+    if (mode === 'category') loadCandidates();
+    else applyCustom();
+  }
+
+  /** 결과 카드의 [후보 다시 불러오기] */
+  function reloadCandidates() {
+    if (mode === 'custom') applyCustom();
+    else loadCandidates();
+  }
+
+  /* ---------- ②' 내 룰렛 ---------- */
+
+  /** 담은 식당으로 휠을 그린다 (서버 조회 없음) */
+  function applyCustom() {
+    loadSeq++;   // 카테고리 후보 응답이 늦게 와도 무시
+    candidates = picked.map((p) => ({ restaurantId: p.restaurantId, name: p.name }));
+    spinnable = candidates.length >= MIN_CANDIDATES;
+    resetRotation();
+    drawWheel();
+    if (spinnable) {
+      hideWheelState();
+    } else {
+      showWheelState(
+        '<p class="state__title">식당을 ' + MIN_CANDIDATES + '곳 이상 담아 주세요</p>' +
+        '<p class="state__desc">위 검색창에서 등록된 식당을 찾아 담으면 나만의 룰렛이 만들어져요.</p>');
+    }
+    updateControls();
+  }
+
+  function openSearchResults() {
+    if (spinning) return;
+    if (!searchResultsEl.hidden) return;
+    searchRestaurants(keywordEl.value);
+  }
+
+  /** 등록된 식당 전체를 한 번만 받아 둔다 (식당 목록 API, 최근 30일 따봉순). 실패하면 null → 자동완성으로 검색 */
+  function loadAllRestaurants() {
+    if (allRestaurants) return Promise.resolve(allRestaurants);
+    if (!allLoading) {
+      allLoading = restaurantApi.getList({ keyword: '', category: '' })
+        .then((list) => {
+          allRestaurants = list.map((r) => ({ restaurantId: r.restaurantId, name: r.name, category: r.category }));
+          return allRestaurants;
+        })
+        .catch((err) => {
+          allLoading = null;   // 다음에 다시 시도
+          if (err.statusCode === 401) throw err;
+          return null;
+        });
+    }
+    return allLoading;
+  }
+
+  /**
+   * 검색: 비어 있으면 등록된 식당 전체(기본 목록), 글자가 있으면 이름 부분 일치.
+   * 전체 목록을 받아 두었으면 화면에서 거르고, 못 받았으면 자동완성 API(최대 5개)로 찾는다.
+   */
+  async function searchRestaurants(value) {
+    const keyword = value.trim();
+    const seq = ++searchSeq;
+    try {
+      const all = await loadAllRestaurants();
+      if (seq !== searchSeq) return;
+
+      if (!keyword) {
+        searchResults = all || [];
+        searchHead = all ? '등록된 식당 ' + all.length + '곳 · 이름을 입력하면 좁혀져요' : '';
+        renderSearchResults(all ? (all.length ? null : '등록된 식당이 없어요.') : '식당 목록을 불러오지 못했어요. 이름으로 검색해 보세요.');
+        return;
+      }
+
+      let list;
+      if (all) {
+        const lower = keyword.toLowerCase();
+        list = all.filter((r) => r.name.toLowerCase().includes(lower))
+          .sort((a, b) => Number(!a.name.toLowerCase().startsWith(lower)) - Number(!b.name.toLowerCase().startsWith(lower)));
+      } else {
+        list = await restaurantApi.autocomplete(keyword);
+        if (seq !== searchSeq) return;
+      }
+      searchResults = list;
+      searchHead = '';
+      renderSearchResults(list.length ? null : '‘' + keyword + '’ 이름의 등록된 식당이 없어요.');
+    } catch (err) {
+      if (seq !== searchSeq || err.statusCode === 401) return;
+      searchResults = [];
+      searchHead = '';
+      renderSearchResults(err.message || '식당을 찾지 못했어요.');
+    }
+  }
+
+  /** 검색 결과: 식당 이름 · 카테고리 · [담기]. message가 있으면 안내 한 줄 */
+  function renderSearchResults(message) {
+    if (message) {
+      searchResultsEl.innerHTML = '<li class="roulette-custom__result-empty">' + esc(message) + '</li>';
+      searchResultsEl.hidden = false;
+      return;
+    }
+    if (!searchResults.length) {
+      hideSearchResults(true);
+      return;
+    }
+    const full = picked.length >= MAX_CANDIDATES;
+    const scrollTop = searchResultsEl.scrollTop;   // 담기 후 다시 그려도 보던 위치 유지
+    searchResultsEl.innerHTML =
+      (searchHead ? '<li class="roulette-custom__result-head">' + esc(searchHead) + '</li>' : '') +
+      searchResults.map((r) => {
+      const already = isPicked(r.restaurantId);
+      const label = already ? '담음' : (full ? '가득 참' : '담기');
+      return (
+        '<li class="roulette-custom__result">' +
+        '<span class="roulette-custom__result-name">' + esc(r.name) + '</span>' +
+        '<span class="roulette-custom__result-cat">' + esc(CATEGORY_LABELS[r.category] || r.category || '') + '</span>' +
+        '<button type="button" class="btn roulette-custom__add" data-add="' + r.restaurantId + '"' +
+        (already || full || spinning ? ' disabled' : '') + '>' + label + '</button>' +
+        '</li>'
+      );
+    }).join('');
+    searchResultsEl.hidden = false;
+    searchResultsEl.scrollTop = scrollTop;
+  }
+
+  function hideSearchResults(clear) {
+    searchResultsEl.hidden = true;
+    if (clear) searchResultsEl.innerHTML = '';
+  }
+
+  function isPicked(restaurantId) {
+    return picked.some((p) => p.restaurantId === restaurantId);
+  }
+
+  function addPicked(r) {
+    if (spinning || isPicked(r.restaurantId) || picked.length >= MAX_CANDIDATES) return;
+    picked.push({ restaurantId: r.restaurantId, name: r.name, category: r.category });
+    savePicked();
+    renderPicked();
+    renderSearchResults();
+    applyCustom();
+    if (picked.length >= MAX_CANDIDATES) ui.toast('최대 ' + MAX_CANDIDATES + '곳까지 담을 수 있어요');
+  }
+
+  function removePicked(restaurantId) {
+    if (spinning) return;
+    picked = picked.filter((p) => p.restaurantId !== restaurantId);
+    savePicked();
+    renderPicked();
+    if (!searchResultsEl.hidden) renderSearchResults();
+    applyCustom();
+  }
+
+  /** 담은 식당 칩 + 안내 문구 */
+  function renderPicked() {
+    const n = picked.length;
+    customHintEl.textContent = n === 0
+      ? '아직 담은 식당이 없어요. ' + MIN_CANDIDATES + '~' + MAX_CANDIDATES + '곳을 담아 주세요.'
+      : n + ' / ' + MAX_CANDIDATES + '곳 담음' + (n < MIN_CANDIDATES ? ' · ' + (MIN_CANDIDATES - n) + '곳 더 담으면 돌릴 수 있어요' : '');
+    clearButton.hidden = n === 0;
+    pickedEl.innerHTML = picked.map((p) => (
+      '<li class="roulette-custom__chip">' +
+      '<span class="roulette-custom__chip-name">' + esc(p.name) + '</span>' +
+      '<button type="button" class="roulette-custom__remove" data-remove="' + p.restaurantId + '"' +
+      ' aria-label="' + esc(p.name) + ' 빼기"' + (spinning ? ' disabled' : '') + '>' +
+      '<span aria-hidden="true">×</span></button>' +
+      '</li>'
+    )).join('');
+  }
+
+  function readPicked() {
+    try {
+      const list = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+      if (!Array.isArray(list)) return [];
+      const seen = new Set();
+      return list
+        .filter((p) => p && Number.isInteger(p.restaurantId) && typeof p.name === 'string' && !seen.has(p.restaurantId) && seen.add(p.restaurantId))
+        .slice(0, MAX_CANDIDATES);
+    } catch (e) {
+      return [];   // 저장소를 못 쓰거나 값이 깨졌으면 빈 목록
+    }
+  }
+
+  function savePicked() {
+    try {
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(picked));
+    } catch (e) {
+      // 저장 못 해도 이번 화면에서는 그대로 쓴다
+    }
+  }
+
+  function readMode() {
+    try {
+      return localStorage.getItem(MODE_KEY) === 'custom' ? 'custom' : 'category';
+    } catch (e) {
+      return 'category';
+    }
+  }
+
+  function saveMode(value) {
+    try {
+      localStorage.setItem(MODE_KEY, value);
+    } catch (e) {
+      // 무시
+    }
+  }
 
   /* ---------- ② 카테고리 ---------- */
 
@@ -589,6 +897,12 @@
     wheelBoxEl.classList.toggle('is-clickable', spinnable && !spinning);
     spinButton.textContent = spinning ? '돌리는 중…' : '룰렛 돌리기';
     renderCategories();
+    // 내 룰렛: 도는 동안 탭·검색·담기·빼기 막기
+    modesEl.querySelectorAll('[data-mode]').forEach((tab) => { tab.disabled = spinning; });
+    keywordEl.disabled = spinning;
+    clearButton.disabled = spinning;
+    pickedEl.querySelectorAll('[data-remove]').forEach((button) => { button.disabled = spinning; });
+    if (spinning) hideSearchResults();
     const respin = resultEl.querySelector('[data-action="respin"]');
     if (respin) respin.disabled = spinning || !spinnable;
   }
@@ -607,7 +921,9 @@
   function renderResultIntro() {
     setResult(
       '<p class="roulette-result__eyebrow">오늘의 선택</p>' +
-      '<p class="roulette-result__placeholder">룰렛을 돌려 오늘의 식당을 정해 보세요.</p>');
+      '<p class="roulette-result__placeholder">' +
+      (mode === 'custom' ? '담은 식당으로 룰렛을 돌려 오늘의 식당을 정해 보세요.' : '룰렛을 돌려 오늘의 식당을 정해 보세요.') +
+      '</p>');
   }
 
   function renderResultSpinning() {

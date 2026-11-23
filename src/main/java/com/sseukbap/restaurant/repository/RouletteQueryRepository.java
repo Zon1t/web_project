@@ -46,12 +46,14 @@ public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
     List<RouletteCandidateRow> findRandomCandidates(@Param("category") String category,
                                                     @Param("limit") int limit);
 
-    /** 보낸 후보 ID 중 실제로 있는 식당 (구내식당 제외) */
+    /**
+     * 보낸 후보 ID 중 실제로 있는 식당.
+     * 2026-11-23: 내 룰렛에서 구내식당도 고를 수 있게 구내식당 제외 조건을 뺐다. (카테고리 룰렛 후보 조회는 계속 제외)
+     */
     @Query(value = """
             SELECT r.*
               FROM RESTAURANT r
              WHERE r.RESTAURANT_ID IN (:ids)
-               AND r.CATEGORY <> 'CAFETERIA'
             """, nativeQuery = true)
     List<Restaurant> findSpinnable(@Param("ids") Collection<Long> ids);
 

@@ -23,7 +23,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 메뉴 룰렛 (API_SPEC 4장, C)
- * 구내식당(CAFETERIA)은 '전체'를 포함해 항상 후보에서 제외한다.
+ * 구내식당(CAFETERIA)은 '전체'를 포함해 카테고리 룰렛 후보에서 항상 제외한다.
+ * 룰렛 실행(spin)은 내 룰렛에서 고른 구내식당도 받는다. (2026-11-23)
  */
 @Service
 @RequiredArgsConstructor
@@ -70,7 +71,7 @@ public class RouletteService {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "룰렛 후보를 확인해 주세요.");
         }
 
-        // 2. 없는 식당(삭제 등)·구내식당은 빼고, 2곳 미만이면 중단
+        // 2. 없는 식당(삭제 등)은 빼고, 2곳 미만이면 중단 (구내식당은 내 룰렛용으로 허용, 2026-11-23)
         List<Restaurant> spinnable = rouletteQueryRepository.findSpinnable(ids);
         if (spinnable.size() < MIN_CANDIDATES) {
             throw new BusinessException(ErrorCode.NOT_ENOUGH_CANDIDATES);

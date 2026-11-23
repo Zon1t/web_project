@@ -26,8 +26,30 @@
       </div>
     </div>
 
-    <!-- ② 카테고리 선택 (단일 선택, 기본 '전체') -->
+    <!-- ① 룰렛 종류: 카테고리 룰렛 / 내 룰렛 (2026-11-23) -->
+    <div id="roulette-modes" class="roulette-modes" role="tablist" aria-label="룰렛 종류">
+      <button type="button" class="roulette-modes__tab" role="tab" data-mode="category" aria-selected="true">카테고리 룰렛</button>
+      <button type="button" class="roulette-modes__tab" role="tab" data-mode="custom" aria-selected="false">내 룰렛</button>
+    </div>
+
+    <!-- ② 카테고리 선택 (단일 선택, 기본 '전체') — 카테고리 룰렛 -->
     <div id="roulette-categories" class="roulette-categories" role="group" aria-label="카테고리 선택"></div>
+
+    <!-- ②' 내 룰렛: 등록된 식당을 검색해 2~8곳 담기 -->
+    <section id="roulette-custom" class="roulette-custom" aria-label="내 룰렛 식당 고르기" hidden>
+      <div class="roulette-custom__search">
+        <label class="sr-only" for="custom-keyword">등록된 식당 이름 검색</label>
+        <input id="custom-keyword" class="input" type="search" maxlength="30"
+               placeholder="등록된 식당 이름으로 검색해서 담기" autocomplete="off"
+               aria-controls="custom-results" aria-describedby="custom-hint">
+        <ul id="custom-results" class="roulette-custom__results" aria-label="검색 결과" hidden></ul>
+      </div>
+      <div class="roulette-custom__head">
+        <p id="custom-hint" class="roulette-custom__hint" aria-live="polite"></p>
+        <button id="custom-clear" class="btn btn--text roulette-custom__clear" type="button">모두 비우기</button>
+      </div>
+      <ul id="custom-picked" class="roulette-custom__picked" aria-label="담은 식당"></ul>
+    </section>
 
     <div class="roulette-layout">
       <!-- ③ 룰렛 휠 + ④ 돌리기 버튼 -->

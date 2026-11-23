@@ -32,7 +32,7 @@
 
   /** [다음에]를 누른 날짜를 기억하는 브라우저 저장소 키 (값: 'YYYY-MM-DD') */
   const THUMBS_SNOOZE_KEY = 'sseukbap.thumbsBanner.snoozedDate';
-  const TODAY_PARTY_LIMIT = 3;
+  const TODAY_PARTY_LIMIT = 4;
 
   /* ===================== 따봉 배너 ===================== */
 
@@ -187,34 +187,186 @@
 
   /* ===================== 오늘의 식사팟 ===================== */
 
-  /** 내가 참여하지 않은 모집 중 팟 최대 3개 (식사 시간 빠른 순). [전체 보기] → 목록(S-07) */
+  /*
+   * 오늘 모집 중인 식사팟 목록 (2026-11-23 개편: 맨 위 카드에 있던 '같이 먹기' 목록을 옮겨 와 항상 보여 준다)
+   *   - [점심 | 저녁] 탭, 처음엔 지금 끼니 (14:00 전 점심, 그 뒤 저녁)
+   *   - 줄: 시간 · 식당 · 인원 · [참여] (참여 전 확인 창 → 참여 후 메인 그대로, 맨 위 '내 식사' 슬롯이 채워짐)
+   *   - 이미 그 끼니에 참여 중이면 [참여] 비활성 (같은 날짜·끼니에는 팟 하나만)
+   *   - 아래: '원하는 시간이나 식당이 없나요?' + [식사팟 만들기]
+   * 참여하면 document에 'sseukbap:party-joined' (detail.source = 'today-parties')를 보낸다.
+   */
+  const TODAY_LUNCH_END = '14:00';
+  const JOINABLE = ['RECRUITING', 'SCHEDULED'];
+  const today = { container: null, meal: null, parties: [], error: null };
+
   async function renderTodayParties(container) {
-    const more = '<a class="pm-section__more" href="' + partyApi.LIST_URL + '">전체 보기 &gt;</a>';
+    today.container = container;
+    if (!today.meal) today.meal = currentMeal();
+    if (!container.dataset.pmBound) {
+      container.dataset.pmBound = '1';
+      container.addEventListener('click', onTodayClick);
+      document.addEventListener('sseukbap:party-joined', (event) => {
+        if (!event.detail || event.detail.source !== 'today-parties') loadTodayParties();
+      });
+    }
     container.hidden = false;
-    container.innerHTML = section('today-parties-title', '오늘의 식사팟', more, loading());
+    container.innerHTML = todaySection(loading());
+    await loadTodayParties();
+  }
+
+  async function loadTodayParties() {
     try {
-      const result = await partyApi.getList({ status: 'RECRUITING', excludeJoined: true, limit: TODAY_PARTY_LIMIT });
-      const body = result.parties.length === 0
-        ? '<div class="pm-empty"><p>지금 모집 중인 식사팟이 없어요.</p>' +
-          '<a class="btn btn--primary" href="' + partyApi.createUrl() + '">식사팟 만들기</a></div>'
-        : '<ul class="pm-cards pm-cards--three">' + result.parties.map(todayPartyCard).join('') + '</ul>';
-      container.innerHTML = section('today-parties-title', '오늘의 식사팟', more, body);
+      const result = await partyApi.getList({ date: partyApi.today() });
+      today.parties = result.parties || [];
+      today.error = null;
     } catch (err) {
       if (err.statusCode === 401) return;
-      container.innerHTML = section('today-parties-title', '오늘의 식사팟', more, errorBox(err.message));
+      today.error = err.message;
+    }
+    drawTodayParties();
+  }
+
+  /**
+   * @param {string} [message] 목록 아래 오류 문구
+   * @param {'next'|'prev'} [dir] 탭을 바꿨을 때 목록이 들어오는 방향 (저녁으로 = 오른쪽에서, 점심으로 = 왼쪽에서)
+   */
+  function drawTodayParties(message, dir) {
+    const container = today.container;
+    if (today.error) {
+      container.innerHTML = todaySection(errorBox(today.error));
       bindRetry(container, () => renderTodayParties(container));
+      return;
+    }
+    const meal = today.meal;
+    const ofMeal = today.parties.filter((p) => p.mealType === meal);
+    const joinedThisMeal = ofMeal.some((p) => p.joined);
+    const open = ofMeal.filter((p) => !p.joined && JOINABLE.includes(p.status));
+    const shown = open.slice(0, TODAY_PARTY_LIMIT);
+    const label = MEAL_TYPE_LABELS[meal];
+
+    const list = shown.length === 0
+      ? '<p class="pm-list__empty">지금 모집 중인 ' + label + ' 식사팟이 없어요.</p>'
+      : '<ul class="pm-list">' + shown.map((p) => todayRowHtml(p, joinedThisMeal)).join('') + '</ul>';
+
+    const body =
+      '<div class="pm-today' + (dir ? ' pm-today--' + dir : '') + '">' +
+      '<p class="pm-today__count"><span>' + label + ' 모집 중 <b>' + open.length + '</b>개</span>' +
+      (open.length > TODAY_PARTY_LIMIT
+        ? '<a class="pm-section__more" href="' + listUrl(meal) + '">전체 보기 &gt;</a>' : '') +
+      '</p>' +
+      list +
+      (joinedThisMeal && shown.length
+        ? '<p class="pm-today__note">이미 오늘 ' + label + ' 식사팟에 참여 중이라 다른 팟에는 참여할 수 없어요.</p>' : '') +
+      '<p class="pm-today__message" role="alert">' + esc(message || '') + '</p>' +
+      '<div class="pm-create">' +
+      '<p class="pm-create__title">' + (open.length === 0
+        ? '먼저 만들면 다른 사람이 참여할 수 있어요'
+        : '원하는 시간이나 식당이 없나요?') + '</p>' +
+      '<a class="btn btn--primary pm-create__btn" href="' + partyApi.createUrl(null, partyApi.today()) + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>' +
+      '식사팟 만들기</a>' +
+      '</div>' +
+      '</div>';
+
+    // 탭이 이미 있으면 탭은 그대로 두고(움직이는 표시가 부드럽게 미끄러지도록) 목록만 바꾼다
+    const tabsEl = container.querySelector('.pm-tabs');
+    const bodyEl = container.querySelector('.pm-today-body');
+    if (tabsEl && bodyEl) {
+      updateTabs(tabsEl);
+      bodyEl.innerHTML = body;
+    } else {
+      container.innerHTML = todaySection(body);
     }
   }
 
-  function todayPartyCard(p) {
+  function todaySection(body) {
+    const tabs =
+      '<div class="pm-tabs" role="tablist" aria-label="끼니" data-active="' + today.meal + '">' +
+      '<span class="pm-tabs__indicator" aria-hidden="true"></span>' +
+      ['LUNCH', 'DINNER'].map((m) =>
+        '<button type="button" class="pm-tabs__btn" role="tab" data-meal="' + m + '" aria-selected="' + (m === today.meal) + '">' +
+        esc(MEAL_TYPE_LABELS[m]) + (today.error ? '' : ' <span class="pm-tabs__count">' + mealCount(m) + '</span>') +
+        '</button>'
+      ).join('') +
+      '</div>';
+    return section('today-parties-title', '오늘의 식사팟', tabs, '<div class="pm-today-body">' + body + '</div>');
+  }
+
+  /** 탭 선택 표시·개수만 바꾼다 (다시 그리지 않음) */
+  function updateTabs(tabsEl) {
+    tabsEl.dataset.active = today.meal;
+    tabsEl.querySelectorAll('[data-meal]').forEach((btn) => {
+      btn.setAttribute('aria-selected', String(btn.dataset.meal === today.meal));
+      const count = btn.querySelector('.pm-tabs__count');
+      if (count) count.textContent = mealCount(btn.dataset.meal);
+    });
+  }
+
+  function mealCount(meal) {
+    return today.parties.filter((p) => p.mealType === meal && !p.joined && JOINABLE.includes(p.status)).length;
+  }
+
+  function todayRowHtml(p, joinedThisMeal) {
+    const full = p.capacity && p.memberCount >= p.capacity;
+    const disabled = full || joinedThisMeal;
     return (
-      '<li><a class="pm-card" href="' + partyApi.detailUrl(p.partyId) + '">' +
-      '<span class="pm-card__top"><b class="pm-card__name">' + esc(p.restaurantName) + '</b>' + statusBadge(p.status) + '</span>' +
-      '<span class="pm-card__info">' + esc(MEAL_TYPE_LABELS[p.mealType]) + ' ' + esc(p.time) +
-      ' · ' + p.memberCount + ' / ' + p.capacity + '명</span>' +
-      (p.memo ? '<span class="pm-card__sub">' + esc(p.memo) + '</span>' : '') +
-      '</a></li>'
+      '<li class="pm-row">' +
+      '<span class="pm-row__time">' + esc(p.time) + '</span>' +
+      '<a class="pm-row__name" href="' + partyApi.detailUrl(p.partyId) + '">' + esc(p.restaurantName) + '</a>' +
+      '<span class="pm-row__meta">' + p.memberCount + ' / ' + p.capacity + '명' +
+      (p.status === 'SCHEDULED' ? ' · 일정 확정' : '') + '</span>' +
+      '<button type="button" class="btn pm-row__join" data-action="join" data-party-id="' + p.partyId + '"' +
+      (disabled ? ' disabled' : '') +
+      (joinedThisMeal ? ' title="같은 시간대에 이미 참여 중인 식사팟이 있어요"' : '') + '>참여</button>' +
+      '</li>'
     );
+  }
+
+  async function onTodayClick(event) {
+    const tab = event.target.closest('[data-meal]');
+    if (tab) {
+      if (tab.dataset.meal === today.meal) return;
+      today.meal = tab.dataset.meal;
+      drawTodayParties('', today.meal === 'DINNER' ? 'next' : 'prev');
+      return;
+    }
+    const button = event.target.closest('[data-action="join"]');
+    if (button) joinTodayParty(button);
+  }
+
+  async function joinTodayParty(button) {
+    const partyId = button.dataset.partyId;
+    const p = today.parties.find((item) => String(item.partyId) === String(partyId));
+    if (!p) return;
+    // 참여 전에 확인 창 (식당·시간·인원·방 설명, 다음 단계 안내)
+    const ok = await partyJoin.ask(Object.assign({ partyDate: partyApi.today() }, p));
+    if (!ok) return;
+    button.disabled = true;
+
+    try {
+      await partyApi.join(partyId);
+      ui.toast(p.restaurantName + ' 식사팟에 참여했어요');
+      document.dispatchEvent(new CustomEvent('sseukbap:party-joined', { detail: { source: 'today-parties', partyId } }));
+      await loadTodayParties();
+    } catch (err) {
+      if (err.statusCode === 401) return;
+      await loadTodayParties();
+      if (partyJoin.isSameMealError(err)) {
+        partyJoin.sameMealNotice({ partyDate: partyApi.today(), mealType: p.mealType });
+        return;
+      }
+      if (err.error !== 'ALREADY_JOINED') drawTodayParties(err.message);   // 그새 마감·삭제 등
+    }
+  }
+
+  function currentMeal() {
+    const now = new Date();
+    const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    return hhmm < TODAY_LUNCH_END ? 'LUNCH' : 'DINNER';
+  }
+
+  function listUrl(meal) {
+    return partyApi.LIST_URL + '?date=' + encodeURIComponent(partyApi.today()) + '&mealType=' + meal;
   }
 
   /* ===================== 공통 ===================== */

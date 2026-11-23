@@ -6,7 +6,8 @@
  * - 카테고리 필터
  *     전체: GET /api/restaurants/rankings?limit=10 (서버 순위)
  *     카테고리: GET /api/restaurants/list?category= — 이 API가 이미 '최근 30일 따봉 → 리뷰 수 → 등록 순'으로
- *              정렬해 주므로 따봉 1개 이상인 식당만 앞에서 10곳을 순위로 쓴다 (백엔드 변경 없음)
+ *              정렬해 주므로 앞에서 10곳을 순위로 쓴다 (백엔드 변경 없음)
+ *     2026-11-23: 따봉이 0개인 식당도 리뷰 수 → 등록 순으로 이어서 보여 준다 (기존 '따봉 1개 이상만')
  * - 태그: 랭킹 응답에 태그가 없어서, 보이는 식당마다 식당 상세(GET /api/restaurants/{id})의 TOP 3 태그를
  *         나중에 채운다 (순위는 먼저 보여 주고 태그만 뒤이어 나타남, 한 번 받은 태그는 기억)
  * - 관심 수는 랭킹에 쓰지 않는다
@@ -62,9 +63,9 @@
         body.innerHTML = ui.empty({
           illust: 'thumbs',
           title: category
-            ? '최근 30일 동안 따봉을 받은 ' + esc(CATEGORY_LABELS[category]) + ' 식당이 없어요'
-            : '최근 30일 동안 따봉을 받은 식당이 없어요',
-          desc: '식사팟으로 함께 식사하고 따봉을 남기면 이곳에 순위가 생겨요.',
+            ? '등록된 ' + esc(CATEGORY_LABELS[category]) + ' 식당이 없어요'
+            : '등록된 식당이 없어요',
+          desc: '식당을 등록하고 식사팟으로 함께 식사한 뒤 따봉을 남기면 순위가 바뀌어요.',
           actionHtml: '<a class="btn btn--primary" href="' + partyApi.LIST_URL + '">식사팟 보기</a>',
         });
         return;
@@ -93,7 +94,6 @@
     const list = await restaurantApi.getList({ category });
     periodEl.textContent = CATEGORY_LABELS[category] + ' 식당 중 최근 30일 따봉 수 기준 · 같으면 리뷰가 많은 순이에요.';
     return list
-      .filter((r) => r.thumbsCount30d > 0)
       .slice(0, RANKING_LIMIT)
       .map((r, i) => ({
         rank: i + 1,
@@ -120,7 +120,7 @@
 
   function renderBanner(top) {
     const month = new Date().getMonth() + 1;
-    const scope = category ? CATEGORY_LABELS[category] + ' 1위' : '최근 30일 따봉 1위';
+    const scope = category ? CATEGORY_LABELS[category] + ' 1위' : (top.thumbsCount30d > 0 ? '최근 30일 따봉 1위' : '랭킹 1위');
     bannerEl.innerHTML =
       '<div class="rk-banner__text">' +
       '<p class="rk-banner__eyebrow">' + ui.icon('trophy', 16) + month + '월의 식당 · ' + esc(scope) + '</p>' +

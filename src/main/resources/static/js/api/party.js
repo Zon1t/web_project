@@ -163,6 +163,15 @@
     },
 
     /**
+     * 내가 할 일이 있는 식사팟 (헤더 종 알림, 없으면 []) — GET /api/parties/my/action-pending
+     * @returns {Promise<Array<{partyId, action: 'SET_SCHEDULE'|'CONFIRM', restaurantName, partyDate, mealType, time, meetPlace}>>}
+     *   SET_SCHEDULE: 방장인데 아직 일정을 안 정함 / CONFIRM: 일정이 정해졌는데 내가 참석 확정을 안 함
+     */
+    getActionPending() {
+      return api.get('/parties/my/action-pending');
+    },
+
+    /**
      * 식사팟 상세 — GET /api/parties/{partyId}
      * @returns {Promise<Object>} {partyId, restaurantId, restaurantName, category, partyDate, mealType, mealTime,
      *   capacity, memberCount, confirmedCount, status, memo, schedule, cancelDeadline, members, myRole, myConfirmed}

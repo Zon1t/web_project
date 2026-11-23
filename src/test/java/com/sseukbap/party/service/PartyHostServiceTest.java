@@ -84,12 +84,26 @@ class PartyHostServiceTest {
     }
 
     @Test
+    void 일정을_정하면_방장은_자동으로_참석_확정된다() {
+        Long partyId = createParty(4);
+        partyMemberService.joinParty(partyId, user02.getMemberId());
+
+        updateSchedule(partyId, "12:00", "정문", null);
+        flushAndClear();
+
+        assertThat(partyService.getParty(partyId, host.getMemberId()).myConfirmed()).isTrue();
+        assertThat(partyService.getParty(partyId, user02.getMemberId()).myConfirmed()).isFalse();
+        assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isEqualTo(1);
+    }
+
+    @Test
     void 확정_후에는_참여_확정을_할_수_있다() {
         Long partyId = createParty(4);
         partyMemberService.joinParty(partyId, user02.getMemberId());
         updateSchedule(partyId, "12:00", "정문", null);
 
-        assertThat(partyMemberService.confirmParty(partyId, user02.getMemberId()).confirmedCount()).isEqualTo(1);
+        // 방장(자동 확정) + user02
+        assertThat(partyMemberService.confirmParty(partyId, user02.getMemberId()).confirmedCount()).isEqualTo(2);
     }
 
     @Test
@@ -107,11 +121,10 @@ class PartyHostServiceTest {
     // ===== 일정 수정 =====
 
     @Test
-    void 수정하면_방장_포함_모든_확정이_초기화된다() {
+    void 수정하면_참여자_확정은_초기화되고_방장만_다시_자동_확정된다() {
         Long partyId = createParty(4);
         partyMemberService.joinParty(partyId, user02.getMemberId());
-        updateSchedule(partyId, "12:00", "1층 로비", null);
-        partyMemberService.confirmParty(partyId, host.getMemberId());
+        updateSchedule(partyId, "12:00", "1층 로비", null);   // 방장 자동 확정
         partyMemberService.confirmParty(partyId, user02.getMemberId());
         flushAndClear();
         assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isEqualTo(2);
@@ -121,7 +134,8 @@ class PartyHostServiceTest {
 
         assertThat(response.confirmationsReset()).isTrue();
         assertThat(response.status()).isEqualTo(PartyStatus.SCHEDULED);
-        assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isZero();
+        assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isEqualTo(1);
+        assertThat(partyService.getParty(partyId, host.getMemberId()).myConfirmed()).isTrue();
         assertThat(partyService.getParty(partyId, user02.getMemberId()).myConfirmed()).isFalse();
         assertThat(mealPartyRepository.findById(partyId).orElseThrow().getConfirmedTime()).isEqualTo(LocalTime.of(12, 30));
         assertThat(lastChat(partyId)).isEqualTo("방장이 일정을 변경했습니다 · 12:30 · 정문. 참여 확정을 다시 해 주세요");

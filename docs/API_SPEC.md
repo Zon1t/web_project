@@ -156,7 +156,7 @@
 | 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 완료되었습니다' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (42개)
+### 전체 API 목록 (43개, 11/23 알림 API 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -189,6 +189,7 @@
 | A | POST | `/api/parties/create` | 식사팟 생성 |
 | A | GET | `/api/parties/list` | 식사팟 목록 조회 |
 | A | GET | `/api/parties/my/today` | 내가 참여 중인 식사팟 조회 (오늘 ~ 14일 후) |
+| A | GET | `/api/parties/my/action-pending` | 내가 할 일이 있는 식사팟 조회 (알림, 11/23 추가) |
 | A | GET | `/api/parties/my/thumbs-pending` | 따봉 요청 대상 조회 |
 | A | GET | `/api/parties/{partyId}` | 식사팟 상세 조회 |
 | A | DELETE | `/api/parties/{partyId}` | 식사팟 삭제 (방장) |
@@ -1361,6 +1362,54 @@ null
 
 ---
 
+### GET /api/parties/my/action-pending — 내가 할 일이 있는 식사팟 조회 (알림)
+
+> 2026-11-23 추가: 헤더 종 알림용 (화면은 B)
+
+**요구사항**: 내가 지금 해야 할 일이 있는 식사팟 목록을 반환한다. 방장은 아직 일정을 정하지 않은 팟("일정을 정해 주세요"), 참여자는 일정이 정해졌는데 아직 참석 확정을 안 한 팟("참석을 확정해 주세요")이 대상이다. 조건이 풀리면(일정 확정·참석 확정·삭제·식사 완료·기준 시간 경과) 목록에서 저절로 빠진다. 읽음 여부는 저장하지 않는다.
+
+**Request**: 파라미터 없음
+
+**시스템 처리**
+1. party_date가 오늘 ~ 오늘+14일, status가 FINISHED·DELETED가 아니고 PARTY_MEMBER에 로그인 회원이 있는 MEAL_PARTY를 조회한다.
+2. 기준 시간(확정 시간, 없으면 예정 시간)이 이미 지난 팟은 뺀다.
+3. 팟마다 할 일을 정한다.
+   - 일정(confirmed_time)이 없고 내가 방장 → `SET_SCHEDULE`
+   - 일정이 있고 내 confirmed_yn = N → `CONFIRM`
+   - 그 외는 뺀다.
+4. 정렬: party_date → 기준 시간 → partyId 오름차순. 없으면 빈 배열.
+
+**Response 200 (data)**
+```json
+[
+  {
+    "partyId": 31,
+    "action": "SET_SCHEDULE",
+    "restaurantName": "세종원",
+    "partyDate": "2026-11-24",
+    "mealType": "LUNCH",
+    "time": "11:30",
+    "meetPlace": null
+  },
+  {
+    "partyId": 35,
+    "action": "CONFIRM",
+    "restaurantName": "스시온기",
+    "partyDate": "2026-11-24",
+    "mealType": "DINNER",
+    "time": "18:00",
+    "meetPlace": "1층 로비"
+  }
+]
+```
+- action: `SET_SCHEDULE`(방장, 일정 정하기) / `CONFIRM`(참석 확정)
+- time: 확정 시간이 있으면 확정 시간, 없으면 예정 시간 / meetPlace: 일정 미확정이면 null
+- FE: 항목을 누르면 `/party-detail.html?partyId={partyId}`로 이동
+
+**오류**: 공통 오류(401, 500) 외 없음
+
+---
+
 ### GET /api/parties/my/thumbs-pending — 따봉 요청 대상 조회
 
 > 2026-11-18 이동: `GET /api/thumbs/pending` → `GET /api/parties/my/thumbs-pending`
@@ -1700,7 +1749,7 @@ null
 
 ### POST /api/parties/{partyId}/members/me/confirm — 참여 확정 (2차)
 
-**요구사항**: 방장이 일정을 확정한 식사팟에서 내 참여를 확정한다(2차 참여). 방장도 같은 API로 확정한다. 확정자만 식사 완료 후 따봉 요청 대상이 된다.
+**요구사항**: 방장이 일정을 확정한 식사팟에서 내 참여를 확정한다(2차 참여). 방장은 일정을 정할 때 자동으로 확정되므로, 방장이 이 API를 쓰는 경우는 확정을 취소했다가 다시 확정할 때뿐이다. 확정자만 식사 완료 후 따봉 요청 대상이 된다.
 
 **Request — Path**: partyId (number) / Body 없음
 
@@ -1773,7 +1822,9 @@ null
 
 ### PATCH /api/parties/{partyId}/schedule — 일정 확정·수정 (방장)
 
-**요구사항**: 방장이 확정 시간·만날 장소·메모를 설정한다. 처음 설정하면 RECRUITING은 SCHEDULED로 바뀌고(FULL·CLOSED는 유지), 참여자에게 [참여 확정] 버튼이 열린다. 이미 설정된 일정을 수정하면 방장을 포함한 모든 참여자의 확정이 초기화되어 다시 확정을 받는다.
+**요구사항**: 방장이 확정 시간·만날 장소·메모를 설정한다. 처음 설정하면 RECRUITING은 SCHEDULED로 바뀌고(FULL·CLOSED는 유지), 참여자에게 [참여 확정] 버튼이 열린다. 방장은 일정을 정하면 자동으로 참석 확정된다. 이미 설정된 일정을 수정하면 모든 참여자의 확정이 초기화되어 다시 확정을 받고, 방장만 다시 자동 확정된다.
+
+> 2026-11-23 변경: 식사팟 흐름 개편 — ① 방장이 시간·메모로 방을 만듦 → ② 방장이 최종 시간·장소를 정하고 참석 확정 요청 → ③ 방장과 참여자가 참석 확정. 방장 자동 확정(8-1) 추가
 
 **Request — Path**: partyId (number)
 
@@ -1801,6 +1852,7 @@ null
 6. 기존 일정이 있었으면 모든 PARTY_MEMBER의 confirmed_yn을 N으로 초기화한다.
 7. confirmed_time, meet_place, confirm_memo를 저장한다.
 8. status가 RECRUITING이면 SCHEDULED로 변경한다. (SCHEDULED·FULL·CLOSED는 유지)
+8-1. 방장의 PARTY_MEMBER.confirmed_yn을 Y로 변경한다. (방장 자동 참석 확정, 6번 초기화 뒤에 처리)
 9. PARTY_CHAT에 시스템 메시지를 저장한다. 최초: '방장이 일정을 확정했습니다 · 12:00 · 1층 로비' / 수정: '방장이 일정을 변경했습니다 · 12:30 · 정문. 참여 확정을 다시 해 주세요'
 10. 커밋한다.
 

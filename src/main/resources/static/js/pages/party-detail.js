@@ -4,10 +4,11 @@
  * 주소: /party-detail.html?partyId=31
  *
  * 만든 것
- *   - 제목·상태 4단계, 일정 정보, 참여자 목록
- *   - 내 버튼: 참여하기 / 참석 확정 / 확정 취소 / 나가기 / 초대 링크 복사 (내 역할·상태에 따라)
- *   - 내 진행: ① 팟 참여 → ② 일정 확정(방장) → ③ 내 참석 확정, 할 일이 있으면 안내 상자
- *   - 방장 메뉴: 일정 확정·수정(창), 모집 마감·재개, 팟 삭제
+ *   - 제목·상태 뱃지, 진행 3단계, 일정 정보, 참여자 목록
+ *   - 진행 3단계 (2026-11-23 흐름 개편): ① 모집(방장이 방 만들기) → ② 일정 확정(방장이 최종 시간·장소) → ③ 참석 확정
+ *     방장은 일정을 정하면 자동으로 참석 확정된다. 할 일이 있으면 안내 상자 (방장: 일정 정하기 / 참여자: 참석 확정)
+ *   - 내 버튼: 참여하기 / 확정 취소 / 나가기 / 초대 링크 복사 (내 역할·상태에 따라)
+ *   - 방장 메뉴: 대화 입력창 위 버튼 줄 (일정 정하기·수정 / 모집 마감·재개 / 초대 링크 / 팟 삭제), 방장에게만
  *   - 대화: 참여자만. 처음엔 전체, 이후 3초마다 새 메시지만(afterId 폴링). 식사 완료면 읽기 전용
  *   - 로딩 / 없는 팟 / 삭제된 팟 / 오류 화면
  *
@@ -32,6 +33,7 @@
   const chatInput = document.getElementById('chat-input');
   const chatSubmit = chatForm.querySelector('button[type="submit"]');
   const chatMessage = document.getElementById('chat-message');
+  const hostBar = document.getElementById('host-bar');
 
   const dialog = document.getElementById('schedule-dialog');
   const scheduleForm = document.getElementById('schedule-form');
@@ -63,6 +65,7 @@
   /* ---------- 시작 ---------- */
 
   root.addEventListener('click', onRootClick);
+  hostBar.addEventListener('click', onRootClick); // 방장 버튼 줄도 같은 처리
   scheduleForm.addEventListener('submit', onScheduleSubmit);
   dialog.addEventListener('click', (event) => {
     if (event.target.closest('[data-action="close-dialog"]')) dialog.close();
@@ -111,8 +114,8 @@
       renderHead(d) +
       renderInfo(d) +
       renderActions(d) +
-      renderMembers(d) +
-      renderHostMenu(d);
+      renderMembers(d);
+    renderHostBar(d);
   }
 
   function renderHead(d) {
@@ -126,28 +129,42 @@
       // 오늘이 아닌 팟은 제목 옆에 날짜를 붙여 오늘 팟과 구분한다 (11/20)
       (partyApi.isToday(d.partyDate) ? '' : ' <span class="party-head__when">' + esc(partyApi.shortDateLabel(d.partyDate)) + '</span>') +
       '</h1>' +
+      '<span class="party-head__meta">' +
+      '<span class="badge badge--' + esc(String(d.status).toLowerCase()) + '">' + esc(STATUS_LABELS[d.status] || '') + '</span>' +
       '<span class="text-muted">' + esc(CATEGORY_LABELS[d.category] || '') + '</span>' +
+      '</span>' +
       '</div>' +
       (d.memo ? '<p class="party-head__desc">' + esc(d.memo) + '</p>' : '') +
-      renderSteps(d.status) +
+      renderFlow(d) +
       '</section>'
     );
   }
 
-  /** 상태 4단계: 모집중 › 일정 확정 › (정원/모집) 마감 › 식사 완료, 현재 단계 강조 */
-  function renderSteps(status) {
-    const current = { RECRUITING: 0, SCHEDULED: 1, FULL: 2, CLOSED: 2, FINISHED: 3 }[status];
-    const labels = ['모집중', '일정 확정', status === 'FULL' ? '정원 마감' : '모집 마감', '식사 완료'];
+  /**
+   * 진행 3단계 (상태 표시 하나로 통일, 2026-11-23)
+   *   ① 모집: 방장이 시간·메모를 정해 방을 만듦 (항상 완료)
+   *   ② 일정 확정: 방장이 최종 시간·장소를 정하고 참석 확정을 요청
+   *   ③ 참석 확정: 방장(자동)과 참여자가 확정. 참여자에게는 '내 확정', 아직 안 들어온 사람에게는 확정 인원
+   * 정원·모집 마감·식사 완료는 제목 옆 상태 뱃지로 보여 준다.
+   */
+  function renderFlow(d) {
+    const isMember = d.myRole !== 'NONE';
+    const finished = d.status === 'FINISHED';
+    const done = [true, finished || !!d.schedule, finished || (isMember && !!d.myConfirmed)];
+    const labels = [
+      '모집',
+      '일정 확정 <small>방장</small>',
+      '참석 확정 <small>' + d.confirmedCount + ' / ' + d.memberCount + '명</small>',
+    ];
+    const current = done.indexOf(false);
     const items = labels.map((label, i) => {
-      const cls = i === current ? ' is-current' : i < current ? ' is-done' : '';
-      const aria = i === current ? ' aria-current="step"' : '';
-      return '<li class="party-steps__item' + cls + '"' + aria + '>' + label + '</li>';
+      const cls = done[i] ? ' is-done' : i === current ? ' is-current' : '';
+      const mark = done[i] ? ui.icon('check', 14) : String(i + 1);
+      return '<li class="my-progress__item' + cls + '"' + (i === current ? ' aria-current="step"' : '') + '>' +
+        '<span class="my-progress__dot">' + mark + '</span>' +
+        '<span class="my-progress__label">' + label + '</span></li>';
     });
-    return (
-      '<ol class="party-steps" aria-label="진행 상태: ' + esc(STATUS_LABELS[status]) + '">' +
-      items.join('<li class="party-steps__sep" aria-hidden="true">›</li>') +
-      '</ol>'
-    );
+    return '<ol class="my-progress party-flow" aria-label="진행 단계">' + items.join('') + '</ol>';
   }
 
   function renderInfo(d) {
@@ -208,10 +225,11 @@
           ? '식사 30분 전이 지나 확정 취소·나가기를 할 수 없어요.'
           : '확정 취소·나가기는 ' + deadlineTime + '까지 할 수 있어요.');
       }
-      if (isJoinable) {
+      // 방장은 대화창 아래 버튼 줄에 초대 링크가 있다
+      if (isJoinable && d.myRole !== 'HOST') {
         buttons.push(button('invite', '초대 링크 복사'));
       }
-      body = renderMyProgress(d) + renderTodo(d) + row(buttons.join('')) + hints.map(hint).join('');
+      body = renderTodo(d) + row(buttons.join('')) + hints.map(hint).join('');
     }
 
     return (
@@ -222,23 +240,13 @@
     );
   }
 
-  /** 내 진행 3단계: ① 팟 참여 → ② 일정 확정(방장) → ③ 내 참석 확정 */
-  function renderMyProgress(d) {
-    const done = [true, !!d.schedule, !!d.myConfirmed];
-    const labels = ['팟 참여', '일정 확정 <small>방장</small>', '내 참석 확정'];
-    const current = done.indexOf(false);
-    const items = labels.map((label, i) => {
-      const cls = done[i] ? ' is-done' : i === current ? ' is-current' : '';
-      const mark = done[i] ? ui.icon('check', 14) : String(i + 1);
-      return '<li class="my-progress__item' + cls + '"' + (i === current ? ' aria-current="step"' : '') + '>' +
-        '<span class="my-progress__dot">' + mark + '</span>' +
-        '<span class="my-progress__label">' + label + '</span></li>';
-    });
-    return '<ol class="my-progress" aria-label="내 진행 상황">' + items.join('') + '</ol>';
-  }
-
-  /** 지금 내가 할 일이 있으면 눈에 띄는 상자로 */
+  /** 지금 내가 할 일이 있으면 눈에 띄는 상자로 (방장: 일정 정하기 / 참여자: 참석 확정) */
   function renderTodo(d) {
+    if (!d.schedule && d.myRole === 'HOST') {
+      return '<div class="party-todo">' + ui.icon('calendar', 18) +
+        '<p><b>일정을 정해 주세요.</b><br>최종 시간과 만날 장소를 정하면 참여자들에게 참석 확정을 요청해요.</p>' +
+        button('open-schedule', '일정 정하기', 'btn--primary') + '</div>';
+    }
     if (!d.schedule) {
       return '<div class="party-todo party-todo--wait">' + ui.icon('clock', 18) +
         '<p><b>방장이 일정을 정하는 중이에요.</b><br>일정이 정해지면 여기서 참석 확정을 할 수 있어요.</p></div>';
@@ -283,22 +291,21 @@
     return String(name || '?').trim().charAt(0) || '?';
   }
 
-  /** 방장 메뉴: 방장에게만, 식사 완료 전까지 */
-  function renderHostMenu(d) {
-    if (d.myRole !== 'HOST' || d.status === 'FINISHED') return '';
-    const statusButton = d.status === 'CLOSED'
-      ? button('reopen', '모집 재개')
-      : button('close', '모집 마감');
-    return (
-      '<section class="party-host" aria-labelledby="host-title">' +
-      '<h2 id="host-title" class="text-muted">방장 메뉴</h2>' +
-      '<div class="party-host__buttons">' +
+  /** 방장 메뉴: 대화 입력창 위 버튼 줄. 방장에게만, 식사 완료 전까지 */
+  function renderHostBar(d) {
+    if (d.myRole !== 'HOST' || d.status === 'FINISHED') {
+      hostBar.hidden = true;
+      hostBar.innerHTML = '';
+      return;
+    }
+    const isJoinable = d.status === 'RECRUITING' || d.status === 'SCHEDULED';
+    hostBar.innerHTML =
+      '<span class="party-host-bar__label">방장</span>' +
       button('open-schedule', d.schedule ? '일정 수정' : '일정 정하기', d.schedule ? '' : 'btn--primary') +
-      statusButton +
-      button('delete', '팟 삭제', 'btn--danger') +
-      '</div>' +
-      '</section>'
-    );
+      (d.status === 'CLOSED' ? button('reopen', '모집 재개') : button('close', '모집 마감')) +
+      (isJoinable ? button('invite', '초대 링크') : '') +
+      button('delete', '팟 삭제', 'btn--danger');
+    hostBar.hidden = false;
   }
 
   function button(action, label, extraClass, disabled) {
@@ -431,7 +438,7 @@
   }
 
   function setButtonsDisabled(disabled) {
-    root.querySelectorAll('button[data-action]').forEach((btn) => {
+    [...root.querySelectorAll('button[data-action]'), ...hostBar.querySelectorAll('button[data-action]')].forEach((btn) => {
       if (disabled) btn.disabled = true;
     });
     if (!disabled) render();
@@ -578,8 +585,8 @@
       dialog.close();
       state.feedback = null;
       ui.toast(result.confirmationsReset
-        ? '일정을 바꿨어요. 모두의 참석 확정이 초기화되어 다시 받아야 해요.'
-        : '일정을 정했어요. 이제 참여자들이 참석 확정을 할 수 있어요.', { type: 'success', duration: 4000 });
+        ? '일정을 바꿨어요. 참여자들의 참석 확정을 다시 받아야 해요. (방장은 자동 확정)'
+        : '일정을 정했어요. 방장은 자동으로 참석 확정됐고, 이제 참여자들에게 확정을 받아요.', { type: 'success', duration: 4000 });
       await loadDetail(false);
     } catch (err) {
       if (err.statusCode === 401) return;

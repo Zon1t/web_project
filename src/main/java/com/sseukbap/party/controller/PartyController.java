@@ -2,6 +2,7 @@ package com.sseukbap.party.controller;
 
 import com.sseukbap.common.interceptor.LoginMember;
 import com.sseukbap.common.response.ApiResponse;
+import com.sseukbap.party.dto.PartyActionPendingResponse;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
@@ -67,6 +68,12 @@ public class PartyController {
     @GetMapping("/my/today")
     public ApiResponse<List<PartyMyTodayResponse>> getMyTodayPartyList(@LoginMember Long memberId) {
         return ApiResponse.success(partyService.getMyTodayPartyList(memberId));
+    }
+
+    /** 내가 할 일이 있는 식사팟 (헤더 종 알림: 방장 일정 정하기 / 참석 확정). 없으면 빈 배열 */
+    @GetMapping("/my/action-pending")
+    public ApiResponse<List<PartyActionPendingResponse>> getActionPendingList(@LoginMember Long memberId) {
+        return ApiResponse.success(partyService.getActionPendingList(memberId));
     }
 
     /** 식사팟 상세 조회 */

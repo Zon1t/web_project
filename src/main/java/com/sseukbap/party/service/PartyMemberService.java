@@ -9,6 +9,7 @@ import com.sseukbap.party.dto.PartyLeaveResponse;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.entity.PartyChat;
 import com.sseukbap.party.entity.PartyMember;
+import com.sseukbap.party.entity.PartyStatus;
 import com.sseukbap.party.repository.PartyChatRepository;
 import com.sseukbap.party.repository.PartyMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,12 @@ public class PartyMemberService {
         // 4. 이미 참여 중
         if (partyMemberRepository.existsByPartyIdAndMemberId(partyId, memberId)) {
             throw new BusinessException(ErrorCode.ALREADY_JOINED);
+        }
+
+        // 4-1. 같은 날짜·같은 끼니의 다른 팟에 이미 들어가 있음 (확정 여부 무관, 삭제된 팟 제외)
+        if (partyMemberRepository.existsSameMealParty(
+                memberId, party.getPartyDate(), party.getMealType(), PartyStatus.DELETED)) {
+            throw new BusinessException(ErrorCode.ALREADY_JOINED_SAME_MEAL);
         }
 
         // 5. FULL·CLOSED이거나 정원이 찼으면 중단

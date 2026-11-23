@@ -1,5 +1,6 @@
 package com.sseukbap.party.repository;
 
+import com.sseukbap.common.enums.MealType;
 import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyStatus;
 import jakarta.persistence.LockModeType;
@@ -102,4 +103,16 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
                                                            @Param("fromDate") LocalDate fromDate,
                                                            @Param("toDate") LocalDate toDate,
                                                            @Param("excludedStatuses") Collection<PartyStatus> excludedStatuses);
+
+    /**
+     * 이 회원이 같은 날짜·같은 끼니의 팟에 이미 들어가 있는지 (삭제된 팟은 빼고, 확정 여부와 무관)
+     * 한 끼에는 팟 하나만: 참여하기·식사팟 생성 전에 확인한다. (2026-11-23)
+     */
+    @Query("select count(pm) > 0 from PartyMember pm join pm.party p "
+            + "where pm.member.memberId = :memberId and p.partyDate = :partyDate and p.mealType = :mealType "
+            + "and p.status <> :deleted")
+    boolean existsSameMealParty(@Param("memberId") Long memberId,
+                                @Param("partyDate") LocalDate partyDate,
+                                @Param("mealType") MealType mealType,
+                                @Param("deleted") PartyStatus deleted);
 }

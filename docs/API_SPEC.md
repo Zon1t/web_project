@@ -595,8 +595,10 @@ null
 ### GET /api/restaurants/rankings — 따봉 랭킹 조회
 
 > 2026-11-18 이동: `GET /api/rankings/thumbs` → `GET /api/restaurants/rankings`
+>
+> 2026-11-23 변경: 따봉 1건 이상만 → 따봉이 0건인 식당도 리뷰 수·등록 순으로 포함, 구내식당(`CAFETERIA`) 제외
 
-**요구사항**: 오늘 기준 최근 30일(오늘 포함) 따봉 수 내림차순으로 식당 랭킹을 반환한다. 랭킹 화면은 limit=10, 메인 '이달의 따봉 TOP 3'는 limit=3으로 호출한다. 최근 30일 따봉이 1건 이상인 식당만 포함한다.
+**요구사항**: 오늘 기준 최근 30일(오늘 포함) 따봉 수 내림차순으로 식당 랭킹을 반환한다. 랭킹 화면은 limit=10, 메인 '이달의 따봉 TOP 3'는 limit=3으로 호출한다. 따봉이 없는 식당도 리뷰 수 → 등록 순으로 이어서 포함한다. 구내식당은 제외한다.
 
 **Request — Query**
 
@@ -610,7 +612,7 @@ null
 3. PARTY_MEMBER(thumbs_up_yn = Y)와 MEAL_PARTY를 조인해, party_date가 기간 내인 행을 MEAL_PARTY.restaurant_id별로 집계한다. (집계 기준: 공통 규칙 '따봉 집계')
 4. 식당별 전체 REVIEW 수를 함께 조회한다.
 5. 정렬: 따봉 수 내림차순 → 리뷰 수 내림차순 → 식당 등록 순(restaurant_id 오름차순).
-6. 순위(rank)는 정렬 순서대로 1부터 매긴다. (동점도 정렬 기준에 따라 다른 순위)
+6. 구내식당(`CAFETERIA`)을 제외하고, 순위(rank)는 정렬 순서대로 1부터 매긴다. (동점도 정렬 기준에 따라 다른 순위, 따봉 0건 식당 포함)
 7. limit만큼 반환한다.
 
 **Response 200 (data)**
@@ -630,7 +632,7 @@ null
   ]
 }
 ```
-- 대상 식당이 없으면 rankings는 빈 배열 (화면: '최근 30일간 따봉을 받은 식당이 없습니다')
+- 대상 식당이 없으면(구내식당 외 등록 식당 없음) rankings는 빈 배열 (화면: '등록된 식당이 아직 없어요')
 
 **오류**
 
@@ -1198,6 +1200,8 @@ null
 **요구사항**: 오늘부터 14일 후까지의 식사팟을 만든다. 날짜를 보내지 않으면 오늘 팟이다. 생성자는 방장(HOST)이자 첫 참여자로 등록되고, 상태는 RECRUITING이다. FE는 성공 후 식사팟 상세로 이동한다. 식당 상세에서 들어온 경우 restaurantId는 화면에서 고정된 값을 보낸다.
 
 > 2026-11-20 변경: 당일만 → 오늘 ~ 14일 후 (partyDate 추가)
+>
+> 2026-11-23 변경: 한 끼에 팟 하나 — 같은 날짜·같은 끼니의 팟(DELETED 제외)에 이미 들어가 있으면 생성 불가 (409 `ALREADY_JOINED_SAME_MEAL`)
 
 **Request — Body**
 ```json
@@ -1225,6 +1229,7 @@ null
 2. partyDate가 오늘 ~ 오늘+14일인지 확인한다.
 3. mealTime이 mealType 시간대에 속하고 30분 단위인지 확인한다.
 4. partyDate + mealTime이 현재 시각보다 이후인지 확인한다. (미래 날짜는 항상 통과)
+   4-1. 로그인 회원이 같은 partyDate·같은 mealType의 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 이미 PARTY_MEMBER로 있으면 중단한다.
 5. RESTAURANT가 있는지 확인한다.
 6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING)
 7. PARTY_MEMBER에 방장을 저장한다. (confirmed_yn = N)
@@ -1245,6 +1250,7 @@ null
 | 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 정원 범위 밖, 한마디 50자 초과, partyDate 형식 오류·범위(오늘~14일 후) 밖 |
 | 400 | INVALID_MEAL_TIME | 선택할 수 없는 식사 시간입니다. | 시간대·30분 단위 위반, 지난 시간 |
 | 404 | RESTAURANT_NOT_FOUND | 식당을 찾을 수 없습니다. | 없는 restaurantId |
+| 409 | ALREADY_JOINED_SAME_MEAL | 같은 시간대에 이미 참여 중인 식사팟이 있습니다. | 같은 날짜·끼니의 다른 팟에 이미 참여 중 |
 
 ---
 
@@ -1603,7 +1609,9 @@ null
 
 ### POST /api/parties/{partyId}/members — 식사팟 참여하기 (1차)
 
-**요구사항**: 수락 절차 없이 식사팟에 참여한다(1차 참여). RECRUITING·SCHEDULED 상태이고 정원 미만일 때만 가능하다. 동시에 여러 명이 마지막 자리에 참여해도 정원을 넘지 않아야 한다. 정원에 도달하면 자동 마감(FULL)한다.
+**요구사항**: 수락 절차 없이 식사팟에 참여한다(1차 참여). RECRUITING·SCHEDULED 상태이고 정원 미만일 때만 가능하다. 동시에 여러 명이 마지막 자리에 참여해도 정원을 넘지 않아야 한다. 정원에 도달하면 자동 마감(FULL)한다. 같은 날짜·같은 끼니에는 팟 하나만 참여할 수 있다(참여 확정 전이어도).
+
+> 2026-11-23 변경: 한 끼에 팟 하나 — 같은 날짜·같은 끼니의 다른 팟(DELETED 제외)에 이미 들어가 있으면 참여 불가 (409 `ALREADY_JOINED_SAME_MEAL`). 초대 링크로 들어와도 같다.
 
 **Request — Path**: partyId (number) / Body 없음
 
@@ -1612,6 +1620,7 @@ null
 2. 팟이 없거나 DELETED면 중단한다.
 3. status가 FINISHED면 중단한다.
 4. 이미 PARTY_MEMBER에 있으면 중단한다.
+   4-1. 같은 party_date·같은 meal_type의 다른 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 PARTY_MEMBER로 있으면 중단한다.
 5. status가 FULL·CLOSED이거나 현재 인원 ≥ capacity면 중단한다.
 6. PARTY_MEMBER를 저장한다. (confirmed_yn = N)
 7. 참여 후 인원이 capacity와 같으면 status = FULL로 변경한다.
@@ -1634,6 +1643,7 @@ null
 | 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED |
 | 409 | ALREADY_JOINED | 이미 참여 중인 식사팟입니다. | 중복 참여 |
+| 409 | ALREADY_JOINED_SAME_MEAL | 같은 시간대에 이미 참여 중인 식사팟이 있습니다. | 같은 날짜·끼니의 다른 팟에 이미 참여 중 |
 | 409 | PARTY_FULL | 이미 마감된 식사팟입니다. | FULL, CLOSED, 정원 도달 |
 | 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
 
@@ -1913,6 +1923,7 @@ API별 오류 표를 모은 것이다. message는 API마다 조금씩 다를 수
 | 409 | RESTAURANT_ALREADY_EXISTS | 이미 등록된 식당입니다. | 식당 등록 |
 | 409 | ALREADY_INTERESTED | 이미 관심 등록한 식당입니다. | 관심 등록 |
 | 409 | ALREADY_JOINED | 이미 참여 중인 식사팟입니다. | 참여하기 |
+| 409 | ALREADY_JOINED_SAME_MEAL | 같은 시간대에 이미 참여 중인 식사팟이 있습니다. | 참여하기, 식사팟 생성 |
 | 409 | NOT_JOINED | 참여하지 않은 식사팟입니다. | 나가기, 참여 확정·취소 |
 | 409 | PARTY_FULL | 이미 마감된 식사팟입니다. | 참여하기 |
 | 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | 식사팟 변경 API 전체 |

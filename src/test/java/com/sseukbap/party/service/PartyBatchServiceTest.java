@@ -63,6 +63,7 @@ class PartyBatchServiceTest {
     void setUp() {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
     }
 
     @Test
@@ -99,10 +100,11 @@ class PartyBatchServiceTest {
 
     @Test
     void 마감된_팟도_완료_처리되고_삭제_완료된_팟은_대상이_아니다() {
-        Long full = createParty(LocalTime.of(12, 0), 2);
-        partyMemberService.joinParty(full, user02.getMemberId());   // FULL
+        // 삭제할 팟을 먼저 만든다. (삭제된 팟은 '한 끼에 팟 하나' 규칙에서 빠지므로 다음 팟을 만들 수 있다)
         Long deleted = createParty(LocalTime.of(12, 0));
         partyService.deleteParty(deleted, host.getMemberId());
+        Long full = createParty(LocalTime.of(12, 0), 2);
+        partyMemberService.joinParty(full, user02.getMemberId());   // FULL
         flushAndClear();
 
         List<Long> targets = partyBatchService.findFinishTargetIds(TODAY.atTime(12, 1));
@@ -156,11 +158,12 @@ class PartyBatchServiceTest {
         setPartyDate(yesterdayDeleted, TODAY.minusDays(1));
         setStatus(yesterdayDeleted, PartyStatus.DELETED);
 
-        Long todayFinished = createPartyWithChat();
-        setStatus(todayFinished, PartyStatus.FINISHED);
-
+        // 오늘 팟은 마지막에 만든다. (오늘 점심 팟이 남아 있으면 '한 끼에 팟 하나' 규칙으로 다음 팟을 못 만든다)
         Long yesterdayActive = createPartyWithChat();   // 서버가 꺼져 아직 완료 처리 안 된 팟
         setPartyDate(yesterdayActive, TODAY.minusDays(1));
+
+        Long todayFinished = createPartyWithChat();
+        setStatus(todayFinished, PartyStatus.FINISHED);
 
         int deleted = partyBatchService.deleteOldChats(TODAY);
         flushAndClear();

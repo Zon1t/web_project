@@ -149,6 +149,8 @@
   /* ---------- 그리기 ---------- */
 
   function renderList(parties) {
+    // 한 끼에 팟 하나 (11/23): 이 날짜·끼니에 이미 들어간 팟이 있으면 다른 팟의 [참여하기]를 막는다
+    state.joinedThisMeal = parties.some((p) => p.joined);
     root.innerHTML = '<ul class="party-cards">' + parties.map(renderCard).join('') + '</ul>';
   }
 
@@ -203,10 +205,13 @@
     return html;
   }
 
-  /** 버튼: 참여 중 → 상세 보기 / 모집중·일정 확정 → 참여하기 / 마감 → 비활성 */
+  /** 버튼: 참여 중 → 상세 보기 / 같은 끼니 다른 팟 참여 중 → 비활성 / 모집중·일정 확정 → 참여하기 / 마감 → 비활성 */
   function actionButton(p, detailUrl) {
     if (p.joined) {
       return '<a class="btn" href="' + detailUrl + '">상세 보기</a>';
+    }
+    if (state.joinedThisMeal) {
+      return '<button type="button" class="btn" disabled title="같은 시간대에 이미 참여 중인 식사팟이 있어요">참여 불가</button>';
     }
     if (p.status === 'RECRUITING' || p.status === 'SCHEDULED') {
       return '<button type="button" class="btn btn--primary" data-action="join">참여하기</button>';

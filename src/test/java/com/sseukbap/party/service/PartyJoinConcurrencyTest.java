@@ -54,9 +54,11 @@ class PartyJoinConcurrencyTest {
     void 남은_자리가_2개일_때_4명이_동시에_참여하면_2명만_성공한다() throws Exception {
         // 정원 3 = 방장(user01) + 빈자리 2
         Member host = memberRepository.findByLoginId("user01").orElseThrow();
+        // 트랜잭션 없이 커밋되는 테스트라 더미 팟을 숨길 수 없다. 더미 팟이 없는 14일 후 날짜로 만든다. ('한 끼에 팟 하나' 규칙)
+        LocalDate partyDate = LocalDate.now().plusDays(PartyTimePolicy.MAX_DAYS_AHEAD);
         partyId = partyService.createParty(
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
-                        MealType.LUNCH, LocalTime.of(12, 0), 3, null),
+                        partyDate, MealType.LUNCH, LocalTime.of(12, 0), 3, null),
                 host.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();
 
         List<Long> joinerIds = List.of("user02", "user03", "user04", "user05").stream()

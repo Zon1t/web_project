@@ -88,6 +88,11 @@ public class PartyService {
             throw new BusinessException(ErrorCode.INVALID_MEAL_TIME);
         }
 
+        // 4-1. 같은 날짜·같은 끼니의 팟에 이미 들어가 있으면 새로 만들 수 없음 (확정 여부 무관, 삭제된 팟 제외)
+        if (partyMemberRepository.existsSameMealParty(memberId, partyDate, request.mealType(), PartyStatus.DELETED)) {
+            throw new BusinessException(ErrorCode.ALREADY_JOINED_SAME_MEAL);
+        }
+
         // 5. 식당 확인
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));

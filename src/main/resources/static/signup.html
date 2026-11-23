@@ -72,6 +72,31 @@
           <p id="signup-nickname-message" class="field__message" aria-live="polite"></p>
         </div>
 
+        <!-- 근무지 (2026-11-23): 삼성 전체 서비스 중 '멀티캠퍼스 세종대'만 열려 있다는 콘셉트.
+             다른 사업장은 선택할 수 없게 disabled. 지금은 한 곳뿐이라 서버로 보내지 않는다. -->
+        <div class="field">
+          <label class="field__label" for="signup-workplace">근무지</label>
+          <select id="signup-workplace" class="select" aria-describedby="signup-workplace-message">
+            <optgroup label="멀티캠퍼스">
+              <option value="MULTICAMPUS_SEJONG" selected>멀티캠퍼스 세종대</option>
+              <option disabled>멀티캠퍼스 역삼 (준비 중)</option>
+            </optgroup>
+            <optgroup label="삼성 사업장">
+              <option disabled>삼성전자 서초사옥 (준비 중)</option>
+              <option disabled>삼성전자 수원사업장 (준비 중)</option>
+              <option disabled>삼성전자 기흥캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 화성캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 평택캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 구미사업장 (준비 중)</option>
+              <option disabled>삼성전자 서울R&amp;D캠퍼스 (준비 중)</option>
+              <option disabled>삼성SDS 잠실캠퍼스 (준비 중)</option>
+              <option disabled>삼성디스플레이 아산캠퍼스 (준비 중)</option>
+              <option disabled>삼성바이오로직스 송도 (준비 중)</option>
+            </optgroup>
+          </select>
+          <p id="signup-workplace-message" class="field__message">지금은 멀티캠퍼스 세종대만 이용할 수 있어요. 다른 사업장은 준비 중이에요.</p>
+        </div>
+
         <button id="signup-submit" class="btn btn--primary auth-submit" type="submit">가입하기</button>
       </form>
 

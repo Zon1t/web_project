@@ -58,6 +58,9 @@
   };
   const DEFAULT_TAB = 'reviews';
 
+  // 근무지: 회원가입에서 '멀티캠퍼스 세종대'만 고를 수 있어 서버에 저장하지 않고 고정 표시 (2026-11-23)
+  const WORKPLACE = '멀티캠퍼스 세종대';
+
   const profileEl = document.getElementById('mypage-profile');
   const panelEl = document.getElementById('mypage-panel');
   const tabButtons = Array.from(document.querySelectorAll('.mypage-tab'));
@@ -127,7 +130,7 @@
     // [탭, 이름, 건수, 단위, 아이콘, 색 톤]
     const stats = [
       ['reviews', '남긴 리뷰', summary.reviewCount, '개', 'star', 'blue'],
-      ['parties', '함께한 식사팟', summary.partyCount, '번', 'people', 'orange'],
+      ['parties', '참여한 식사팟', summary.partyCount, '개', 'people', 'orange'],   // 예정 팟도 포함이라 '함께한' 대신 (2026-11-23)
       ['restaurants', '등록한 식당', summary.restaurantCount, '곳', 'pin', 'green'],
       ['interests', '관심 식당', summary.interestCount, '곳', 'thumbs', 'purple'],
     ];
@@ -137,7 +140,7 @@
       '<span class="mypage-profile__avatar" aria-hidden="true">' + esc(nickname.charAt(0) || '?') + '</span>' +
       '<div>' +
       '<p class="mypage-profile__nickname">' + esc(nickname) + ' 님</p>' +
-      '<p class="mypage-profile__login-id">' + esc(summary.loginId) + '</p>' +
+      '<p class="mypage-profile__login-id">' + esc(summary.loginId) + '<span aria-hidden="true"> · </span>' + WORKPLACE + '</p>' +
       '</div>' +
       '</div>' +
       '<h2 class="mypage-record__title">나의 슥밥 기록</h2>' +
@@ -244,7 +247,7 @@
       '<span class="badge badge--' + esc(party.status.toLowerCase()) + '">' + esc(status) + '</span>' +
       (party.confirmed
         ? '<span class="badge mypage-badge--confirmed">참석 확정</span>'
-        : '<span class="badge">확정 전</span>') +
+        : '<span class="badge">참석 확정 전</span>') +
       (party.host ? '<span class="badge mypage-badge--host">방장</span>' : '');
     return (
       '<li class="mypage-item mypage-item--link">' +

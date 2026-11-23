@@ -55,6 +55,7 @@ class PartyInviteLinkTest {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
         restaurant = restaurantRepository.findAll().get(0);
     }
 
@@ -91,8 +92,10 @@ class PartyInviteLinkTest {
     void 정원_마감_방장_마감_식사_완료면_INVALID_STATUS() {
         Long full = createParty(MealType.LUNCH, LocalTime.of(12, 0), 2);
         partyMemberService.joinParty(full, user02.getMemberId());   // FULL
+        PartyTestSupport.moveToTomorrow(em, full);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long closed = createParty(MealType.LUNCH, LocalTime.of(12, 0), 4);
         partyHostService.updateStatus(closed, new PartyStatusUpdateRequest("CLOSE"), host.getMemberId());
+        PartyTestSupport.moveToTomorrow(em, closed);
         Long finished = createParty(MealType.LUNCH, LocalTime.of(12, 0), 4);
         setStatus(finished, PartyStatus.FINISHED);
 

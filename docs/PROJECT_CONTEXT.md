@@ -193,7 +193,7 @@ naver:
 - 방장이 나가거나 삭제 → 식사팟 DELETED(소프트 삭제).
 - 대화: 참여자 전용, 200자, 3초 폴링(afterId), 시스템 메시지(참여·나가기·일정·확정 등), 식사 완료 후 읽기 전용, 다음 날 0시 삭제.
 - 따봉: FINISHED 팟의 참여 확정자만, 팟 1건당 1회, 대상 = 팟의 식당. 메인 배너로 요청, [다음에] 시 당일 숨김(FE 브라우저 저장소). 요청 대상은 식사 후 7일 이내.
-- 랭킹: 오늘 포함 최근 30일(오늘-29 ~ 오늘, **식사일 PARTY_DATE 기준**) 따봉 수 내림차순 → 리뷰 수 → 등록 순. 랭킹 TOP 10, 메인 TOP 3. 따봉 1건 이상만.
+- 랭킹: 오늘 포함 최근 30일(오늘-29 ~ 오늘, **식사일 PARTY_DATE 기준**) 따봉 수 내림차순 → 리뷰 수 → 등록 순. 랭킹 TOP 10, 메인 TOP 3. 구내식당 제외, 따봉 0건 식당도 포함(11/23 변경, 기존 따봉 1건 이상만).
 - 룰렛: 후보 조회(최대 8, 무작위) → spin(candidateIds 2~8개 중 1곳 선정), 2곳 미만이면 실행 불가.
 
 ---
@@ -259,7 +259,7 @@ naver:
 
 ### API별 상세 오류 코드 (명세서에 등장한 것, 전체 목록은 노션 확인)
 
-`PASSWORD_MISMATCH`, `LOGIN_ID_ALREADY_EXISTS`, `NICKNAME_ALREADY_EXISTS`, `RESTAURANT_NOT_FOUND`, `ALREADY_INTERESTED`, `INTEREST_NOT_FOUND`, `PARTY_NOT_FOUND`, `PARTY_DELETED`, `PARTY_FINISHED`, `PARTY_FULL`, `ALREADY_JOINED`, `NOT_JOINED`, `NOT_HOST`, `INVALID_MEAL_TIME`, `INVALID_STATUS`, `SCHEDULE_NOT_SET`, `ALREADY_CONFIRMED`, `NOT_CONFIRMED`, `CANCEL_DEADLINE_PASSED`, `LEAVE_DEADLINE_PASSED`, `CHAT_READ_ONLY`, `NOT_CONFIRMED_MEMBER`, `PARTY_NOT_FINISHED`, `ALREADY_THUMBED`, `NOT_ENOUGH_CANDIDATES`
+`PASSWORD_MISMATCH`, `LOGIN_ID_ALREADY_EXISTS`, `NICKNAME_ALREADY_EXISTS`, `RESTAURANT_NOT_FOUND`, `ALREADY_INTERESTED`, `INTEREST_NOT_FOUND`, `PARTY_NOT_FOUND`, `PARTY_DELETED`, `PARTY_FINISHED`, `PARTY_FULL`, `ALREADY_JOINED`, `ALREADY_JOINED_SAME_MEAL`, `NOT_JOINED`, `NOT_HOST`, `INVALID_MEAL_TIME`, `INVALID_STATUS`, `SCHEDULE_NOT_SET`, `ALREADY_CONFIRMED`, `NOT_CONFIRMED`, `CANCEL_DEADLINE_PASSED`, `LEAVE_DEADLINE_PASSED`, `CHAT_READ_ONLY`, `NOT_CONFIRMED_MEMBER`, `PARTY_NOT_FINISHED`, `ALREADY_THUMBED`, `NOT_ENOUGH_CANDIDATES`
 
 ### 코드 값
 
@@ -676,6 +676,8 @@ com.sseukbap
 | 11/19 | check-map-url에 name 추가: 네이버에 URL·장소 ID 조회 공식 API가 없어 식당 이름으로 지역 검색, 사용자가 주소 확인 후 등록. map_url은 장소 ID 기준 표준 URL(`https://map.naver.com/p/entry/place/{id}`)로 저장·중복 판단 |
 | 11/19 | 네이버 검색 API 발급처 변경: 개발자센터 → 네이버 클라우드 NAVER API HUB (키 이름 `naver.client-id/secret` 유지). 지도 키(Maps)는 서버 yml에 넣지 않음 |
 | 11/20 | 식사팟 날짜 확대: 당일만 → 오늘 ~ 14일 후(2주) (팀 합의, 처음 7일 → 같은 날 14일로 조정). 날짜는 달력에서 고른다(만들기·목록). 생성 API에 partyDate(선택, 기본 오늘), 목록 API에 date(선택, 기본 오늘) 추가. `/api/parties/my/today`는 URI 유지(메인 호환)하고 오늘~14일 후 중 가까운 2개 + 응답에 partyDate 추가. DB·스케줄러·대화 삭제·따봉·랭킹은 변경 없음 |
+| 11/23 | 랭킹: 따봉 1건 이상만 → 따봉 0건 식당도 리뷰 수·등록 순으로 채워 TOP 10(메인 TOP 3), 구내식당 제외 (팀 합의) |
+| 11/23 | 한 끼에 팟 하나: 같은 날짜·같은 끼니의 팟(DELETED 제외)에 이미 들어가 있으면 참여하기·식사팟 생성 불가, 409 `ALREADY_JOINED_SAME_MEAL` (확정 여부 무관, 팀 합의) |
 
 ### 미결 사항
 

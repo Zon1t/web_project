@@ -62,6 +62,7 @@ class PartyChatServiceTest {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
 
         partyId = partyService.createParty(
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),

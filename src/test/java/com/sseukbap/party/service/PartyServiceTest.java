@@ -70,10 +70,29 @@ class PartyServiceTest {
         user01 = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
         restaurant = restaurantRepository.findAll().get(0);
     }
 
     // ===== 생성 =====
+
+    @Test
+    void 같은_날짜_같은_끼니에_이미_팟이_있으면_새로_만들_수_없다() {
+        // user02가 오늘 점심 팟에 참여만 한 상태 (확정 전)
+        createPartyWithGuest();
+
+        assertErrorCode(() -> partyService.createParty(createRequest(MealType.LUNCH, LocalTime.of(13, 0)),
+                user02.getMemberId(), NINE_AM), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+        assertErrorCode(() -> partyService.createParty(createRequest(MealType.LUNCH, LocalTime.of(11, 0)),
+                user01.getMemberId(), NINE_AM), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+
+        // 저녁이나 다른 날 점심은 만들 수 있다
+        assertThat(partyService.createParty(createRequest(MealType.DINNER, LocalTime.of(18, 0)),
+                user02.getMemberId(), NINE_AM).partyId()).isNotNull();
+        PartyCreateRequest tomorrowLunch = new PartyCreateRequest(restaurant.getRestaurantId(),
+                LocalDate.now().plusDays(1), MealType.LUNCH, LocalTime.of(12, 0), 4, null);
+        assertThat(partyService.createParty(tomorrowLunch, user02.getMemberId(), NINE_AM).partyId()).isNotNull();
+    }
 
     @Test
     void 생성하면_방장이_첫_참여자가_되고_시스템_메시지가_남는다() {

@@ -383,7 +383,9 @@
       }
       if (action === 'join') {
         // 목록 줄에는 메시지 칸이 없어서 버튼 글자로 알려 준다 (예: 그새 마감)
-        button.textContent = err.error === 'PARTY_FULL' ? '마감' : '실패';
+        button.textContent = err.error === 'PARTY_FULL' ? '마감'
+          : err.error === 'ALREADY_JOINED_SAME_MEAL' ? '참여 불가' : '실패';
+        button.title = err.message;
         return;
       }
       button.disabled = false;

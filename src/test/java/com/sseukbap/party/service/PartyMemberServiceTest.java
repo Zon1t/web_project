@@ -63,6 +63,7 @@ class PartyMemberServiceTest {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
     }
 
     // ===== 참여하기 =====
@@ -121,12 +122,39 @@ class PartyMemberServiceTest {
     void 식사_완료_삭제_없는_팟() {
         Long finished = createParty(4);
         setStatus(finished, PartyStatus.FINISHED);
+        PartyTestSupport.moveToTomorrow(em, finished);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long deleted = createParty(4);
         partyService.deleteParty(deleted, host.getMemberId());
 
         assertErrorCode(() -> partyMemberService.joinParty(finished, user02.getMemberId()), ErrorCode.PARTY_FINISHED);
         assertErrorCode(() -> partyMemberService.joinParty(deleted, user02.getMemberId()), ErrorCode.PARTY_DELETED);
         assertErrorCode(() -> partyMemberService.joinParty(-1L, user02.getMemberId()), ErrorCode.PARTY_NOT_FOUND);
+    }
+
+    @Test
+    void 같은_날짜_같은_끼니에는_팟_하나만_참여할_수_있다() {
+        Long first = createParty(4);   // user01 오늘 점심
+        Long second = partyService.createParty(new PartyCreateRequest(
+                restaurantRepository.findAll().get(0).getRestaurantId(), MealType.LUNCH, LocalTime.of(12, 30), 4, null),
+                user02.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();   // user02 오늘 점심
+        Long dinner = partyService.createParty(new PartyCreateRequest(
+                restaurantRepository.findAll().get(0).getRestaurantId(), MealType.DINNER, LocalTime.of(18, 0), 4, null),
+                user02.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();   // user02 오늘 저녁
+
+        partyMemberService.joinParty(first, user03.getMemberId());
+
+        // 확정 전이어도 같은 점심의 다른 팟은 막힌다 (방장도 마찬가지)
+        assertErrorCode(() -> partyMemberService.joinParty(second, user03.getMemberId()), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+        assertErrorCode(() -> partyMemberService.joinParty(second, host.getMemberId()), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+
+        // 저녁은 따로라 참여할 수 있다
+        partyMemberService.joinParty(dinner, user03.getMemberId());
+
+        // 앞의 팟이 삭제되면 같은 점심의 다른 팟에 참여할 수 있다
+        partyService.deleteParty(first, host.getMemberId());
+        partyMemberService.joinParty(second, user03.getMemberId());
+        flushAndClear();
+        assertThat(partyMemberRepository.existsByPartyIdAndMemberId(second, user03.getMemberId())).isTrue();
     }
 
     // ===== 나가기 =====

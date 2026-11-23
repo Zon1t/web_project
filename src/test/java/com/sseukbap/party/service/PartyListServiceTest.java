@@ -11,6 +11,8 @@ import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
 import com.sseukbap.party.dto.PartyScheduleUpdateRequest;
 import com.sseukbap.party.dto.PartyStatusUpdateRequest;
+import com.sseukbap.party.entity.MealParty;
+import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.entity.PartyStatus;
 import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
@@ -37,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *
  * 스케줄러가 시간이 지난 더미 팟을 FINISHED로 바꾸기 때문에 더미 팟 상태에 기대지 않는다.
  * 테스트마다 오늘 ~ 14일 후의 기존 팟을 잠시 DELETED로 숨기고(롤백됨), 아래 팟을 직접 만든다. "지금 = 오늘 09:00"
- *   점심: cafe  11:00 RECRUITING (user04)
+ *   점심: cafe  11:00 RECRUITING (listtest02, 테스트용 회원)
  *         hansot 11:30 RECRUITING (user01 방장, user02)
  *         sushi 12:00 SCHEDULED  (user03 방장·확정, user04 확정, user05) 만날 장소 "본관 1층 로비"
  *         burger 12:30 DELETED    (user05)
@@ -91,10 +93,16 @@ class PartyListServiceTest {
                 .executeUpdate();
         em.clear();
 
-        cafe = create(user04, MealType.LUNCH, "11:00", 4);
+        // '한 끼에 팟 하나' 규칙(11/23): user04는 sushi 점심에 들어가므로 cafe 방장은 따로 만든 회원
+        Member cafeHost = memberRepository.save(Member.create("listtest02", "x".repeat(60), "목록카페"));
+        cafe = create(cafeHost, MealType.LUNCH, "11:00", 4);
 
         hansot = create(user01, MealType.LUNCH, "11:30", 4);
         join(hansot, user02);
+
+        // burger는 sushi보다 먼저 만들고 삭제한다. (삭제된 팟은 규칙에서 빠지므로 user05가 sushi에 참여할 수 있다)
+        burger = create(user05, MealType.LUNCH, "12:30", 4);
+        partyService.deleteParty(burger, user05.getMemberId());
 
         sushi = create(user03, MealType.LUNCH, "12:00", 4);
         join(sushi, user04);
@@ -103,9 +111,6 @@ class PartyListServiceTest {
                 user03.getMemberId(), NINE_AM);
         partyMemberService.confirmParty(sushi, user03.getMemberId());
         partyMemberService.confirmParty(sushi, user04.getMemberId());
-
-        burger = create(user05, MealType.LUNCH, "12:30", 4);
-        partyService.deleteParty(burger, user05.getMemberId());
 
         pasta = create(user04, MealType.DINNER, "17:30", 6);
         join(pasta, user03);
@@ -265,8 +270,11 @@ class PartyListServiceTest {
 
     @Test
     void 식사_완료된_팟도_나오지만_뒤로_밀린다() {
-        // user03에게 가장 이른 11:00 팟을 만들고 FINISHED로 → 앞의 2개는 그대로
-        Long finished = create(user03, MealType.LUNCH, "11:00", 4);
+        // user03에게 가장 이른 11:00 팟을 붙이고 FINISHED로 → 앞의 2개는 그대로
+        // (user03은 이미 sushi 점심에 있어 서비스로는 못 만들므로, 다른 회원이 만든 팟에 참여 행만 직접 넣는다)
+        Member other = memberRepository.save(Member.create("listtest03", "x".repeat(60), "목록완료"));
+        Long finished = create(other, MealType.LUNCH, "11:00", 4);
+        em.persist(PartyMember.create(em.find(MealParty.class, finished), em.find(Member.class, user03.getMemberId())));
         setStatus(finished, PartyStatus.FINISHED);
         assertThat(partyService.getMyTodayPartyList(user03.getMemberId()))
                 .extracting(PartyMyTodayResponse::partyId).containsExactly(sushi, pasta);

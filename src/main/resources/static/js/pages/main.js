@@ -208,7 +208,7 @@
     try {
       const result = await rankingApi.getRankings(TOP_LIMIT);
       if (!result.rankings.length) {
-        body.innerHTML = noticeHtml('최근 30일 동안 따봉을 받은 식당이 아직 없어요.');
+        body.innerHTML = noticeHtml('등록된 식당이 아직 없어요.');
         return;
       }
       body.innerHTML = '<ol class="top3-list">' + result.rankings.map(rankingItemHtml).join('') + '</ol>';

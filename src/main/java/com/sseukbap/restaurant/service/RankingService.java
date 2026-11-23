@@ -4,6 +4,7 @@ import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.restaurant.dto.RankingItemResponse;
 import com.sseukbap.restaurant.dto.RankingResponse;
+import com.sseukbap.restaurant.entity.RestaurantCategory;
 import com.sseukbap.restaurant.repository.RestaurantListRow;
 import com.sseukbap.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,14 +48,15 @@ public class RankingService {
         //      검색어·카테고리 조건 없이 전체 식당을 조회한다. 쿼리는 to를 포함하지 않으므로 다음 날을 넘긴다.
         List<RestaurantListRow> rows = restaurantRepository.findListRows(null, null, from, to.plusDays(1));
 
-        // 6~7. 따봉 1건 이상만, 정렬 순서대로 1위부터, limit만큼
+        // 6~7. 구내식당은 빼고, 정렬 순서대로 1위부터, limit만큼
+        //      따봉이 0개인 식당도 리뷰 수 → 등록 순으로 이어서 채운다. (2026-11-23 변경: 기존 '따봉 1건 이상만')
         List<RankingItemResponse> rankings = new ArrayList<>();
         for (RestaurantListRow row : rows) {
             if (rankings.size() >= size) {
                 break;
             }
-            if (row.getThumbsCount30d() == null || row.getThumbsCount30d() < 1) {
-                break;   // 따봉 수 내림차순이라 0이 나오면 뒤는 모두 0
+            if (RestaurantCategory.CAFETERIA.name().equals(row.getCategory())) {
+                continue;
             }
             rankings.add(RankingItemResponse.of(rankings.size() + 1, row));
         }

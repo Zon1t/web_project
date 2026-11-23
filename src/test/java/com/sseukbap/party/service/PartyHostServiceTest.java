@@ -62,6 +62,7 @@ class PartyHostServiceTest {
     void setUp() {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
     }
 
     // ===== 일정 확정 (최초) =====
@@ -95,6 +96,7 @@ class PartyHostServiceTest {
     void FULL이나_CLOSED는_일정만_저장하고_상태_유지() {
         Long full = createParty(2);
         partyMemberService.joinParty(full, user02.getMemberId());   // FULL
+        PartyTestSupport.moveToTomorrow(em, full);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long closed = createParty(4);
         partyHostService.updateStatus(closed, CLOSE, host.getMemberId());
 
@@ -153,6 +155,7 @@ class PartyHostServiceTest {
     void 식사_완료_삭제된_팟은_일정을_정할_수_없다() {
         Long finished = createParty(4);
         setStatus(finished, PartyStatus.FINISHED);
+        PartyTestSupport.moveToTomorrow(em, finished);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long deleted = createParty(4);
         partyService.deleteParty(deleted, host.getMemberId());
 

@@ -53,19 +53,21 @@ class PartyThumbsConcurrencyTest {
     @Test
     void 같은_사람이_동시에_3번_요청하면_1번만_성공() throws Exception {
         LocalDate today = LocalDate.now();
+        // 트랜잭션 없이 커밋되는 테스트라 더미 팟을 숨길 수 없다. 더미 팟이 없는 14일 후 날짜로 만든다. ('한 끼에 팟 하나' 규칙)
+        LocalDate partyDate = today.plusDays(PartyTimePolicy.MAX_DAYS_AHEAD);
         Member host = memberRepository.findByLoginId("user01").orElseThrow();
         Member guest = memberRepository.findByLoginId("user02").orElseThrow();
 
         // 식사 완료 + 손님 확정 상태 만들기 (각 서비스 호출이 바로 커밋된다)
         partyId = partyService.createParty(
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
-                        MealType.LUNCH, LocalTime.of(12, 0), 4, null),
+                        partyDate, MealType.LUNCH, LocalTime.of(12, 0), 4, null),
                 host.getMemberId(), today.atTime(9, 0)).partyId();
         partyMemberService.joinParty(partyId, guest.getMemberId());
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "정문", null),
                 host.getMemberId(), today.atTime(9, 0));
         partyMemberService.confirmParty(partyId, guest.getMemberId());
-        partyBatchService.finishParty(partyId, today.atTime(23, 59));
+        partyBatchService.finishParty(partyId, partyDate.atTime(23, 59));
 
         AtomicInteger success = new AtomicInteger();
         AtomicInteger already = new AtomicInteger();

@@ -52,6 +52,7 @@ public enum ErrorCode {
     RESTAURANT_ALREADY_EXISTS(HttpStatus.CONFLICT, "RESTAURANT_ALREADY_EXISTS", "이미 등록된 식당입니다."),
     ALREADY_INTERESTED(HttpStatus.CONFLICT, "ALREADY_INTERESTED", "이미 관심 등록한 식당입니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "ALREADY_JOINED", "이미 참여 중인 식사팟입니다."),
+    ALREADY_JOINED_SAME_MEAL(HttpStatus.CONFLICT, "ALREADY_JOINED_SAME_MEAL", "같은 시간대에 이미 참여 중인 식사팟이 있습니다."),
     NOT_JOINED(HttpStatus.CONFLICT, "NOT_JOINED", "참여하지 않은 식사팟입니다."),
     PARTY_FULL(HttpStatus.CONFLICT, "PARTY_FULL", "이미 마감된 식사팟입니다."),
     PARTY_FINISHED(HttpStatus.CONFLICT, "PARTY_FINISHED", "식사가 완료된 식사팟입니다."),

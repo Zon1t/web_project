@@ -92,7 +92,7 @@ public class ReviewService {
     /**
      * 리뷰 작성
      *
-     * @param tagIds 화면에서 보낸 tagId 문자열들. 숫자가 아니거나 1~13이 아니면 INVALID_TAG
+     * @param tagIds 화면에서 보낸 tagId 문자열들. 숫자가 아니거나 TAG 테이블에 없으면(현재 1~18) INVALID_TAG
      * @param image  사진 1장 (선택). 없거나 빈 파일이면 사진 없이 저장
      */
     @Transactional

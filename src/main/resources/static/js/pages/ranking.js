@@ -17,7 +17,7 @@
 
   const esc = utils.escapeHtml;
   const CATEGORY_LABELS = restaurantApi.CATEGORY_LABELS;
-  const CATEGORIES = [null, 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'ETC'];
+  const CATEGORIES = [null, 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'CAFE', 'ETC'];   // 전체(null)에는 카페 없음 (서버에서 제외)
   const RANKING_LIMIT = 10;
   const PODIUM = 3;
   const DETAIL_URL = '/restaurant-detail.html?id=';

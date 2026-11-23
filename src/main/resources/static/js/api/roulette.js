@@ -16,8 +16,8 @@
     /** 룰렛 화면 주소 (S-11) */
     PAGE_URL: '/roulette.html',
 
-    /** 룰렛 카테고리 (구내식당 없음). null = 전체 */
-    CATEGORIES: Object.freeze([null, 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK']),   // '기타' 칩 없음 (11/23, '전체'에는 포함)
+    /** 룰렛 카테고리 (구내식당 없음). null = 전체(카페 제외), 'CAFE'는 카페끼리 (2026-11-23) */
+    CATEGORIES: Object.freeze([null, 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'CAFE']),   // '기타' 칩 없음 (11/23, '전체'에는 포함)
 
     /**
      * 룰렛 후보 조회 — GET /api/restaurants/roulette/candidates

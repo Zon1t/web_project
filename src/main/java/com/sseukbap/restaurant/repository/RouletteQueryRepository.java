@@ -12,26 +12,27 @@ import java.util.List;
  * 룰렛 조회 쿼리 (C 담당). B의 RestaurantRepository를 고치지 않으려고 따로 둔다.
  *
  * 구내식당(CAFETERIA)은 룰렛 후보에서 항상 제외한다. ('전체' 포함, API_SPEC 4장)
+ * 카페(CAFE)는 '전체'에서만 제외하고, category=CAFE로 고르면 카페끼리 돌린다. (2026-11-23)
  */
 public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
 
     /**
      * 룰렛 대상 식당 수
      *
-     * @param category 카테고리 값(예: "KOREAN"). null이면 전체
+     * @param category 카테고리 값(예: "KOREAN"). null이면 전체(카페 제외)
      */
     @Query(value = """
             SELECT COUNT(*)
               FROM RESTAURANT r
              WHERE r.CATEGORY <> 'CAFETERIA'
-               AND (:category IS NULL OR r.CATEGORY = :category)
+               AND ((:category IS NULL AND r.CATEGORY <> 'CAFE') OR r.CATEGORY = :category)
             """, nativeQuery = true)
     long countTargets(@Param("category") String category);
 
     /**
      * 룰렛 후보를 무작위로 최대 limit개 (Oracle 11g: DBMS_RANDOM 정렬 후 ROWNUM)
      *
-     * @param category 카테고리 값(예: "KOREAN"). null이면 전체
+     * @param category 카테고리 값(예: "KOREAN"). null이면 전체(카페 제외)
      */
     @Query(value = """
             SELECT x."restaurantId", x."name"
@@ -39,7 +40,7 @@ public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
                            r.NAME          AS "name"
                       FROM RESTAURANT r
                      WHERE r.CATEGORY <> 'CAFETERIA'
-                       AND (:category IS NULL OR r.CATEGORY = :category)
+                       AND ((:category IS NULL AND r.CATEGORY <> 'CAFE') OR r.CATEGORY = :category)
                      ORDER BY DBMS_RANDOM.VALUE) x
              WHERE ROWNUM <= :limit
             """, nativeQuery = true)

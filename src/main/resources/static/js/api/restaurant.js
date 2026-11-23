@@ -23,6 +23,7 @@
       JAPANESE: '일식',
       WESTERN: '양식',
       SNACK: '분식',
+      CAFE: '카페',
       ETC: '기타',
     }),
 

@@ -72,6 +72,11 @@
     ETC: // 숟가락 + 포크
       '<ellipse cx="15" cy="12" rx="4" ry="5.5" fill="currentColor"/><path d="M15 17v16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>' +
       '<path d="M24 7v7a3 3 0 0 0 3 3 3 3 0 0 0 3-3V7M27 17v16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+    CAFE: // 커피잔 + 김
+      '<path d="M14 11c0-2 2-3 2-5M20 11c0-2 2-3 2-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".55"/>' +
+      '<path d="M8 15h20v8a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8z" fill="currentColor"/>' +
+      '<path d="M28 18h2a3.5 3.5 0 0 1 0 7h-2" stroke="currentColor" stroke-width="2.4" fill="none"/>' +
+      '<rect x="6" y="33" width="26" height="2.6" rx="1.3" fill="currentColor" opacity=".7"/>',
     CAFETERIA: // 식판
       '<rect x="6" y="11" width="28" height="20" rx="4" fill="currentColor" opacity=".35"/><rect x="9" y="14" width="10" height="7" rx="2" fill="currentColor"/>' +
       '<rect x="21" y="14" width="10" height="7" rx="2" fill="currentColor"/><rect x="9" y="23" width="22" height="5" rx="2" fill="currentColor"/>',

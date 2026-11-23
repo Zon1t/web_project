@@ -11,5 +11,6 @@ public enum RestaurantCategory {
     JAPANESE,   // 일식
     WESTERN,    // 양식
     SNACK,      // 분식
+    CAFE,       // 카페 (2026-11-23 추가. 룰렛·랭킹 '전체'에서는 제외)
     ETC         // 기타
 }

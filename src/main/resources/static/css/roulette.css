@@ -14,6 +14,185 @@
   opacity: 0.6;
 }
 
+.roulette-categories[hidden],
+.roulette-custom[hidden],
+.roulette-custom__results[hidden],
+.roulette-custom__clear[hidden],
+.roulette-refill[hidden] {
+  display: none;
+}
+
+/* ---------- ① 룰렛 종류 탭 (카테고리 룰렛 / 내 룰렛) ---------- */
+.roulette-modes {
+  display: flex;
+  margin-bottom: var(--space-5);
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.roulette-modes__tab {
+  height: var(--control-height);
+  margin-bottom: -2px;
+  padding: 0 var(--space-5);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.roulette-modes__tab:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.roulette-modes__tab[aria-selected="true"] {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.roulette-modes__tab:disabled {
+  cursor: not-allowed;
+}
+
+/* ---------- ②' 내 룰렛: 검색 + 담은 식당 ---------- */
+.roulette-custom {
+  max-width: 640px;
+  margin-bottom: var(--space-6);
+}
+
+.roulette-custom__search {
+  position: relative;   /* 결과 목록 기준 */
+}
+
+.roulette-custom__search .input {
+  width: 100%;
+}
+
+.roulette-custom__results {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  left: 0;
+  z-index: 20;
+  max-height: 320px;     /* 기본 목록(등록 식당 전체)이 길면 안에서 스크롤 */
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.roulette-custom__result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.roulette-custom__result + .roulette-custom__result {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.roulette-custom__result-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roulette-custom__result-cat {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-custom__add {
+  flex-shrink: 0;
+  height: 36px;
+  min-width: 72px;
+}
+
+.roulette-custom__result-head {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-custom__result-empty {
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-custom__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  margin-top: var(--space-2);
+}
+
+.roulette-custom__hint {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-custom__picked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.roulette-custom__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  height: 36px;
+  padding: 0 var(--space-1) 0 var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  font-size: var(--font-size-sm);
+}
+
+.roulette-custom__chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roulette-custom__remove {
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.roulette-custom__remove:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.roulette-custom__remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .roulette-layout {
   display: grid;
   grid-template-columns: minmax(280px, 400px) 1fr;
@@ -262,6 +441,11 @@
 }
 
 .roulette-wheel-state[hidden] {
+  display: none;
+}
+
+/* 안내·오류 문구가 떠 있으면 가운데 로고 캡을 숨긴다 (문구를 가리지 않게) */
+.roulette-wheel-state:not([hidden]) ~ .roulette-hub-cap {
   display: none;
 }
 

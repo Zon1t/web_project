@@ -53,14 +53,14 @@
       return api.post('/auth/password-reset/request', { loginId, email });
     },
 
-    /** 비밀번호 찾기 2) 인증번호 + 새 비밀번호 — POST /api/auth/password-reset/confirm → null */
-    confirmPasswordReset(body) {
-      return api.post('/auth/password-reset/confirm', body);
+    /** 비밀번호 찾기 2) 인증번호 확인 — POST /api/auth/password-reset/verify → null (번호는 아직 쓰지 않음) */
+    verifyPasswordReset(loginId, code) {
+      return api.post('/auth/password-reset/verify', { loginId, code });
     },
 
-    /** 아이디 찾기 — POST /api/auth/find-id → { email }. 등록된 이메일이면 아이디를 메일로 보낸다 (응답은 항상 같음) */
-    findId(email) {
-      return api.post('/auth/find-id', { email });
+    /** 비밀번호 찾기 3) 인증번호 + 새 비밀번호 — POST /api/auth/password-reset/confirm → null */
+    confirmPasswordReset(body) {
+      return api.post('/auth/password-reset/confirm', body);
     },
   };
 })(window);

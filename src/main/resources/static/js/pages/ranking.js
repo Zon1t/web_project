@@ -128,10 +128,13 @@
 
   /** 따봉이 아직 없는 범위의 안내 (배너 대신) */
   function noThumbsNoticeHtml() {
-    const target = category ? CATEGORY_LABELS[category] : '';
+    // 카테고리 이름 뒤 조사(이/가)가 달라지지 않게 '○○ 중에 … 곳이' 형태로 쓴다 (예: 아직 카페 중에 따봉을 받은 곳이 없어요)
+    const title = category
+      ? '아직 ' + esc(CATEGORY_LABELS[category]) + ' 중에 따봉을 받은 곳이 없어요'
+      : '아직 따봉을 받은 식당이 없어요';
     return (
       '<div class="rk-notice">' + ui.icon('thumbs', 20) +
-      '<div><p class="rk-notice__title">아직 따봉을 받은 ' + esc(target ? target + ' ' : '') + '식당이 없어요</p>' +
+      '<div><p class="rk-notice__title">' + title + '</p>' +
       '<p class="rk-notice__desc">따봉이 없을 때는 리뷰가 많은 순으로 보여 드려요. 함께 식사하고 따봉을 남기면 순위가 생겨요.</p></div>' +
       '</div>'
     );

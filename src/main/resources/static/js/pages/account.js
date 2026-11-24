@@ -7,19 +7,31 @@
  * - 비밀번호 변경 (PATCH /api/users/me/password)
  *   · 화면에서 먼저 규칙 검사(password-field.js의 ruleError), 최종 판단은 서버
  *   · 바꾼 뒤에도 로그인은 그대로 유지된다
- * - 회원 탈퇴는 C2에서 이 화면 아래에 추가한다
+ * - 회사 이메일 등록·변경 (PATCH /api/users/me/email) — 비밀번호·아이디 찾기에 쓴다 (2026-11-24)
+ * - 회원 탈퇴 (POST /api/users/me/withdraw, C2 2026-11-24)
+ *   · 비밀번호 확인 + '되돌릴 수 없어요' 확인 창 → 성공하면 세션이 끊기고 랜딩 화면으로
  */
 (function () {
   'use strict';
 
   const NICKNAME_MIN = 2;
   const NICKNAME_MAX = 10;
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const LANDING_URL = '/landing.html';
 
   const loginIdEl = document.getElementById('account-login-id');
 
   const nicknameForm = document.getElementById('nickname-form');
   const nicknameSubmit = document.getElementById('nickname-submit');
   const nickname = field('account-nickname');
+
+  const emailForm = document.getElementById('email-form');
+  const emailSubmit = document.getElementById('email-submit');
+  const email = field('account-email');
+
+  const withdrawForm = document.getElementById('withdraw-form');
+  const withdrawSubmit = document.getElementById('withdraw-submit');
+  const withdrawPassword = field('account-withdraw-password');
 
   const passwordForm = document.getElementById('password-form');
   const passwordSubmit = document.getElementById('password-submit');
@@ -36,6 +48,8 @@
       me = await authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
       loginIdEl.textContent = me.loginId;
       nickname.input.value = me.nickname;
+      email.input.value = me.email || '';
+      emailSubmit.textContent = me.email ? '변경' : '등록';
     } catch (err) {
       if (err.statusCode !== 401) ui.toast(err.message, { type: 'error' });
     }
@@ -73,6 +87,73 @@
       nickname.input.focus();
     } finally {
       nicknameSubmit.disabled = false;
+    }
+  });
+
+  /* ---------- 회사 이메일 ---------- */
+
+  email.input.addEventListener('input', () => clearMessage(email));
+
+  emailForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const value = email.input.value.trim().toLowerCase();
+
+    if (!EMAIL_PATTERN.test(value)) {
+      setMessage(email, value ? '이메일 형식을 확인해 주세요.' : '이메일을 입력해 주세요.', 'error');
+      email.input.focus();
+      return;
+    }
+    if (me && value === me.email) {
+      setMessage(email, '지금 등록된 이메일이에요.', 'error');
+      return;
+    }
+
+    emailSubmit.disabled = true;
+    try {
+      const result = await accountApi.changeEmail(value);
+      if (me) me.email = result.email;
+      email.input.value = result.email;
+      emailSubmit.textContent = '변경';
+      setMessage(email, '이메일을 저장했어요.', 'success');
+      ui.toast('회사 이메일을 저장했어요');
+    } catch (err) {
+      if (err.statusCode === 401) return;
+      setMessage(email, err.message, 'error');   // 409: 이미 등록된 이메일이에요.
+      email.input.focus();
+    } finally {
+      emailSubmit.disabled = false;
+    }
+  });
+
+  /* ---------- 회원 탈퇴 ---------- */
+
+  withdrawPassword.input.addEventListener('input', () => clearMessage(withdrawPassword));
+
+  withdrawForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!withdrawPassword.input.value) {
+      setMessage(withdrawPassword, '비밀번호를 입력해 주세요.', 'error');
+      withdrawPassword.input.focus();
+      return;
+    }
+
+    const ok = await ui.confirm({
+      title: '정말 탈퇴할까요?',
+      message: '탈퇴하면 되돌릴 수 없어요. 방장인 식사팟은 삭제되고, 참여 중인 식사팟에서는 나가요.',
+      confirmText: '탈퇴하기',
+      danger: true,
+    });
+    if (!ok) return;
+
+    withdrawSubmit.disabled = true;
+    try {
+      await accountApi.withdraw(withdrawPassword.input.value);
+      location.replace(LANDING_URL);   // 세션이 끊겼으므로 로그인 없이 볼 수 있는 랜딩으로
+    } catch (err) {
+      if (err.statusCode === 401) return;
+      setMessage(withdrawPassword, err.message, 'error');   // 400 INVALID_PASSWORD: 현재 비밀번호가 일치하지 않아요.
+      withdrawPassword.input.focus();
+      withdrawSubmit.disabled = false;
     }
   });
 

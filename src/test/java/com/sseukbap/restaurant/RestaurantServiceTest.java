@@ -3,16 +3,16 @@ package com.sseukbap.restaurant;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
 import com.sseukbap.member.entity.Member;
-import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.restaurant.dto.RestaurantAutocompleteResponse;
 import com.sseukbap.restaurant.dto.RestaurantDetailResponse;
 import com.sseukbap.restaurant.dto.RestaurantListResponse;
 import com.sseukbap.restaurant.dto.TopTagResponse;
+import com.sseukbap.restaurant.entity.Interest;
 import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.entity.RestaurantCategory;
-import com.sseukbap.restaurant.repository.RestaurantRepository;
+import com.sseukbap.restaurant.repository.InterestRepository;
 import com.sseukbap.restaurant.service.RestaurantService;
-import com.sseukbap.review.repository.ReviewRepository;
+import com.sseukbap.support.TestData;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,59 +26,73 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 식당 목록·상세·자동완성 확인.
  *
- * 기대값은 docs/sql/04_dummy_data.sql 맨 위 주석 기준이다.
- *   최근 30일 따봉: 홍반점 4 > 스시하루 3 > 한솥가득 백반 2 = 라멘공방 2 (동점은 리뷰 수 순)
- * 더미데이터 날짜는 스크립트를 실행한 날 기준이라, 며칠 지나면 00 → 04를 다시 실행해야 맞는다.
+ * 2026-11-24 (C4): 더미데이터(홍반점·스시하루 등)의 순서·건수에 기대던 테스트를,
+ * 테스트 안에서 이름에 무작위 번호를 붙여 만든 식당만 골라 확인하도록 바꿨다. (DB 상태와 관계없이 통과)
+ * 테스트 식당은 따봉이 0개라, 정렬은 '리뷰 수 → 등록 순'으로 확인한다. (따봉 순서는 랭킹·식사팟 테스트 몫)
  */
 @SpringBootTest
 @Transactional
 class RestaurantServiceTest {
 
     @Autowired RestaurantService restaurantService;
-    @Autowired RestaurantRepository restaurantRepository;
-    @Autowired MemberRepository memberRepository;
-    @Autowired ReviewRepository reviewRepository;
+    @Autowired InterestRepository interestRepository;
+    @Autowired TestData data;
 
     // ===== 목록 =====
 
     @Test
     void 목록은_따봉수_리뷰수_등록순으로_정렬된다() {
+        String token = "정렬" + TestData.uniqueNumber();
+        Member writer = data.member();
+        Restaurant noReview = data.restaurant(token + "다", RestaurantCategory.KOREAN);
+        Restaurant twoReviews = data.restaurant(token + "가", RestaurantCategory.KOREAN);
+        Restaurant oneReviewFirst = data.restaurant(token + "나", RestaurantCategory.KOREAN);
+        Restaurant oneReviewLater = data.restaurant(token + "라", RestaurantCategory.KOREAN);
+        data.review(twoReviews, writer);
+        data.review(twoReviews, writer);
+        data.review(oneReviewFirst, writer);
+        data.review(oneReviewLater, writer);
+
+        List<RestaurantListResponse> list = restaurantService.getRestaurantList(token, null);
+
+        // 따봉은 모두 0 → 리뷰 수 내림차순 → 같으면 먼저 등록한 식당
+        assertThat(list).extracting(RestaurantListResponse::restaurantId).containsExactly(
+                twoReviews.getRestaurantId(), oneReviewFirst.getRestaurantId(),
+                oneReviewLater.getRestaurantId(), noReview.getRestaurantId());
+        assertThat(list).extracting(RestaurantListResponse::reviewCount).containsExactly(2L, 1L, 1L, 0L);
+        assertThat(list).allSatisfy(r -> {
+            assertThat(r.thumbsCount30d()).isZero();
+            assertThat(r.lat()).isNotNull();
+            assertThat(r.lng()).isNotNull();
+        });
+    }
+
+    @Test
+    void 목록에는_구내식당도_나온다() {
         List<RestaurantListResponse> list = restaurantService.getRestaurantList(null, null);
 
-        assertThat(list).extracting(RestaurantListResponse::name)
-                .startsWith("홍반점", "스시하루", "한솥가득 백반", "라멘공방");
-        assertThat(list).extracting(RestaurantListResponse::thumbsCount30d)
-                .startsWith(4L, 3L, 2L, 2L);
-
-        // 따봉 0건 식당과 구내식당도 목록에 나온다
-        assertThat(list).hasSizeGreaterThanOrEqualTo(11);
         RestaurantListResponse cafeteria = list.stream()
                 .filter(RestaurantListResponse::cafeteria)
                 .findFirst()
                 .orElseThrow();
         assertThat(cafeteria.category()).isEqualTo(RestaurantCategory.CAFETERIA);
-
-        // 홍반점: 리뷰 수, 좌표 있음
-        RestaurantListResponse hong = list.get(0);
-        // 리뷰 수는 화면에서 쓴 리뷰가 더해질 수 있어서 DB에 실제 있는 수와 비교한다
-        assertThat(hong.reviewCount()).isEqualTo(reviewRepository.countByRestaurant_RestaurantId(hong.restaurantId()));
-        assertThat(hong.lat()).isNotNull();
-        assertThat(hong.lng()).isNotNull();
     }
 
     @Test
     void 목록은_검색어와_카테고리로_거른다() {
-        // 화면에서 등록한 식당이 더해져도 깨지지 않게: 결과는 모두 조건에 맞고, 더미 식당이 순서대로 들어 있으면 된다
-        List<RestaurantListResponse> japanese = restaurantService.getRestaurantList("", "JAPANESE");
-        assertThat(japanese).allMatch(r -> r.category() == RestaurantCategory.JAPANESE);
-        assertThat(japanese).extracting(RestaurantListResponse::name)
-                .containsSubsequence("스시하루", "라멘공방");
+        String token = "거름" + TestData.uniqueNumber();
+        Restaurant sushi = data.restaurant(token + " 스시", RestaurantCategory.JAPANESE);
+        Restaurant ramen = data.restaurant(token + " 라멘", RestaurantCategory.JAPANESE);
+        Restaurant bap = data.restaurant(token + " 반점", RestaurantCategory.CHINESE);
 
-        List<RestaurantListResponse> keyword = restaurantService.getRestaurantList("  반점 ", null);
-        assertThat(keyword).allMatch(r -> r.name().contains("반점"));
-        assertThat(keyword).extracting(RestaurantListResponse::name).contains("홍반점");
+        List<RestaurantListResponse> japanese = restaurantService.getRestaurantList(token, "JAPANESE");
+        assertThat(japanese).extracting(RestaurantListResponse::restaurantId)
+                .containsExactlyInAnyOrder(sushi.getRestaurantId(), ramen.getRestaurantId());
 
-        assertThat(restaurantService.getRestaurantList("없는식당이름", null)).isEmpty();
+        List<RestaurantListResponse> keyword = restaurantService.getRestaurantList("  " + token + " 반점 ", null);
+        assertThat(keyword).extracting(RestaurantListResponse::restaurantId).containsExactly(bap.getRestaurantId());
+
+        assertThat(restaurantService.getRestaurantList("없는식당" + TestData.uniqueNumber(), null)).isEmpty();
     }
 
     @Test
@@ -97,39 +111,38 @@ class RestaurantServiceTest {
 
     @Test
     void 상세는_태그TOP3_따봉_관심_리뷰수와_내_관심여부를_준다() {
-        Long hongId = findRestaurantId("홍반점");
-        Long user01 = memberRepository.findByLoginId("user01").map(Member::getMemberId).orElseThrow();
-        Long user03 = memberRepository.findByLoginId("user03").map(Member::getMemberId).orElseThrow();
+        Restaurant restaurant = data.restaurant("상세" + TestData.uniqueNumber(), RestaurantCategory.CHINESE);
+        Member me = data.member();
+        Member other = data.member();
+        // 태그 1(점심추천) 2회, 6·8·9 각 1회 → TOP 3 = 1, 6, 8 (동수면 tagId 오름차순)
+        data.review(restaurant, me, 1L, 6L);
+        data.review(restaurant, other, 1L, 8L, 9L);
+        interestRepository.saveAndFlush(Interest.create(restaurant, me));
 
-        RestaurantDetailResponse detail = restaurantService.getRestaurant(hongId, user01);
+        RestaurantDetailResponse detail = restaurantService.getRestaurant(restaurant.getRestaurantId(), me.getMemberId());
 
-        assertThat(detail.name()).isEqualTo("홍반점");
+        assertThat(detail.name()).isEqualTo(restaurant.getName());
         assertThat(detail.category()).isEqualTo(RestaurantCategory.CHINESE);
         assertThat(detail.cafeteria()).isFalse();
-        assertThat(detail.mapUrl()).isNotBlank();
-        assertThat(detail.thumbsCount30d()).isEqualTo(4);
-        assertThat(detail.reviewCount()).isEqualTo(reviewRepository.countByRestaurant_RestaurantId(hongId));
-        assertThat(detail.interestCount()).isGreaterThanOrEqualTo(1);
-        assertThat(detail.interested()).isTrue();   // user01은 홍반점 관심 등록
+        assertThat(detail.mapUrl()).isEqualTo(restaurant.getMapUrl());
+        assertThat(detail.thumbsCount30d()).isZero();
+        assertThat(detail.reviewCount()).isEqualTo(2);
+        assertThat(detail.interestCount()).isEqualTo(1);
+        assertThat(detail.interested()).isTrue();
 
-        // 홍반점 리뷰 태그: 1(점심추천) 2회, 6·8·9·10 각 1회 → TOP 3 = 1, 6, 8 (동수면 tagId 오름차순)
         assertThat(detail.topTags()).extracting(TopTagResponse::tagId).containsExactly(1L, 6L, 8L);
         assertThat(detail.topTags().get(0).name()).isEqualTo("점심추천");
         assertThat(detail.topTags().get(0).count()).isEqualTo(2);
 
         // 다른 회원은 관심 여부 false
-        assertThat(restaurantService.getRestaurant(hongId, user03).interested()).isFalse();
+        assertThat(restaurantService.getRestaurant(restaurant.getRestaurantId(), other.getMemberId()).interested()).isFalse();
     }
 
     @Test
     void 리뷰가_없는_식당은_태그가_빈_배열() {
-        Long cafeteriaId = restaurantRepository.findAll().stream()
-                .filter(Restaurant::isCafeteria)
-                .findFirst()
-                .map(Restaurant::getRestaurantId)
-                .orElseThrow();
+        Restaurant cafeteria = data.restaurant("구내식당" + TestData.uniqueNumber(), RestaurantCategory.CAFETERIA);
 
-        RestaurantDetailResponse detail = restaurantService.getRestaurant(cafeteriaId, 0L);
+        RestaurantDetailResponse detail = restaurantService.getRestaurant(cafeteria.getRestaurantId(), 0L);
 
         assertThat(detail.cafeteria()).isTrue();
         assertThat(detail.topTags()).isEmpty();
@@ -149,15 +162,21 @@ class RestaurantServiceTest {
 
     @Test
     void 자동완성은_시작일치_우선_가나다순_최대5개() {
-        // '반'이 들어간 식당: 한솥가득 백반, 홍반점 → 시작 일치 없음 → 가나다순
-        List<RestaurantAutocompleteResponse> result = restaurantService.getAutocompleteList("반");
-        assertThat(result).extracting(RestaurantAutocompleteResponse::name)
-                .containsExactly("한솥가득 백반", "홍반점");
+        String token = "자완" + TestData.uniqueNumber();
+        data.restaurant("나" + token, RestaurantCategory.KOREAN);
+        data.restaurant(token + "시작", RestaurantCategory.KOREAN);
+        data.restaurant("가" + token, RestaurantCategory.KOREAN);
 
-        // '스'로 시작하는 스시하루가 먼저, 그다음 '스'가 들어간 식당을 가나다순 (버거스테이션, 파스타앤코)
-        List<RestaurantAutocompleteResponse> su = restaurantService.getAutocompleteList("스");
-        assertThat(su).extracting(RestaurantAutocompleteResponse::name)
-                .containsExactly("스시하루", "버거스테이션", "파스타앤코");
+        // 시작 일치(token시작)가 먼저, 그다음 들어간 식당을 가나다순
+        List<RestaurantAutocompleteResponse> result = restaurantService.getAutocompleteList(token);
+        assertThat(result).extracting(RestaurantAutocompleteResponse::name)
+                .containsExactly(token + "시작", "가" + token, "나" + token);
+
+        // 6곳이 맞아도 최대 5개
+        for (String prefix : List.of("다", "라", "마")) {
+            data.restaurant(prefix + token, RestaurantCategory.KOREAN);
+        }
+        assertThat(restaurantService.getAutocompleteList(token)).hasSize(5);
     }
 
     @Test
@@ -168,14 +187,6 @@ class RestaurantServiceTest {
     }
 
     // ===== 도우미 =====
-
-    private Long findRestaurantId(String name) {
-        return restaurantRepository.findAll().stream()
-                .filter(r -> r.getName().equals(name))
-                .findFirst()
-                .map(Restaurant::getRestaurantId)
-                .orElseThrow();
-    }
 
     private void assertInvalidRequest(Runnable action, String message) {
         assertThatThrownBy(action::run)

@@ -82,6 +82,25 @@
   justify-self: start;
 }
 
+/* 회원 탈퇴 카드 (2026-11-24) */
+.account-card--danger {
+  border-color: var(--color-danger-soft);
+}
+
+.account-card--danger .account-card__title {
+  color: var(--color-danger);
+}
+
+.account-warn {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  word-break: keep-all;
+}
+
 @media (max-width: 640px) {
   .account-card {
     padding: var(--space-5) var(--space-4);

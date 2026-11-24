@@ -23,7 +23,10 @@ public record SignupRequest(
 
         @NotBlank(message = "입력값을 확인해 주세요.")
         @Size(min = 2, max = 10, message = "입력값을 확인해 주세요.")
-        String nickname
+        String nickname,
+
+        /** 회사 이메일 (선택, 2026-11-24). 비밀번호·아이디 찾기에 쓴다. 형식 검사는 AuthService(EmailPolicy) */
+        String email
 ) {
     /**
      * 검증보다 먼저 실행된다.

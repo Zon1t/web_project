@@ -42,7 +42,7 @@ class AuthServiceTest {
     void 대문자로_가입해도_소문자로_저장된다() {
         String suffix = uniqueSuffix();
         SignupResponse result = authService.signup(
-                new SignupRequest("TQ" + suffix, "abcd1234", "abcd1234", "가" + suffix));
+                new SignupRequest("TQ" + suffix, "abcd1234", "abcd1234", "가" + suffix, null));
 
         assertThat(result.loginId()).isEqualTo("tq" + suffix);
         assertThat(memberRepository.findByLoginId("tq" + suffix)).isPresent();
@@ -55,7 +55,7 @@ class AuthServiceTest {
 
         assertThat(authService.checkLoginId("TQ" + suffix).available()).isFalse();
         assertThatThrownBy(() -> authService.signup(
-                new SignupRequest("Tq" + suffix, "abcd1234", "abcd1234", "나" + suffix)))
+                new SignupRequest("Tq" + suffix, "abcd1234", "abcd1234", "나" + suffix, null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_ID_ALREADY_EXISTS);
     }
@@ -88,10 +88,80 @@ class AuthServiceTest {
 
         // 숫자 없음, 영문 없음, 공백, 아이디와 같음
         for (String password : new String[]{"abcdefgh", "12345678", "abcd 1234", loginId}) {
-            assertThatThrownBy(() -> authService.signup(new SignupRequest(loginId, password, password, nickname)))
+            assertThatThrownBy(() -> authService.signup(new SignupRequest(loginId, password, password, nickname, null)))
                     .as("password=%s", password)
                     .isInstanceOf(BusinessException.class)
                     .extracting("errorCode").isEqualTo(ErrorCode.INVALID_REQUEST);
         }
+    }
+
+    // ===== 2026-11-24: 회사 이메일, 탈퇴 회원, 로그인 시도 제한, 예약 닉네임 =====
+
+    @Test
+    void 가입할_때_이메일은_소문자로_저장되고_중복이면_409() {
+        String suffix = uniqueSuffix();
+        String email = "Mail" + suffix + "@Samsung.com";
+        authService.signup(new SignupRequest("tm" + suffix, "abcd1234", "abcd1234", "가" + suffix, " " + email + " "));
+
+        assertThat(memberRepository.findByLoginId("tm" + suffix).orElseThrow().getEmail())
+                .isEqualTo(email.toLowerCase());
+        assertThatThrownBy(() -> authService.signup(
+                new SignupRequest("tn" + suffix, "abcd1234", "abcd1234", "나" + suffix, email.toUpperCase())))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS);
+    }
+
+    @Test
+    void 탈퇴한_회원은_로그인할_수_없다() {
+        String suffix = uniqueSuffix();
+        Member member = memberRepository.saveAndFlush(
+                Member.create("tw" + suffix, passwordEncoder.encode("abcd1234"), "가" + suffix));
+        member.withdraw(java.time.LocalDateTime.now());
+        memberRepository.flush();
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("tw" + suffix, "abcd1234")))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+        assertThat(authService.getMe(member.getMemberId())).isEmpty();
+        assertThat(authService.checkLoginId("tw" + suffix).available()).isFalse();   // 아이디 재사용 불가
+    }
+
+    @Test
+    void 다섯_번_연속_틀리면_맞는_비밀번호도_잠긴다() {
+        String suffix = uniqueSuffix();
+        memberRepository.saveAndFlush(Member.create("tl" + suffix, passwordEncoder.encode("abcd1234"), "가" + suffix));
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("tl" + suffix, "wrong1234")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);
+        }
+        assertThatThrownBy(() -> authService.login(new LoginRequest("TL" + suffix, "abcd1234")))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
+    }
+
+    @Test
+    void 성공하면_실패_횟수가_지워진다() {
+        String suffix = uniqueSuffix();
+        memberRepository.saveAndFlush(Member.create("ts" + suffix, passwordEncoder.encode("abcd1234"), "가" + suffix));
+
+        for (int i = 0; i < 4; i++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("ts" + suffix, "wrong1234")))
+                    .isInstanceOf(BusinessException.class);
+        }
+        authService.login(new LoginRequest("ts" + suffix, "abcd1234"));
+        for (int i = 0; i < 4; i++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("ts" + suffix, "wrong1234")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LOGIN_FAILED);   // 아직 잠기지 않음
+        }
+    }
+
+    @Test
+    void 탈퇴한회원으로_시작하는_닉네임은_쓸_수_없다() {
+        assertThatThrownBy(() -> authService.checkNickname("탈퇴한회원7"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.INVALID_REQUEST);
     }
 }

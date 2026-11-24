@@ -53,7 +53,10 @@
 
   /* 내 룰렛 */
   const MAX_CANDIDATES = 8;
-  const CUSTOM_KEY = 'sseukbap.roulette.custom';   // 담은 식당 [{restaurantId, name, category}]
+  // 담은 식당 [{restaurantId, name, category}]. 회원별로 기억한다: 'sseukbap.roulette.custom.{memberId}' (2026-11-24, C4)
+  // 같은 PC에서 다른 계정으로 로그인하면 앞사람 목록이 보이던 문제. 예전 공용 키(번호 없음)는 지운다.
+  const CUSTOM_KEY = 'sseukbap.roulette.custom';
+  let customKey = null;   // 로그인 회원을 알기 전에는 null (읽기·저장 안 함)
   const MODE_KEY = 'sseukbap.roulette.mode';       // 'category' | 'custom'
   const SEARCH_DELAY_MS = 250;
 
@@ -75,7 +78,7 @@
   const clearButton = document.getElementById('custom-clear');
 
   let mode = readMode();          // 'category' | 'custom'
-  let picked = readPicked();      // 내 룰렛에 담은 식당
+  let picked = readPicked();      // 내 룰렛에 담은 식당 (회원을 알기 전에는 빈 목록, 아래 loadMemberPicked에서 채움)
   let searchResults = [];
   let searchHead = '';            // 검색 결과 맨 위 안내 (기본 목록일 때 '등록된 식당 N곳')
   let allRestaurants = null;      // 등록된 식당 전체 (검색창을 처음 누를 때 한 번 받는다)
@@ -103,6 +106,7 @@
   renderSoundButton();
   renderPicked();
   setMode(mode, true);
+  loadMemberPicked();
 
   categoriesEl.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-category]');
@@ -381,9 +385,32 @@
     )).join('');
   }
 
-  function readPicked() {
+  /** 로그인 회원 번호로 내 룰렛 목록을 불러온다 (헤더와 같은 /api/auth/me) */
+  async function loadMemberPicked() {
     try {
-      const list = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+      const me = await authApi.me();
+      customKey = CUSTOM_KEY + '.' + me.memberId;
+      try {
+        localStorage.removeItem(CUSTOM_KEY);   // 회원 구분 없던 예전 목록 정리
+      } catch (e) {
+        // 무시
+      }
+      if (picked.length === 0) {
+        picked = readPicked();
+      } else {
+        savePicked();   // 불러오기 전에 담은 게 있으면 그대로 내 목록으로 저장
+      }
+      renderPicked();
+      if (mode === 'custom') applyCustom();
+    } catch (err) {
+      // 401은 client.js가 로그인 화면으로 보낸다. 그 외에는 이번 화면에서만 쓰고 저장하지 않는다
+    }
+  }
+
+  function readPicked() {
+    if (!customKey) return [];
+    try {
+      const list = JSON.parse(localStorage.getItem(customKey) || '[]');
       if (!Array.isArray(list)) return [];
       const seen = new Set();
       return list
@@ -395,8 +422,9 @@
   }
 
   function savePicked() {
+    if (!customKey) return;
     try {
-      localStorage.setItem(CUSTOM_KEY, JSON.stringify(picked));
+      localStorage.setItem(customKey, JSON.stringify(picked));
     } catch (e) {
       // 저장 못 해도 이번 화면에서는 그대로 쓴다
     }

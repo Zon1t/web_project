@@ -31,6 +31,17 @@ public class AuthService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginAttemptLimiter loginAttemptLimiter;
+
+    /**
+     * 닉네임으로 쓸 수 없는 값인지: 탈퇴한 회원 표시('탈퇴한회원…')로 시작하면 안 된다. (2026-11-24)
+     * 회원가입·닉네임 중복 확인·닉네임 변경이 같이 쓴다.
+     */
+    public static void validateNicknameNotReserved(String nickname) {
+        if (nickname != null && nickname.startsWith(Member.WITHDRAWN_NICKNAME_PREFIX)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "사용할 수 없는 닉네임입니다.");
+        }
+    }
 
     /**
      * 아이디를 앞뒤 공백 제거 + 소문자로 통일한다. (2026-11-24)
@@ -59,6 +70,7 @@ public class AuthService {
         if (trimmed == null || trimmed.length() < NICKNAME_MIN || trimmed.length() > NICKNAME_MAX) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "닉네임은 2~10자로 입력해 주세요.");
         }
+        validateNicknameNotReserved(trimmed);
         // 2~3. 같은 닉네임이 없으면 사용 가능
         boolean available = !memberRepository.existsByNickname(trimmed);
         return new CheckNicknameResponse(trimmed, available);
@@ -83,8 +95,18 @@ public class AuthService {
         if (memberRepository.existsByLoginIdIgnoreCase(request.loginId())) {
             throw new BusinessException(ErrorCode.LOGIN_ID_ALREADY_EXISTS);
         }
+        validateNicknameNotReserved(request.nickname());
         if (memberRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+        }
+
+        // 5-1. 회사 이메일 (선택): 있으면 형식·중복 확인 후 소문자로 저장 (2026-11-24)
+        String email = null;
+        if (request.email() != null && !request.email().isBlank()) {
+            email = EmailPolicy.normalizeAndValidate(request.email());
+            if (memberRepository.existsByEmail(email)) {
+                throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
         }
 
         // 5. 비밀번호 암호화
@@ -92,6 +114,7 @@ public class AuthService {
 
         // 6. 저장. 동시 가입으로 UK 제약 위반이 나면 해당 409로 응답
         Member member = Member.create(request.loginId(), encodedPassword, request.nickname());
+        member.changeEmail(email);
         try {
             memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
@@ -104,20 +127,28 @@ public class AuthService {
 
     /**
      * 로그인: 아이디·비밀번호 확인. 세션 처리는 Controller에서 한다.
-     * 아이디가 없든 비밀번호가 틀리든 같은 오류(LOGIN_FAILED)로 응답한다.
+     * 아이디가 없든, 탈퇴했든, 비밀번호가 틀리든 같은 오류(LOGIN_FAILED)로 응답한다.
+     * 같은 아이디로 5번 연속 실패하면 5분 동안 429 TOO_MANY_LOGIN_ATTEMPTS (2026-11-24, C2)
      */
     public MemberInfoResponse login(LoginRequest request) {
         // 1. 필수값 검증은 LoginRequest의 @Valid에서 처리됨
+        String loginId = normalizeLoginId(request.loginId());
 
-        // 2. 아이디로 회원 조회 (대소문자 무시). 없으면 로그인 실패
-        Member member = memberRepository.findByLoginIdForLogin(normalizeLoginId(request.loginId()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+        // 2. 잠겨 있으면 비밀번호를 보지 않고 거절
+        loginAttemptLimiter.checkNotLocked(loginId);
 
-        // 3. 입력 비밀번호와 저장된 암호화 비밀번호 비교
-        if (!passwordEncoder.matches(request.password(), member.getPassword())) {
+        // 3. 아이디로 회원 조회 (대소문자 무시). 없거나 탈퇴한 회원이면 실패
+        Member member = memberRepository.findByLoginIdForLogin(loginId)
+                .filter(m -> !m.isWithdrawn())
+                .orElse(null);
+
+        // 4. 입력 비밀번호와 저장된 암호화 비밀번호 비교
+        if (member == null || !passwordEncoder.matches(request.password(), member.getPassword())) {
+            loginAttemptLimiter.recordFailure(loginId);
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
+        loginAttemptLimiter.reset(loginId);
         return MemberInfoResponse.from(member);
     }
 
@@ -126,7 +157,9 @@ public class AuthService {
      * → Controller가 세션을 무효화하고 401로 응답한다.
      */
     public Optional<MemberInfoResponse> getMe(Long memberId) {
-        return memberRepository.findById(memberId).map(MemberInfoResponse::from);
+        return memberRepository.findById(memberId)
+                .filter(member -> !member.isWithdrawn())   // 탈퇴한 회원도 없는 것처럼 401 (2026-11-24)
+                .map(MemberInfoResponse::from);
     }
 
     // Oracle 오류 메시지 예: ORA-00001: unique constraint (계정.UK_MEMBER_LOGIN_ID) violated
@@ -137,6 +170,9 @@ public class AuthService {
         }
         if (message.contains("UK_MEMBER_NICKNAME")) {
             return new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+        }
+        if (message.contains("UK_MEMBER_EMAIL")) {
+            return new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
         return e;   // 그 외 제약 위반은 500으로 처리
     }

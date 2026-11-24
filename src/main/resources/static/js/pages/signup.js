@@ -6,6 +6,7 @@
  * - 비밀번호: 8~20자, 영문·숫자 모두 포함, 공백 불가, 아이디와 다르게 (2026-11-24, password-field.js의 ruleError)
  *            비밀번호 확인과 같아야 함
  * - 아이디는 입력하는 대로 소문자로 바꿔 보여 준다 (서버도 소문자로 저장, 2026-11-24)
+ * - 회사 이메일(선택): 넣으면 형식 확인 후 함께 보낸다. 비밀번호·아이디 찾기에 쓴다 (2026-11-24)
  * - 닉네임: 앞뒤 공백 제거 후 2~10자, [중복 확인] 필수
  * - 중복 확인 후 값을 고치면 다시 확인해야 한다. 서버도 가입 시 다시 검사한다.
  * - 가입 후 자동 로그인하지 않고 로그인 화면으로 이동한다.
@@ -41,6 +42,23 @@
   const password = field('signup-password');
   const passwordConfirm = field('signup-password-confirm');
   const nickname = field('signup-nickname');
+  const email = field('signup-email');
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const EMAIL_HINT = email.message.textContent;
+
+  email.input.addEventListener('input', () => {
+    email.message.textContent = EMAIL_HINT;
+    email.message.className = 'field__message';
+    email.input.classList.remove('input--error');
+  });
+
+  /** 비어 있으면 통과(선택 항목), 있으면 형식 확인 */
+  function validateEmail() {
+    const value = email.input.value.trim();
+    if (!value || EMAIL_PATTERN.test(value)) return true;
+    setMessage(email, '이메일 형식을 확인해 주세요.', 'error');
+    return false;
+  }
   const idCheckButton = document.getElementById('signup-id-check');
   const nicknameCheckButton = document.getElementById('signup-nickname-check');
 
@@ -186,8 +204,9 @@
     const passwordOk = validatePassword(true);
     const confirmOk = validatePasswordConfirm(true);
     const nicknameOk = validateNicknameChecked();
+    const emailOk = validateEmail();
 
-    if (!idOk || !passwordOk || !confirmOk || !nicknameOk) {
+    if (!idOk || !passwordOk || !confirmOk || !nicknameOk || !emailOk) {
       focusFirstError();
       return;
     }
@@ -199,6 +218,7 @@
         password: password.input.value,
         passwordConfirm: passwordConfirm.input.value,
         nickname: nickname.input.value.trim(),
+        email: email.input.value.trim() || null,
       });
       try {
         sessionStorage.setItem(SIGNUP_DONE_KEY, member.loginId);   // 로그인 화면에서 가입 완료 안내
@@ -249,6 +269,10 @@
         checkedNickname = null;
         setMessage(nickname, err.message, 'error');
         nickname.input.focus();
+        break;
+      case 'EMAIL_ALREADY_EXISTS':
+        setMessage(email, err.message, 'error');
+        email.input.focus();
         break;
       case 'PASSWORD_MISMATCH':
         setMessage(passwordConfirm, err.message, 'error');

@@ -22,6 +22,11 @@ server:
     encoding:
       charset: UTF-8
       force: true
+    session:                  # 2026-11-24 (C1) 세션 설정 명시
+      timeout: 60m            # 아무것도 안 하고 60분 지나면 로그아웃 (발표 중 풀리지 않게)
+      cookie:
+        http-only: true       # JS에서 세션 쿠키를 읽지 못하게
+        same-site: lax        # 다른 사이트에서 보낸 요청에는 쿠키를 붙이지 않음
 
 upload:
   dir: uploads # 업로드 파일 저장 폴더 (프로젝트 폴더 기준, Git 제외)

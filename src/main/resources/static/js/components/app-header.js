@@ -16,7 +16,8 @@
  *
  * - GNB: 홈 · 지도 · 식사팟 · 랭킹 · 마이페이지. 현재 주소를 보고 선택 표시를 한다.
  *   메뉴를 바꾸려면 아래 NAV_ITEMS만 고치면 된다.
- * - 오른쪽: [알림 🔔] [아바타 닉네임 ▾] → 드롭다운(마이페이지, 로그아웃)
+ * - 오른쪽: [알림 🔔] [아바타 닉네임 ▾] → 드롭다운(마이페이지, 계정 설정, 로그아웃)
+ *   계정 설정에서 닉네임을 바꾸면 'sseukbap:nickname-changed' 신호(detail.nickname)를 받아 바로 고친다 (2026-11-24, C)
  * - 닉네임은 /api/auth/me로 채운다. 로그인하지 않았으면 client.js가 로그인 화면으로 보낸다.
  * - 알림 패널 (2026-11-23 개편: 따봉 1건 → 할 일 목록 + 따봉)
  *   ① 할 일 (GET /api/parties/my/action-pending, A)
@@ -128,6 +129,7 @@
 
   showUser();
   loadNotices();
+  document.addEventListener('sseukbap:nickname-changed', (event) => setUser(event.detail && event.detail.nickname));
 
   /* ---------- 그리기 ---------- */
 
@@ -158,6 +160,7 @@
       '</button>' +
       '<div id="header-menu" class="app-header__menu" role="menu" aria-label="내 메뉴" hidden>' +
       '<a class="app-header__menu-item" role="menuitem" href="/mypage.html">마이페이지</a>' +
+      '<a class="app-header__menu-item" role="menuitem" href="/account.html">계정 설정</a>' +
       '<button class="app-header__menu-item" role="menuitem" type="button" data-action="logout">로그아웃</button>' +
       '</div>' +
       '</div>';
@@ -166,9 +169,7 @@
   async function showUser() {
     try {
       const me = await global.authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
-      nickname.textContent = me.nickname + ' 님';
-      avatar.textContent = Array.from(me.nickname || '?')[0];
-      userButton.setAttribute('aria-label', me.nickname + ' 님 메뉴');
+      setUser(me.nickname);
       userArea.classList.add('is-ready');
     } catch (err) {
       // 401은 이동 처리됨. 그 외 오류면 닉네임 없이 메뉴만 쓸 수 있게 둔다.
@@ -176,6 +177,14 @@
       userButton.setAttribute('aria-label', '내 메뉴');
       userArea.classList.add('is-ready');
     }
+  }
+
+  /** 닉네임·아바타 글자 표시 (처음 불러올 때, 계정 설정에서 닉네임을 바꿨을 때) */
+  function setUser(name) {
+    if (!name) return;
+    nickname.textContent = name + ' 님';
+    avatar.textContent = Array.from(name)[0];
+    userButton.setAttribute('aria-label', name + ' 님 메뉴');
   }
 
   /* ---------- 드롭다운 ---------- */

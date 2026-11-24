@@ -33,6 +33,14 @@
   font-weight: var(--font-weight-extrabold);
 }
 
+/* [계정 설정] 버튼: 프로필 줄 오른쪽 끝 (2026-11-24) */
+.mypage-profile__settings {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
 .mypage-profile__nickname {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);

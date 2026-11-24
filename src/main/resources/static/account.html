@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>계정 설정 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/password-field.css">
+  <link rel="stylesheet" href="/css/account.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <!-- 계정 설정 (C, 2026-11-24): 닉네임 변경 · 비밀번호 변경. 회원 탈퇴는 C2에서 아래에 추가 -->
+  <main class="container account-page">
+    <a class="ui-back" href="/mypage.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>마이페이지</a>
+
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">계정 설정</h1>
+        <p class="ui-page-head__desc">닉네임과 비밀번호를 바꿀 수 있어요.</p>
+      </div>
+    </div>
+
+    <!-- ① 내 정보 + 닉네임 변경 -->
+    <section class="account-card" aria-labelledby="account-profile-title">
+      <h2 id="account-profile-title" class="account-card__title">내 정보</h2>
+
+      <dl class="account-info">
+        <div><dt>아이디</dt><dd id="account-login-id">-</dd></div>
+        <div><dt>근무지</dt><dd>멀티캠퍼스 세종대</dd></div>
+      </dl>
+
+      <form id="nickname-form" class="account-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="account-nickname">닉네임</label>
+          <div class="account-form__row">
+            <input id="account-nickname" class="input" type="text" maxlength="10" autocomplete="nickname"
+                   placeholder="2~10자" aria-describedby="account-nickname-message">
+            <button id="nickname-submit" class="btn btn--primary" type="submit">변경</button>
+          </div>
+          <p id="account-nickname-message" class="field__message" aria-live="polite"></p>
+        </div>
+      </form>
+    </section>
+
+    <!-- ② 비밀번호 변경 -->
+    <section class="account-card" aria-labelledby="account-password-title">
+      <h2 id="account-password-title" class="account-card__title">비밀번호 변경</h2>
+      <p class="account-card__desc">영문과 숫자를 함께 넣어 8~20자로 정해 주세요. 공백은 쓸 수 없고, 아이디와 같으면 안 돼요.</p>
+
+      <form id="password-form" class="account-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="account-current-password">현재 비밀번호</label>
+          <input id="account-current-password" class="input" type="password" maxlength="20"
+                 autocomplete="current-password" aria-describedby="account-current-password-message" data-password-field>
+          <p id="account-current-password-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="account-new-password">새 비밀번호</label>
+          <input id="account-new-password" class="input" type="password" maxlength="20"
+                 autocomplete="new-password" aria-describedby="account-new-password-message" data-password-field>
+          <p id="account-new-password-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="account-new-password-confirm">새 비밀번호 확인</label>
+          <input id="account-new-password-confirm" class="input" type="password" maxlength="20"
+                 autocomplete="new-password" aria-describedby="account-new-password-confirm-message" data-password-field>
+          <p id="account-new-password-confirm-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <button id="password-submit" class="btn btn--primary account-form__submit" type="submit">비밀번호 변경</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/account.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/components/password-field.js"></script>
+  <script src="/js/pages/account.js"></script>
+</body>
+</html>

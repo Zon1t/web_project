@@ -25,7 +25,10 @@
 | --- | --- |
 | 구조 | REST API + JS fetch. 서버는 JSON만 응답하고 화면은 JS로 렌더링 |
 | Base URL | `/api` |
-| 인증 | 세션 방식. 로그인 성공 시 `JSESSIONID` 쿠키 발급, 이후 요청에 쿠키 자동 포함. 회원가입·아이디 중복 확인·닉네임 중복 확인·로그인을 제외한 모든 API는 로그인 필요 |
+| 인증 | 세션 방식. 로그인 성공 시 `JSESSIONID` 쿠키 발급(HttpOnly, SameSite=Lax), 이후 요청에 쿠키 자동 포함. 아무 요청 없이 60분이 지나면 세션 만료. 회원가입·아이디 중복 확인·닉네임 중복 확인·로그인·비밀번호 찾기를 제외한 모든 API는 로그인 필요 |
+| 아이디 | 영문·숫자 4~20자. 앞뒤 공백 제거 후 **소문자로 통일**해 저장·비교한다 (2026-11-24). `User01`과 `user01`은 같은 아이디 |
+| 비밀번호 규칙 | 8~20자, 영문과 숫자를 모두 포함, 공백 불가, 아이디와 같으면 안 됨 (대소문자 무시). 회원가입·비밀번호 변경 공통 (2026-11-24) |
+| 없는 화면 주소 | `/api/`가 아닌 없는 주소(예: `/abc.html`)는 JSON 대신 `404.html` 화면을 404로 보여 준다 (2026-11-24) |
 | 요청 형식 | `Content-Type: application/json` (파일 첨부가 있는 리뷰 작성만 `multipart/form-data`) |
 | 날짜·시간 | 날짜 `YYYY-MM-DD`, 시간 `HH:mm`, 일시 ISO-8601 |
 | 끼니 값 | `LUNCH`(점심), `DINNER`(저녁) |
@@ -52,6 +55,8 @@
 | HTTP | error | 의미 |
 | --- | --- | --- |
 | 400 | `INVALID_REQUEST` | 필수값 누락, 형식·길이 오류 |
+| 400 | `INVALID_PASSWORD` | 현재 비밀번호가 틀림 (비밀번호 변경, 2026-11-24) |
+| 400 | `INVALID_RESET_CODE` | 비밀번호 찾기 인증번호가 없음·만료·불일치 (2026-11-24) |
 | 401 | `UNAUTHORIZED` | 로그인하지 않음 또는 세션 만료 (FE는 로그인 화면으로 이동) |
 | 403 | `FORBIDDEN` | 권한 없음 (예: 방장 전용 기능, 본인 리뷰가 아님) |
 | 404 | `NOT_FOUND` | 대상 데이터 없음 |
@@ -156,7 +161,7 @@
 | 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 완료되었습니다' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (43개, 11/23 알림 API 추가)
+### 전체 API 목록 (47개, 11/23 알림 API 추가, 11/24 계정 설정·비밀번호 찾기 API 4개 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -166,11 +171,15 @@
 | C | POST | `/api/auth/login` | 로그인 |
 | C | POST | `/api/auth/logout` | 로그아웃 |
 | C | GET | `/api/auth/me` | 로그인 사용자 조회 |
+| C | POST | `/api/auth/password-reset/request` | 비밀번호 찾기 인증번호 요청 (11/24 추가) |
+| C | POST | `/api/auth/password-reset/confirm` | 비밀번호 찾기 인증번호 확인·변경 (11/24 추가) |
 | C | GET | `/api/users/me/summary` | 마이페이지 프로필 조회 |
 | C | GET | `/api/users/me/reviews` | 내 리뷰 목록 조회 |
 | C | GET | `/api/users/me/parties` | 참여한 식사팟 목록 조회 |
 | C | GET | `/api/users/me/restaurants` | 등록한 식당 목록 조회 |
 | C | GET | `/api/users/me/interests` | 관심 식당 목록 조회 |
+| C | PATCH | `/api/users/me/password` | 비밀번호 변경 (11/24 추가) |
+| C | PATCH | `/api/users/me/nickname` | 닉네임 변경 (11/24 추가) |
 | C | GET | `/api/cafeteria/menus/today` | 오늘의 구내식당 메뉴 조회 |
 | C | GET | `/api/restaurants/rankings` | 따봉 랭킹 조회 |
 | C | GET | `/api/restaurants/roulette/candidates` | 룰렛 후보 조회 |
@@ -211,6 +220,8 @@
 
 **요구사항**: 입력한 아이디를 사용할 수 있는지 반환한다. 로그인 없이 호출할 수 있다. 결과는 회원가입 화면의 입력창 아래에 표시한다.
 
+> 2026-11-24 변경: 아이디를 소문자로 바꿔 비교 (대소문자만 다른 아이디도 사용 불가), 응답 loginId는 소문자 값
+
 **Request — Query**
 
 | 이름 | 타입 | 필수 | 규칙 |
@@ -218,8 +229,8 @@
 | loginId | string | O | 영문·숫자 4~20자 |
 
 **시스템 처리**
-1. loginId 형식을 검증한다.
-2. 같은 loginId의 MEMBER가 있는지 조회한다.
+1. loginId의 앞뒤 공백을 제거하고 소문자로 바꾼 뒤 형식을 검증한다.
+2. 대소문자를 무시하고 같은 loginId의 MEMBER가 있는지 조회한다.
 3. 사용 가능 여부를 반환한다.
 
 **Response 200 (data)**
@@ -286,15 +297,16 @@
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| loginId | string | O | 영문·숫자 4~20자 |
-| password | string | O | 8~20자 |
+| loginId | string | O | 영문·숫자 4~20자 (소문자로 바꿔 저장) |
+| password | string | O | 공통 규칙 '비밀번호 규칙' (8~20자, 영문+숫자, 공백 불가, 아이디와 다르게) |
 | passwordConfirm | string | O | password와 동일 |
 | nickname | string | O | 2~10자, 앞뒤 공백 제거, 중복 불가 |
 
 **시스템 처리**
-1. 필수값·형식·길이를 검증한다.
+1. 필수값·형식·길이를 검증한다. loginId는 앞뒤 공백 제거 후 소문자로 바꾼다.
+1-1. password가 비밀번호 규칙에 맞는지 확인한다. (2026-11-24)
 2. password와 passwordConfirm이 같은지 확인한다.
-3. loginId로 MEMBER를 조회해 이미 있으면 중단한다.
+3. 대소문자를 무시하고 같은 loginId의 MEMBER가 있으면 중단한다.
 4. nickname(공백 제거 값)으로 MEMBER를 조회해 이미 있으면 중단한다.
 5. 비밀번호를 BCrypt로 암호화한다.
 6. MEMBER를 저장한다. 동시 가입으로 UK 제약(UK_MEMBER_LOGIN_ID, UK_MEMBER_NICKNAME) 위반이 발생하면 해당 409 오류로 응답한다.
@@ -314,8 +326,9 @@
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 형식·길이 오류 |
+| 400 | INVALID_REQUEST | 비밀번호는 8~20자로, 영문과 숫자를 함께 넣어 주세요. / 비밀번호에는 공백을 넣을 수 없습니다. / 아이디와 다른 비밀번호를 입력해 주세요. | 비밀번호 규칙 위반 |
 | 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | password ≠ passwordConfirm |
-| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | 같은 loginId 존재 |
+| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | 같은 loginId 존재 (대소문자 무시) |
 | 409 | NICKNAME_ALREADY_EXISTS | 이미 사용 중인 닉네임입니다. | 같은 nickname 존재 |
 
 ---
@@ -339,7 +352,7 @@
 
 **시스템 처리**
 1. 필수값을 검증한다.
-2. loginId로 MEMBER를 조회한다. 없으면 로그인 실패로 처리한다.
+2. loginId를 소문자로 바꿔 MEMBER를 조회한다. 없으면 대소문자를 무시하고 한 번 더 찾는다(소문자 통일 전에 대문자로 가입한 계정, 1명일 때만). 그래도 없으면 로그인 실패로 처리한다. (2026-11-24)
 3. 입력 비밀번호와 저장된 암호화 비밀번호를 비교한다.
 4. 기존 세션이 있으면 무효화하고 새 세션을 생성한다.
 5. 세션에 memberId를 저장한다.
@@ -413,7 +426,183 @@ null
 | 401 | UNAUTHORIZED | 로그인이 필요합니다. | 세션 없음, 세션 만료, 회원 정보 없음 |
 
 ---
+
+### POST /api/auth/password-reset/request — 비밀번호 찾기 인증번호 요청
+
+> 2026-11-24 추가. **실제 메일은 보내지 않는다.** 인증번호는 서버 로그(LogMailSender)에 찍힌다. 시연 때는 콘솔에서 번호를 확인한다.
+
+**요구사항**: 아이디와 회사 이메일을 받아 6자리 인증번호를 메일로 보낸다. 로그인 없이 호출할 수 있다. 아이디가 있는지 드러내지 않도록 **회원이 있든 없든 같은 응답**을 준다. 다시 요청하면 앞 번호는 쓸 수 없다.
+
+**Request — Body**
+```json
+{
+  "loginId": "chef01",
+  "email": "chef01@samsung.com"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| loginId | string | O | 대소문자 무시 |
+| email | string | O | 이메일 형식, 100자 이하. 지금은 형식만 확인 (회원 이메일 컬럼이 생기면 등록 이메일과 같은지 확인 예정) |
+
+**시스템 처리**
+1. 필수값·이메일 형식을 검증한다.
+2. loginId를 소문자로 바꿔 MEMBER를 조회한다. (로그인과 같은 방식)
+3. 회원이 있으면 6자리 무작위 번호를 만들어 서버 메모리에 5분간 저장하고(같은 아이디의 이전 번호는 버림), email로 메일을 보낸다.
+4. 회원이 없으면 아무것도 하지 않는다.
+5. 회원 여부와 관계없이 같은 응답을 반환한다.
+
+**Response 200 (data)**
+```json
+{
+  "email": "chef01@samsung.com",
+  "expiresInSeconds": 300
+}
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 아이디를 입력해 주세요. / 이메일을 입력해 주세요. / 이메일 형식을 확인해 주세요. | 필수값 누락, 이메일 형식 오류 |
+
+---
+
+### POST /api/auth/password-reset/confirm — 비밀번호 찾기 인증번호 확인·변경
+
+> 2026-11-24 추가
+
+**요구사항**: 메일로 받은 인증번호를 확인하고 새 비밀번호로 바꾼다. 로그인 없이 호출할 수 있다. FE는 성공하면 로그인 화면으로 이동해 완료 안내를 보여 준다.
+
+**Request — Body**
+```json
+{
+  "loginId": "chef01",
+  "code": "482913",
+  "newPassword": "newpass99",
+  "newPasswordConfirm": "newpass99"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| loginId | string | O | 인증번호를 요청한 아이디 (대소문자 무시) |
+| code | string | O | 6자리 숫자 |
+| newPassword | string | O | 공통 규칙 '비밀번호 규칙' |
+| newPasswordConfirm | string | O | newPassword와 동일 |
+
+**시스템 처리**
+1. 필수값을 검증한다.
+2. newPassword가 비밀번호 규칙에 맞는지, newPasswordConfirm과 같은지 확인한다. (여기서 실패하면 인증번호 시도 횟수에 넣지 않는다)
+3. loginId의 인증번호가 있고 5분이 지나지 않았는지 확인한다.
+4. code가 맞는지 확인한다. 틀리면 시도 횟수를 늘리고, 5번 틀리면 그 번호를 지운다.
+5. 인증번호를 지운다. (한 번만 사용 가능)
+6. 새 비밀번호를 BCrypt로 암호화해 저장한다.
+
+**Response 200 (data)**
+```json
+null
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 인증번호를 입력해 주세요. / 입력값을 확인해 주세요. | 필수값 누락 |
+| 400 | INVALID_REQUEST | (회원가입과 같은 규칙 문구) | 새 비밀번호 규칙 위반 |
+| 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | newPassword ≠ newPasswordConfirm |
+| 400 | INVALID_RESET_CODE | 인증번호가 맞지 않거나 시간이 지났습니다. | 요청한 적 없음, 5분 지남, 번호 틀림, 5번 틀려 지워짐, 이미 사용함 |
+
+---
 ## 2. users/me — 마이페이지 (C)
+
+### PATCH /api/users/me/password — 비밀번호 변경
+
+> 2026-11-24 추가 (C1 계정 설정)
+
+**요구사항**: 계정 설정 화면에서 현재 비밀번호를 확인한 뒤 새 비밀번호로 바꾼다. 바꾼 뒤에도 지금 로그인(세션)은 유지된다.
+
+**Request — Body**
+```json
+{
+  "currentPassword": "password12",
+  "newPassword": "newpass99",
+  "newPasswordConfirm": "newpass99"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| currentPassword | string | O | 지금 비밀번호 |
+| newPassword | string | O | 공통 규칙 '비밀번호 규칙', 지금 비밀번호와 달라야 함 |
+| newPasswordConfirm | string | O | newPassword와 동일 |
+
+**시스템 처리**
+1. 필수값을 검증한다.
+2. 로그인 회원의 MEMBER를 조회한다.
+3. currentPassword가 저장된 암호화 비밀번호와 맞는지 확인한다.
+4. newPassword가 비밀번호 규칙에 맞는지 확인한다.
+5. newPassword와 newPasswordConfirm이 같은지 확인한다.
+6. newPassword가 지금 비밀번호와 같으면 중단한다.
+7. BCrypt로 암호화해 저장한다.
+
+**Response 200 (data)**
+```json
+null
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락 |
+| 400 | INVALID_PASSWORD | 현재 비밀번호가 일치하지 않습니다. | currentPassword 틀림 |
+| 400 | INVALID_REQUEST | (회원가입과 같은 규칙 문구) | 새 비밀번호 규칙 위반 |
+| 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | newPassword ≠ newPasswordConfirm |
+| 400 | INVALID_REQUEST | 지금 쓰는 비밀번호와 다른 비밀번호를 입력해 주세요. | 새 비밀번호 = 현재 비밀번호 |
+
+---
+
+### PATCH /api/users/me/nickname — 닉네임 변경
+
+> 2026-11-24 추가 (C1 계정 설정)
+
+**요구사항**: 계정 설정 화면에서 닉네임을 바꾼다. 규칙은 회원가입과 같다. FE는 성공하면 헤더의 닉네임도 바로 바꾼다.
+
+**Request — Body**
+```json
+{
+  "nickname": "새닉네임"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| nickname | string | O | 앞뒤 공백 제거 후 2~10자, 다른 회원과 중복 불가 |
+
+**시스템 처리**
+1. nickname의 앞뒤 공백을 제거하고 길이를 검증한다.
+2. 로그인 회원의 MEMBER를 조회한다.
+3. 지금 닉네임과 같으면 바꾸지 않고 그대로 반환한다.
+4. 다른 회원이 같은 nickname을 쓰고 있으면 중단한다.
+5. 저장한다. 동시에 바꿔 UK_MEMBER_NICKNAME 위반이 나면 409로 응답한다.
+
+**Response 200 (data)**
+```json
+{
+  "nickname": "새닉네임"
+}
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 닉네임은 2~10자로 입력해 주세요. | nickname 누락·길이 오류 |
+| 409 | NICKNAME_ALREADY_EXISTS | 이미 사용 중인 닉네임입니다. | 다른 회원이 사용 중 |
+
+---
 
 ### GET /api/users/me/summary — 마이페이지 프로필 조회
 

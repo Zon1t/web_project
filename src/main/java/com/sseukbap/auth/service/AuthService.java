@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -31,15 +32,24 @@ public class AuthService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
 
-    /** 아이디 중복 확인 */
+    /**
+     * 아이디를 앞뒤 공백 제거 + 소문자로 통일한다. (2026-11-24)
+     * 가입·로그인·중복 확인이 모두 이 값으로 비교한다.
+     */
+    public static String normalizeLoginId(String loginId) {
+        return (loginId == null) ? null : loginId.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** 아이디 중복 확인 (대소문자 무시) */
     public CheckIdResponse checkLoginId(String loginId) {
-        // 1. 형식 검증 (영문·숫자 4~20자)
-        if (loginId == null || !LOGIN_ID_PATTERN.matcher(loginId).matches()) {
+        // 1. 소문자로 통일한 뒤 형식 검증 (영문·숫자 4~20자)
+        String normalized = normalizeLoginId(loginId);
+        if (normalized == null || !LOGIN_ID_PATTERN.matcher(normalized).matches()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "아이디는 영문·숫자 4~20자로 입력해 주세요.");
         }
-        // 2~3. 같은 아이디가 없으면 사용 가능
-        boolean available = !memberRepository.existsByLoginId(loginId);
-        return new CheckIdResponse(loginId, available);
+        // 2~3. 대소문자만 다른 아이디도 없으면 사용 가능
+        boolean available = !memberRepository.existsByLoginIdIgnoreCase(normalized);
+        return new CheckIdResponse(normalized, available);
     }
 
     /** 닉네임 중복 확인 (앞뒤 공백 제거 후 비교, 대소문자 구분) */
@@ -59,13 +69,18 @@ public class AuthService {
     public SignupResponse signup(SignupRequest request) {
         // 1. 필수값·형식·길이 검증은 SignupRequest의 @Valid에서 처리됨
 
-        // 2. 비밀번호 확인
+        //    (아이디는 SignupRequest에서 이미 소문자로 통일됨)
+
+        // 2. 비밀번호 규칙 (8~20자, 영문+숫자, 공백 불가, 아이디와 다르게) — 2026-11-24
+        PasswordPolicy.validate(request.password(), request.loginId());
+
+        // 3. 비밀번호 확인
         if (!request.password().equals(request.passwordConfirm())) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        // 3~4. 화면의 중복 확인과 관계없이 서버에서 다시 검사
-        if (memberRepository.existsByLoginId(request.loginId())) {
+        // 4~5. 화면의 중복 확인과 관계없이 서버에서 다시 검사 (아이디는 대소문자 무시)
+        if (memberRepository.existsByLoginIdIgnoreCase(request.loginId())) {
             throw new BusinessException(ErrorCode.LOGIN_ID_ALREADY_EXISTS);
         }
         if (memberRepository.existsByNickname(request.nickname())) {
@@ -94,8 +109,8 @@ public class AuthService {
     public MemberInfoResponse login(LoginRequest request) {
         // 1. 필수값 검증은 LoginRequest의 @Valid에서 처리됨
 
-        // 2. 아이디로 회원 조회. 없으면 로그인 실패
-        Member member = memberRepository.findByLoginId(request.loginId())
+        // 2. 아이디로 회원 조회 (대소문자 무시). 없으면 로그인 실패
+        Member member = memberRepository.findByLoginIdForLogin(normalizeLoginId(request.loginId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
         // 3. 입력 비밀번호와 저장된 암호화 비밀번호 비교

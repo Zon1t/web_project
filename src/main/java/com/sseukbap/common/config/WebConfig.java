@@ -31,7 +31,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/signup",
                         "/api/auth/login",
                         "/api/auth/check-id",
-                        "/api/auth/check-nickname"
+                        "/api/auth/check-nickname",
+                        "/api/auth/password-reset/**"   // 비밀번호 찾기 (2026-11-24): 로그인 전에 쓰는 기능
                 );
     }
 

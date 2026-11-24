@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/css/footer.css">
   <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/password-field.css">
 </head>
 <body>
   <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
@@ -45,10 +46,14 @@
         <div class="field">
           <label class="field__label" for="login-password">비밀번호</label>
           <input id="login-password" class="input" type="password" name="password"
-                 maxlength="20" autocomplete="current-password">
+                 maxlength="20" autocomplete="current-password" data-password-field>
         </div>
 
         <button id="login-submit" class="btn btn--primary auth-submit" type="submit">로그인</button>
+
+        <p class="auth-help">
+          <a class="auth-help__link" href="/password-reset.html">비밀번호를 잊으셨나요?</a>
+        </p>
       </form>
 
       <p class="auth-card__footer">
@@ -68,6 +73,7 @@
   <script src="/js/components/brand.js"></script>
   <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/password-field.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/login.js"></script>
 </body>

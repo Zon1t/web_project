@@ -3,7 +3,9 @@
  *
  * 규칙 (docs/API_SPEC.md 1장 auth)
  * - 아이디: 영문·숫자 4~20자, [중복 확인] 필수
- * - 비밀번호: 8~20자, 비밀번호 확인과 같아야 함
+ * - 비밀번호: 8~20자, 영문·숫자 모두 포함, 공백 불가, 아이디와 다르게 (2026-11-24, password-field.js의 ruleError)
+ *            비밀번호 확인과 같아야 함
+ * - 아이디는 입력하는 대로 소문자로 바꿔 보여 준다 (서버도 소문자로 저장, 2026-11-24)
  * - 닉네임: 앞뒤 공백 제거 후 2~10자, [중복 확인] 필수
  * - 중복 확인 후 값을 고치면 다시 확인해야 한다. 서버도 가입 시 다시 검사한다.
  * - 가입 후 자동 로그인하지 않고 로그인 화면으로 이동한다.
@@ -12,8 +14,6 @@
   'use strict';
 
   const LOGIN_ID_PATTERN = /^[A-Za-z0-9]{4,20}$/;
-  const PASSWORD_MIN = 8;
-  const PASSWORD_MAX = 20;
   const NICKNAME_MIN = 2;
   const NICKNAME_MAX = 10;
   const SIGNUP_DONE_KEY = 'sseukbap.signupLoginId';   // login.js와 같은 값
@@ -23,7 +23,7 @@
     idAvailable: '사용할 수 있는 아이디입니다.',
     idTaken: '이미 사용 중인 아이디입니다.',
     idNeedCheck: '아이디 중복 확인을 해 주세요.',
-    passwordFormat: '비밀번호는 8~20자로 입력해 주세요.',
+    passwordOk: '사용할 수 있는 비밀번호예요.',
     passwordConfirmEmpty: '비밀번호를 한 번 더 입력해 주세요.',
     passwordMismatch: '비밀번호가 일치하지 않아요.',
     passwordMatch: '비밀번호가 일치합니다.',
@@ -53,6 +53,14 @@
   /* ---------- 아이디 ---------- */
 
   id.input.addEventListener('input', () => {
+    // 대문자를 치면 바로 소문자로 (글자 수가 같아서 커서 위치는 그대로 둔다)
+    const lower = id.input.value.toLowerCase();
+    if (lower !== id.input.value) {
+      const caret = id.input.selectionStart;
+      id.input.value = lower;
+      id.input.setSelectionRange(caret, caret);
+    }
+    if (password.input.value) validatePassword(false);   // '아이디와 같으면 안 됨' 다시 확인
     if (id.input.value !== checkedLoginId) {
       checkedLoginId = null;
       clearMessage(id);
@@ -98,16 +106,17 @@
 
   /** @param {boolean} strict 가입하기를 눌렀을 때만 true (빈 칸도 오류로 표시) */
   function validatePassword(strict) {
-    const length = password.input.value.length;
-    if (length === 0 && !strict) {
+    const value = password.input.value;
+    if (value.length === 0 && !strict) {
       clearMessage(password);
       return false;
     }
-    if (length < PASSWORD_MIN || length > PASSWORD_MAX) {
-      setMessage(password, MSG.passwordFormat, 'error');
+    const error = passwordField.ruleError(value, id.input.value);
+    if (error) {
+      setMessage(password, error, 'error');
       return false;
     }
-    clearMessage(password);
+    setMessage(password, MSG.passwordOk, 'success');
     return true;
   }
 

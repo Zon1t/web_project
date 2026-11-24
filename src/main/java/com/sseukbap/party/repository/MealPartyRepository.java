@@ -44,4 +44,15 @@ public interface MealPartyRepository extends JpaRepository<MealParty, Long> {
     @Query("select p from MealParty p where p.partyDate <= :untilDate and p.status in :statuses")
     List<MealParty> findAllByPartyDateUntilAndStatusIn(@Param("untilDate") LocalDate untilDate,
                                                        @Param("statuses") Collection<PartyStatus> statuses);
+
+    /**
+     * 이 회원이 방장이거나 참여 중인 팟 중 statuses(진행 중 상태)인 팟의 번호 (번호 오름차순)
+     * 회원 탈퇴 때 정리할 팟을 고른다. 잠금은 번호 순서대로 하나씩 따로 건다.
+     */
+    @Query("select p.partyId from MealParty p where p.status in :statuses "
+            + "and (p.host.memberId = :memberId "
+            + "or exists (select 1 from PartyMember pm where pm.party = p and pm.member.memberId = :memberId)) "
+            + "order by p.partyId")
+    List<Long> findPartyIdsOfMember(@Param("memberId") Long memberId,
+                                    @Param("statuses") Collection<PartyStatus> statuses);
 }

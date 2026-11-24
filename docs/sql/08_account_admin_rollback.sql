@@ -1,0 +1,19 @@
+-- =====================================================================
+-- 08_account_admin_rollback.sql : 08_account_admin.sql 되돌리기
+--   - 제약조건 → 컬럼 순서로 지운다. 지운 컬럼의 값(탈퇴·이메일·숨김 등)은 되살릴 수 없다.
+--   - 되돌린 뒤에는 새 필드가 없는 예전 코드로 서버를 띄워야 한다.
+-- =====================================================================
+
+-- 1. 제약조건
+ALTER TABLE MEMBER     DROP CONSTRAINT CK_MEMBER_STATUS;
+ALTER TABLE MEMBER     DROP CONSTRAINT CK_MEMBER_ROLE;
+ALTER TABLE MEMBER     DROP CONSTRAINT UK_MEMBER_EMAIL;
+ALTER TABLE RESTAURANT DROP CONSTRAINT CK_RESTAURANT_HIDDEN_YN;
+ALTER TABLE REVIEW     DROP CONSTRAINT CK_REVIEW_HIDDEN_YN;
+ALTER TABLE SUGGESTION DROP CONSTRAINT CK_SUGGESTION_STATUS;
+
+-- 2. 컬럼
+ALTER TABLE MEMBER     DROP (STATUS, WITHDRAWN_AT, EMAIL, RESET_TOKEN_HASH, RESET_TOKEN_EXPIRES_AT, ROLE);
+ALTER TABLE RESTAURANT DROP (HIDDEN_YN);
+ALTER TABLE REVIEW     DROP (HIDDEN_YN);
+ALTER TABLE SUGGESTION DROP (STATUS);

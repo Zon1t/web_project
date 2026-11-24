@@ -2,6 +2,8 @@ package com.sseukbap.member.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -40,6 +42,28 @@ public class Member {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // ===== 2026-11-24 추가 (docs/sql/08_account_admin.sql). 값 변경 메서드는 쓰는 기능에서 추가한다. =====
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "STATUS", nullable = false, length = 10)
+    private MemberStatus status = MemberStatus.ACTIVE;   // 탈퇴하면 WITHDRAWN
+
+    @Column(name = "WITHDRAWN_AT")
+    private LocalDateTime withdrawnAt;                    // 탈퇴 일시
+
+    @Column(name = "EMAIL", length = 100)
+    private String email;                                 // 계정 찾기용 (선택)
+
+    @Column(name = "RESET_TOKEN_HASH", length = 64)
+    private String resetTokenHash;                        // 비밀번호 재설정 토큰의 SHA-256 (원문 저장 금지)
+
+    @Column(name = "RESET_TOKEN_EXPIRES_AT")
+    private LocalDateTime resetTokenExpiresAt;            // 재설정 토큰 만료 일시
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ROLE", nullable = false, length = 10)
+    private MemberRole role = MemberRole.USER;            // 관리자면 ADMIN
+
     private Member(String loginId, String encodedPassword, String nickname) {
         this.loginId = loginId;
         this.password = encodedPassword;
@@ -52,13 +76,13 @@ public class Member {
         return new Member(loginId, encodedPassword, nickname);
     }
 
-    /** 비밀번호 변경 (계정 설정). 반드시 암호화한 값을 넘긴다. */
-    public void changePassword(String encodedPassword) {
-        this.password = encodedPassword;
+    /** 탈퇴한 회원인지 */
+    public boolean isWithdrawn() {
+        return status == MemberStatus.WITHDRAWN;
     }
 
-    /** 닉네임 변경 (계정 설정). 앞뒤 공백 제거·길이·중복 검사는 서비스에서 한다. */
-    public void changeNickname(String nickname) {
-        this.nickname = nickname;
+    /** 관리자인지 */
+    public boolean isAdmin() {
+        return role == MemberRole.ADMIN;
     }
 }

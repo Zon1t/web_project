@@ -129,10 +129,10 @@
   function renderSummary() {
     // [탭, 이름, 건수, 단위, 아이콘, 색 톤]
     const stats = [
-      ['reviews', '남긴 리뷰', summary.reviewCount, '개', 'star', 'blue'],
+      ['reviews', '남긴 리뷰', summary.reviewCount, '개', 'chat', 'blue'],      // 별점 기능이 없어 별 대신 말풍선 (2026-11-24)
       ['parties', '참여한 식사팟', summary.partyCount, '개', 'people', 'orange'],   // 예정 팟도 포함이라 '함께한' 대신 (2026-11-23)
       ['restaurants', '등록한 식당', summary.restaurantCount, '곳', 'pin', 'green'],
-      ['interests', '관심 식당', summary.interestCount, '곳', 'thumbs', 'purple'],
+      ['interests', '관심 식당', summary.interestCount, '곳', 'star', 'purple'],  // 따봉(엄지)과 헷갈리지 않게 별 (2026-11-24)
     ];
     const nickname = String(summary.nickname || '');
     profileEl.innerHTML =

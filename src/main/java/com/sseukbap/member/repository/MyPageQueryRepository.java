@@ -28,7 +28,7 @@ public interface MyPageQueryRepository extends Repository<Member, Long> {
 
     /* ---------- 활동 건수 (summary) ---------- */
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.member.memberId = :memberId")
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.member.memberId = :memberId AND r.hidden = false AND r.restaurant.hidden = false")
     long countReviews(@Param("memberId") Long memberId);
 
     /** 참여한 식사팟 수 (삭제된 팟 제외, 나간 팟은 PARTY_MEMBER 행이 없어서 자동 제외) */
@@ -39,10 +39,10 @@ public interface MyPageQueryRepository extends Repository<Member, Long> {
             """)
     long countParties(@Param("memberId") Long memberId, @Param("deleted") PartyStatus deleted);
 
-    @Query("SELECT COUNT(r) FROM Restaurant r WHERE r.member.memberId = :memberId")
+    @Query("SELECT COUNT(r) FROM Restaurant r WHERE r.member.memberId = :memberId AND r.hidden = false")
     long countRestaurants(@Param("memberId") Long memberId);
 
-    @Query("SELECT COUNT(i) FROM Interest i WHERE i.member.memberId = :memberId")
+    @Query("SELECT COUNT(i) FROM Interest i WHERE i.member.memberId = :memberId AND i.restaurant.hidden = false")
     long countInterests(@Param("memberId") Long memberId);
 
     /* ---------- 탭별 목록 ---------- */
@@ -52,6 +52,8 @@ public interface MyPageQueryRepository extends Repository<Member, Long> {
             SELECT r FROM Review r
               JOIN FETCH r.restaurant
              WHERE r.member.memberId = :memberId
+               AND r.hidden = false
+               AND r.restaurant.hidden = false
              ORDER BY r.createdAt DESC, r.reviewId DESC
             """)
     List<Review> findMyReviews(@Param("memberId") Long memberId);
@@ -74,6 +76,7 @@ public interface MyPageQueryRepository extends Repository<Member, Long> {
     @Query("""
             SELECT r FROM Restaurant r
              WHERE r.member.memberId = :memberId
+               AND r.hidden = false
              ORDER BY r.createdAt DESC, r.restaurantId DESC
             """)
     List<Restaurant> findMyRestaurants(@Param("memberId") Long memberId);
@@ -83,6 +86,7 @@ public interface MyPageQueryRepository extends Repository<Member, Long> {
             SELECT i FROM Interest i
               JOIN FETCH i.restaurant
              WHERE i.member.memberId = :memberId
+               AND i.restaurant.hidden = false
              ORDER BY i.createdAt DESC, i.interestId DESC
             """)
     List<Interest> findMyInterests(@Param("memberId") Long memberId);

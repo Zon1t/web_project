@@ -87,6 +87,16 @@ public class Restaurant {
         return new Restaurant(name, category, mapUrl, address, lat, lng, member);
     }
 
+    /** 관리자 숨김·숨김 해제 (2026-11-24 A3) */
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    /** 관리자 카테고리 변경 (2026-11-24 A3). CAFETERIA 관련 검사는 관리자 Service에서 먼저 한다 */
+    public void changeCategory(RestaurantCategory category) {
+        this.category = category;
+    }
+
     /** 구내식당 여부 (응답의 cafeteria 필드). DB에 별도 컬럼은 없다. */
     public boolean isCafeteria() {
         return category == RestaurantCategory.CAFETERIA;

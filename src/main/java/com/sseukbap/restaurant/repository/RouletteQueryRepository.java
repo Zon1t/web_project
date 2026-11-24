@@ -25,6 +25,7 @@ public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
             SELECT COUNT(*)
               FROM RESTAURANT r
              WHERE r.CATEGORY <> 'CAFETERIA'
+               AND r.HIDDEN_YN = 'N'
                AND ((:category IS NULL AND r.CATEGORY <> 'CAFE') OR r.CATEGORY = :category)
             """, nativeQuery = true)
     long countTargets(@Param("category") String category);
@@ -40,6 +41,7 @@ public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
                            r.NAME          AS "name"
                       FROM RESTAURANT r
                      WHERE r.CATEGORY <> 'CAFETERIA'
+                       AND r.HIDDEN_YN = 'N'
                        AND ((:category IS NULL AND r.CATEGORY <> 'CAFE') OR r.CATEGORY = :category)
                      ORDER BY DBMS_RANDOM.VALUE) x
              WHERE ROWNUM <= :limit
@@ -55,6 +57,7 @@ public interface RouletteQueryRepository extends Repository<Restaurant, Long> {
             SELECT r.*
               FROM RESTAURANT r
              WHERE r.RESTAURANT_ID IN (:ids)
+               AND r.HIDDEN_YN = 'N'
             """, nativeQuery = true)
     List<Restaurant> findSpinnable(@Param("ids") Collection<Long> ids);
 

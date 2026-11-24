@@ -786,7 +786,9 @@ null
 
 > 2026-11-19 변경: `name` 파라미터 추가, 장소는 식당 이름으로 검색(네이버에 URL·장소 ID로 조회하는 공식 API 없음), 중복은 장소 ID로 만든 표준 URL로 판단
 
-**요구사항**: 식당 등록 화면에서 URL과 식당 이름 입력이 끝나면 호출해 입력창 아래에 결과를 표시한다. 형식 → 중복 → 장소 검색 순으로 검사하고, 정상이면 네이버 지역 검색으로 찾은 장소 이름·주소·좌표를 반환한다. 사용자는 표시된 주소를 보고 맞는 식당인지 확인한 뒤 등록한다. 오류 상황도 화면 안내용이므로 200으로 응답하고 reason으로 구분한다.
+> 2026-11-24 변경: 검색 결과를 최대 5개 후보(`candidates`)로 반환하고 사용자가 고른다(`place` 삭제). 후보마다 회사(구내식당 좌표)까지 거리, 네이버 분류, 추천 카테고리, 등록 가능 여부를 준다. 회사에서 반경(기본 4km) 밖이거나 음식점·카페가 아닌 장소는 등록할 수 없다.
+
+**요구사항**: 식당 등록 화면에서 URL과 식당 이름 입력이 끝나면 호출해 입력창 아래에 결과를 표시한다. 형식 → 중복 → 장소 검색 순으로 검사하고, 정상이면 네이버 지역 검색으로 찾은 장소 후보(최대 5개)를 반환한다. 사용자는 후보의 이름·주소·거리를 보고 맞는 식당을 고른 뒤 등록한다. 오류 상황도 화면 안내용이므로 200으로 응답하고 reason으로 구분한다.
 
 **Request — Query**
 
@@ -799,10 +801,19 @@ null
 1. url, name 필수값·길이를 검증한다.
 2. url 형식을 검사한다. naver.me 또는 map.naver.com 링크에서 장소 ID를 찾을 수 없으면 INVALID_FORMAT. (naver.me 단축 링크는 연결된 주소를 따라가 장소 ID를 찾는다)
 3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 DUPLICATE.
-4. 네이버 지역 검색(NAVER API HUB)으로 name을 검색한다. 결과가 없으면 NOT_FOUND.
-5. 정상이면 첫 번째 검색 결과의 장소 정보를 반환한다. (이름의 HTML 태그 제거, 주소는 도로명 주소, 없으면 지번 주소)
+4. 네이버 지역 검색(NAVER API HUB)으로 name을 검색한다(최대 5개). 결과가 없으면 NOT_FOUND.
+5. 후보마다 다음을 계산한다. (이름의 HTML 태그 제거, 주소는 도로명 주소, 없으면 지번 주소)
+   - `distanceKm`: 회사(RESTAURANT의 CAFETERIA 행 좌표)까지 직선거리, 소수 둘째 자리. 회사 좌표가 없으면 null(거리 검사 안 함)
+   - `naverCategory`: 네이버 분류 원문 (예: `음식점>한식`, `카페,디저트>베이커리`)
+   - `suggestedCategory`: 네이버 분류로 추천하는 카테고리 값. 판단할 수 없으면 null
+   - `registrable` / `blockReason`: 아래 중 하나라도 해당하면 false
+     - `NOT_A_RESTAURANT`: 네이버 분류의 첫 단계가 음식점 계열이 아님 (분류가 비어 있으면 통과)
+     - `OUT_OF_RANGE`: 회사에서 `radiusKm`(설정 `restaurant.register-radius-km`, 기본 4) 초과
+6. 등록 가능한 후보가 하나 이상이면 valid = true. 하나도 없으면 valid = false, reason = NO_ELIGIBLE_PLACE (후보 목록은 이유 표시용으로 그대로 준다).
 
-> 네이버에는 URL·장소 ID로 장소를 조회하는 공식 API가 없어 이름으로 검색한다. 검색 결과가 URL의 장소와 다를 수 있으므로 화면에서 주소를 보여 주고 사용자가 확인한다.
+> 네이버에는 URL·장소 ID로 장소를 조회하는 공식 API가 없어 이름으로 검색한다. 검색 결과가 URL의 장소와 다를 수 있으므로 화면에서 후보를 보여 주고 사용자가 고른다.
+>
+> 음식점 계열 분류(첫 단계): 음식점, 한식, 중식, 일식, 양식, 분식, 카페,디저트, 카페, 디저트, 베이커리, 술집, 아시아음식, 패스트푸드, 뷔페, 치킨,닭강정, 피자, 햄버거, 퓨전음식, 패밀리레스토랑, 도시락,컵밥, 샐러드, 브런치, 육류,고기요리, 해물,생선요리, 찌개,전골, 국수 (2026-11-24 실제 호출로 확인한 예: `음식점>한식`, `한식>족발,보쌈`, `중식>마라탕`, `음식점>일식>일본식라면`, `카페,디저트>베이커리` / 제외 예: `교육,학문>대학교`, `생활,편의>편의점`)
 >
 > 지역 검색: `GET https://naverapihub.apigw.ntruss.com/search/v1/local` (헤더 `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY`). 키는 네이버 클라우드 플랫폼 콘솔 > NAVER API HUB에서 발급하고 `application-local.yml`의 `naver.client-id`·`naver.client-secret`에 넣는다. 응답 좌표 mapx(경도)·mapy(위도)는 WGS84 값에 10^7을 곱한 정수 문자열이다.
 
@@ -812,12 +823,31 @@ null
   "valid": true,
   "reason": null,
   "message": null,
-  "place": {
-    "name": "OO국밥 세종대점",
-    "address": "서울 광진구 능동로 ...",
-    "lat": 37.5502,
-    "lng": 127.0731
-  }
+  "radiusKm": 4,
+  "candidates": [
+    {
+      "name": "OO국밥 세종대점",
+      "address": "서울 광진구 능동로 ...",
+      "lat": 37.5502,
+      "lng": 127.0731,
+      "naverCategory": "음식점>한식",
+      "distanceKm": 0.12,
+      "suggestedCategory": "KOREAN",
+      "registrable": true,
+      "blockReason": null
+    },
+    {
+      "name": "OO국밥 강남점",
+      "address": "서울 강남구 ...",
+      "lat": 37.4979,
+      "lng": 127.0276,
+      "naverCategory": "음식점>한식",
+      "distanceKm": 7.03,
+      "suggestedCategory": "KOREAN",
+      "registrable": false,
+      "blockReason": "OUT_OF_RANGE"
+    }
+  ]
 }
 ```
 
@@ -827,15 +857,22 @@ null
   "valid": false,
   "reason": "DUPLICATE",
   "message": "이미 등록된 식당입니다.",
-  "place": null
+  "radiusKm": 4,
+  "candidates": []
 }
 ```
 
-| reason | message |
+| reason | message | candidates |
+| --- | --- | --- |
+| INVALID_FORMAT | 네이버 지도 URL만 입력할 수 있습니다. | 빈 배열 |
+| DUPLICATE | 이미 등록된 식당입니다. | 빈 배열 |
+| NOT_FOUND | 존재하지 않는 주소입니다. | 빈 배열 |
+| NO_ELIGIBLE_PLACE | 등록할 수 있는 장소가 없습니다. | 찾은 후보 (모두 registrable = false) |
+
+| blockReason | 뜻 (화면 문구는 FE에서) |
 | --- | --- |
-| INVALID_FORMAT | 네이버 지도 URL만 입력할 수 있습니다. |
-| DUPLICATE | 이미 등록된 식당입니다. |
-| NOT_FOUND | 존재하지 않는 주소입니다. |
+| NOT_A_RESTAURANT | 음식점·카페가 아닌 장소 |
+| OUT_OF_RANGE | 회사에서 radiusKm 밖 |
 
 **오류**
 
@@ -882,6 +919,7 @@ null
 - lat·lng: 식당 등록 시 네이버 API로 조회해 저장한 좌표. FE는 네이버 지도 API로 핀을 표시
 - cafeteria: category가 CAFETERIA이면 true (DB에 별도 컬럼 없음, ERD 기준)
 - 결과가 없으면 빈 배열
+- (2026-11-24) 화면의 [가까운 순] 정렬·거리 표시는 FE가 lat·lng로 계산한다. 기준은 회사(구내식당 좌표). API 변경 없음
 
 **오류**
 
@@ -894,6 +932,8 @@ null
 ### POST /api/restaurants/register — 식당 등록
 
 > 2026-11-19 변경: `CAFETERIA` 카테고리 등록 불가(구내식당은 초기 데이터로만 제공), 장소는 식당 이름으로 검색, map_url은 장소 ID로 만든 표준 URL로 저장
+>
+> 2026-11-24 변경: 사용자가 고른 후보를 `placeName`·`placeAddress`로 보낸다(첫 결과 자동 선택 폐지). 음식점·카페가 아니거나 회사에서 반경 밖이면 등록 불가
 
 **요구사항**: 네이버 지도 URL, 식당 이름, 카테고리로 식당을 등록한다. 등록 직전에 URL 검증을 서버에서 다시 수행하고, 네이버 지역 검색으로 찾은 주소·위도·경도를 함께 저장한다. 사옥 구내식당(세종대 계절밥상)은 초기 데이터로 미리 등록되어 있고, 사용자는 구내식당 카테고리로 등록할 수 없다.
 
@@ -902,7 +942,9 @@ null
 {
   "mapUrl": "https://naver.me/xxxx",
   "name": "OO국밥 세종대점",
-  "category": "KOREAN"
+  "category": "KOREAN",
+  "placeName": "OO국밥 세종대점",
+  "placeAddress": "서울 광진구 능동로 ..."
 }
 ```
 
@@ -911,14 +953,17 @@ null
 | mapUrl | string | O | naver.me 또는 map.naver.com 링크 |
 | name | string | O | 1~30자, 앞뒤 공백 제거 |
 | category | string | O | 공통 규칙의 식당 카테고리 값 중 `CAFETERIA` 제외 |
+| placeName | string | O | check-map-url에서 고른 후보의 name |
+| placeAddress | string | O | check-map-url에서 고른 후보의 address |
 
 **시스템 처리**
 1. 필수값·길이·카테고리 값을 검증한다. (`CAFETERIA`면 중단)
 2. mapUrl 형식을 검사하고 장소 ID를 찾는다. 찾을 수 없으면 중단한다.
 3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 중단한다.
-4. 네이버 지역 검색으로 name을 검색한다. 결과가 없으면 중단한다.
-5. 첫 번째 검색 결과의 address, lat, lng와 요청값으로 RESTAURANT를 저장한다. (map_url = 표준 URL, member_id = 로그인 회원)
-6. 생성된 restaurantId를 반환한다. FE는 식당 상세로 이동한다.
+4. 네이버 지역 검색으로 name을 다시 검색해(최대 5개) placeName·placeAddress가 같은 후보를 찾는다. 없으면 중단한다. (화면이 보낸 좌표를 믿지 않고 서버가 다시 찾는다)
+5. 그 후보가 음식점 계열이 아니면 중단, 회사에서 반경 밖이면 중단한다. (check-map-url의 blockReason과 같은 규칙)
+6. 후보의 address, lat, lng와 요청값으로 RESTAURANT를 저장한다. (map_url = 표준 URL, member_id = 로그인 회원)
+7. 생성된 restaurantId를 반환한다. FE는 식당 상세로 이동한다.
 
 > ⚠️ 노션 원문 5번에는 `is_cafeteria = N`이 남아 있으나, ERD에서 IS_CAFETERIA 컬럼은 삭제되었다(구내식당은 category = CAFETERIA로 구분). 이 문서는 ERD 기준으로 적었다.
 
@@ -935,7 +980,9 @@ null
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 길이 초과, 없는 카테고리, CAFETERIA 카테고리 |
 | 400 | INVALID_MAP_URL | 네이버 지도 URL만 입력할 수 있습니다. | 형식 오류, 장소 ID를 찾을 수 없음 |
-| 404 | MAP_PLACE_NOT_FOUND | 존재하지 않는 주소입니다. | 지역 검색 결과 없음 |
+| 400 | NOT_A_RESTAURANT | 음식점·카페만 등록할 수 있습니다. | 고른 후보의 네이버 분류가 음식점 계열이 아님 |
+| 400 | RESTAURANT_OUT_OF_RANGE | 회사에서 {radiusKm}km 안의 식당만 등록할 수 있습니다. | 고른 후보가 회사에서 반경 밖 |
+| 404 | MAP_PLACE_NOT_FOUND | 존재하지 않는 주소입니다. | 지역 검색 결과 없음, 고른 후보를 다시 찾지 못함 |
 | 409 | RESTAURANT_ALREADY_EXISTS | 이미 등록된 식당입니다. | 같은 표준 URL(장소 ID) 존재 |
 | 502 | MAP_API_ERROR | 지도 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. | 네이버 API 호출 실패 |
 
@@ -1970,6 +2017,8 @@ API별 오류 표를 모은 것이다. message는 API마다 조금씩 다를 수
 | 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 공통 |
 | 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | 회원가입 |
 | 400 | INVALID_MAP_URL | 네이버 지도 URL만 입력할 수 있습니다. | 식당 등록 |
+| 400 | NOT_A_RESTAURANT | 음식점·카페만 등록할 수 있습니다. | 식당 등록 (2026-11-24) |
+| 400 | RESTAURANT_OUT_OF_RANGE | 회사에서 4km 안의 식당만 등록할 수 있습니다. | 식당 등록 (2026-11-24, 거리는 설정값) |
 | 400 | INVALID_TAG | 선택할 수 없는 태그입니다. | 리뷰 작성 |
 | 400 | INVALID_IMAGE | jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다. | 리뷰 작성 |
 | 400 | INVALID_MEAL_TIME | 선택할 수 없는 식사 시간입니다. | 식사팟 생성, 일정 확정 |

@@ -7,6 +7,7 @@ import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.restaurant.client.NaverLocalSearchClient;
 import com.sseukbap.restaurant.client.NaverPlace;
 import com.sseukbap.restaurant.dto.MapUrlCheckResponse;
+import com.sseukbap.restaurant.dto.PlaceCandidateResponse;
 import com.sseukbap.restaurant.dto.RestaurantRegisterRequest;
 import com.sseukbap.restaurant.entity.Restaurant;
 import com.sseukbap.restaurant.entity.RestaurantCategory;
@@ -19,7 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,7 +31,8 @@ import static org.mockito.BDDMockito.given;
  * 식당 등록·URL 검증 확인.
  *
  * 네이버 검색은 실제로 부르지 않고 가짜(@MockitoBean)로 바꾼다. → 키가 없는 PC에서도 테스트가 통과한다.
- * 더미데이터 식당의 MAP_URL은 https://map.naver.com/p/entry/place/9000000001 ~ 0010 (이미 등록됨)
+ * 중복 확인은 테스트 안에서 먼저 등록한 장소로 한다. (DB에 어떤 더미·시연 데이터가 있든 통과하도록)
+ * 회사 위치 = 초기 데이터 구내식당 좌표 (세종대, 37.5503, 127.0731). 등록 반경 기본 4km
  */
 @SpringBootTest
 @Transactional
@@ -41,9 +43,16 @@ class RestaurantRegisterServiceTest {
     private static final String NEW_URL =
             "https://map.naver.com/p/search/%EB%8C%80%EC%BF%A0%EC%9D%B4/place/123000000999?c=15.00,0,0,0,dh";
     private static final String NEW_STANDARD_URL = "https://map.naver.com/p/entry/place/123000000999";
-    private static final String REGISTERED_URL = "https://map.naver.com/p/entry/place/9000000001";
-    private static final NaverPlace PLACE =
-            new NaverPlace("대쿠이 본점", "대구광역시 남구 중앙대로51길 38-2", 35.8563052, 128.5885117);
+
+    /** 회사 근처 일식집 (약 0.2km) */
+    private static final NaverPlace NEAR =
+            new NaverPlace("대쿠이 세종대점", "서울특별시 광진구 능동로 200", 37.5490, 127.0740, "음식점>일식>일본식라면");
+    /** 같은 이름의 먼 지점 (대구, 약 240km) */
+    private static final NaverPlace FAR =
+            new NaverPlace("대쿠이 본점", "대구광역시 남구 중앙대로51길 38-2", 35.8563052, 128.5885117, "음식점>일식");
+    /** 회사 근처지만 음식점이 아닌 곳 */
+    private static final NaverPlace SHOP =
+            new NaverPlace("대쿠이 편의점", "서울특별시 광진구 능동로 201", 37.5495, 127.0735, "생활,편의>편의점");
 
     @Autowired RestaurantRegisterService registerService;
     @Autowired RestaurantRepository restaurantRepository;
@@ -56,30 +65,62 @@ class RestaurantRegisterServiceTest {
     @BeforeEach
     void setUp() {
         user01 = memberRepository.findByLoginId("user01").map(Member::getMemberId).orElseThrow();
-        given(naverLocalSearchClient.searchFirst(anyString())).willReturn(Optional.of(PLACE));
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of(FAR, NEAR, SHOP));
     }
 
     // ===== URL 검증 =====
 
     @Test
-    void 검증_정상이면_찾은_장소를_준다() {
+    void 검증_후보마다_거리_분류_추천_카테고리와_등록_가능_여부를_준다() {
         MapUrlCheckResponse result = registerService.checkMapUrl(NEW_URL, " 대쿠이 ");
 
         assertThat(result.valid()).isTrue();
         assertThat(result.reason()).isNull();
-        assertThat(result.place().name()).isEqualTo("대쿠이 본점");
-        assertThat(result.place().lat()).isEqualTo(35.8563052);
+        assertThat(result.radiusKm()).isEqualTo(4.0);
+        assertThat(result.candidates()).hasSize(3);
+
+        PlaceCandidateResponse far = result.candidates().get(0);
+        assertThat(far.registrable()).isFalse();
+        assertThat(far.blockReason()).isEqualTo("OUT_OF_RANGE");
+        assertThat(far.distanceKm()).isGreaterThan(200);
+
+        PlaceCandidateResponse near = result.candidates().get(1);
+        assertThat(near.registrable()).isTrue();
+        assertThat(near.blockReason()).isNull();
+        assertThat(near.distanceKm()).isLessThan(1);
+        assertThat(near.naverCategory()).isEqualTo("음식점>일식>일본식라면");
+        assertThat(near.suggestedCategory()).isEqualTo("JAPANESE");
+
+        PlaceCandidateResponse shop = result.candidates().get(2);
+        assertThat(shop.registrable()).isFalse();
+        assertThat(shop.blockReason()).isEqualTo("NOT_A_RESTAURANT");
+        assertThat(shop.suggestedCategory()).isNull();
+    }
+
+    @Test
+    void 검증_등록할_수_있는_후보가_없으면_NO_ELIGIBLE_PLACE와_후보를_준다() {
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of(FAR, SHOP));
+
+        MapUrlCheckResponse result = registerService.checkMapUrl(NEW_URL, "대쿠이");
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.reason()).isEqualTo("NO_ELIGIBLE_PLACE");
+        assertThat(result.message()).isEqualTo("등록할 수 있는 장소가 없습니다.");
+        assertThat(result.candidates()).hasSize(2);   // 이유를 보여 주려고 후보는 그대로 준다
     }
 
     @Test
     void 검증_실패는_reason으로_구분한다() {
         assertReason(registerService.checkMapUrl("https://map.kakao.com/123", "대쿠이"),
                 "INVALID_FORMAT", "네이버 지도 URL만 입력할 수 있습니다.");
-        assertReason(registerService.checkMapUrl(REGISTERED_URL + "?c=15", "아무 이름"),
+
+        // 이 테스트 안에서 등록한 장소 (DB의 더미 데이터에 기대지 않게)
+        registerService.registerRestaurant(request(NEW_URL, "대쿠이", "JAPANESE", NEAR), user01);
+        assertReason(registerService.checkMapUrl(NEW_STANDARD_URL + "?c=15", "아무 이름"),
                 "DUPLICATE", "이미 등록된 식당입니다.");
 
-        given(naverLocalSearchClient.searchFirst(anyString())).willReturn(Optional.empty());
-        assertReason(registerService.checkMapUrl(NEW_URL, "없는가게"),
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of());
+        assertReason(registerService.checkMapUrl("https://map.naver.com/p/entry/place/123000000998", "없는가게"),
                 "NOT_FOUND", "존재하지 않는 주소입니다.");
     }
 
@@ -94,62 +135,84 @@ class RestaurantRegisterServiceTest {
     // ===== 등록 =====
 
     @Test
-    void 등록하면_표준_URL과_찾은_주소_좌표로_저장한다() {
+    void 등록하면_고른_후보의_주소_좌표와_표준_URL로_저장한다() {
         Long restaurantId = registerService
-                .registerRestaurant(new RestaurantRegisterRequest(NEW_URL, "  대쿠이  ", "JAPANESE"), user01)
+                .registerRestaurant(request(NEW_URL, "  대쿠이  ", "JAPANESE", NEAR), user01)
                 .restaurantId();
 
         Restaurant saved = restaurantRepository.findById(restaurantId).orElseThrow();
         assertThat(saved.getName()).isEqualTo("대쿠이");                 // 사용자가 입력한 이름 (공백 제거)
         assertThat(saved.getCategory()).isEqualTo(RestaurantCategory.JAPANESE);
         assertThat(saved.getMapUrl()).isEqualTo(NEW_STANDARD_URL);
-        assertThat(saved.getAddress()).isEqualTo(PLACE.address());
-        assertThat(saved.getLat()).isEqualTo(PLACE.lat());
-        assertThat(saved.getLng()).isEqualTo(PLACE.lng());
+        assertThat(saved.getAddress()).isEqualTo(NEAR.address());       // 첫 결과(FAR)가 아니라 고른 후보
+        assertThat(saved.getLat()).isEqualTo(NEAR.lat());
+        assertThat(saved.getLng()).isEqualTo(NEAR.lng());
         assertThat(saved.getMember().getMemberId()).isEqualTo(user01);
     }
 
     @Test
+    void 등록_반경_밖_후보는_RESTAURANT_OUT_OF_RANGE() {
+        assertError(() -> registerService.registerRestaurant(request(NEW_URL, "대쿠이", "JAPANESE", FAR), user01),
+                ErrorCode.RESTAURANT_OUT_OF_RANGE, "회사에서 4km 안의 식당만 등록할 수 있습니다.");
+    }
+
+    @Test
+    void 등록_음식점이_아닌_후보는_NOT_A_RESTAURANT() {
+        assertError(() -> registerService.registerRestaurant(request(NEW_URL, "대쿠이", "ETC", SHOP), user01),
+                ErrorCode.NOT_A_RESTAURANT, "음식점·카페만 등록할 수 있습니다.");
+    }
+
+    @Test
+    void 등록_고른_후보를_다시_찾지_못하면_MAP_PLACE_NOT_FOUND() {
+        RestaurantRegisterRequest unknown = new RestaurantRegisterRequest(
+                NEW_URL, "대쿠이", "JAPANESE", "대쿠이 없는점", "서울특별시 어딘가 1");
+        assertError(() -> registerService.registerRestaurant(unknown, user01), ErrorCode.MAP_PLACE_NOT_FOUND, null);
+
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of());
+        assertError(() -> registerService.registerRestaurant(request(NEW_URL, "없는가게", "KOREAN", NEAR), user01),
+                ErrorCode.MAP_PLACE_NOT_FOUND, null);
+    }
+
+    @Test
     void 같은_장소는_링크_모양이_달라도_409() {
-        registerService.registerRestaurant(new RestaurantRegisterRequest(NEW_URL, "대쿠이", "JAPANESE"), user01);
+        registerService.registerRestaurant(request(NEW_URL, "대쿠이", "JAPANESE", NEAR), user01);
 
         assertError(() -> registerService.registerRestaurant(
-                        new RestaurantRegisterRequest(NEW_STANDARD_URL + "/home", "대쿠이", "JAPANESE"), user01),
+                        request(NEW_STANDARD_URL + "/home", "대쿠이", "JAPANESE", NEAR), user01),
                 ErrorCode.RESTAURANT_ALREADY_EXISTS, null);
         assertError(() -> registerService.registerRestaurant(
-                        new RestaurantRegisterRequest(REGISTERED_URL, "새 이름", "KOREAN"), user01),
+                        request(NEW_URL, "새 이름", "KOREAN", NEAR), user01),
                 ErrorCode.RESTAURANT_ALREADY_EXISTS, null);
     }
 
     @Test
     void 구내식당_없는_카테고리_이름_길이_오류는_400() {
         assertError(() -> registerService.registerRestaurant(
-                new RestaurantRegisterRequest(NEW_URL, "대쿠이", "CAFETERIA"), user01), ErrorCode.INVALID_REQUEST, null);
+                request(NEW_URL, "대쿠이", "CAFETERIA", NEAR), user01), ErrorCode.INVALID_REQUEST, null);
         assertError(() -> registerService.registerRestaurant(
-                new RestaurantRegisterRequest(NEW_URL, "대쿠이", "PIZZA"), user01), ErrorCode.INVALID_REQUEST, null);
+                request(NEW_URL, "대쿠이", "PIZZA", NEAR), user01), ErrorCode.INVALID_REQUEST, null);
         assertError(() -> registerService.registerRestaurant(
-                new RestaurantRegisterRequest(NEW_URL, "가".repeat(31), "KOREAN"), user01), ErrorCode.INVALID_REQUEST, null);
+                request(NEW_URL, "가".repeat(31), "KOREAN", NEAR), user01), ErrorCode.INVALID_REQUEST, null);
     }
 
     @Test
-    void 등록_URL_형식_오류는_INVALID_MAP_URL_검색_결과_없으면_MAP_PLACE_NOT_FOUND() {
+    void 등록_URL_형식_오류는_INVALID_MAP_URL() {
         assertError(() -> registerService.registerRestaurant(
-                        new RestaurantRegisterRequest("https://map.kakao.com/123", "대쿠이", "KOREAN"), user01),
+                        request("https://map.kakao.com/123", "대쿠이", "KOREAN", NEAR), user01),
                 ErrorCode.INVALID_MAP_URL, null);
-
-        given(naverLocalSearchClient.searchFirst(anyString())).willReturn(Optional.empty());
-        assertError(() -> registerService.registerRestaurant(
-                        new RestaurantRegisterRequest(NEW_URL, "없는가게", "KOREAN"), user01),
-                ErrorCode.MAP_PLACE_NOT_FOUND, null);
     }
 
     // ===== 도우미 =====
+
+    private static RestaurantRegisterRequest request(String url, String name, String category, NaverPlace picked) {
+        return new RestaurantRegisterRequest(url, name, category, picked.name(), picked.address());
+    }
 
     private void assertReason(MapUrlCheckResponse result, String reason, String message) {
         assertThat(result.valid()).isFalse();
         assertThat(result.reason()).isEqualTo(reason);
         assertThat(result.message()).isEqualTo(message);
-        assertThat(result.place()).isNull();
+        assertThat(result.candidates()).isEmpty();
     }
 
     /** message가 null이면 문구는 확인하지 않는다 */

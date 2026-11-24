@@ -48,19 +48,18 @@
         <label class="field__label" for="restaurant-name">식당 이름 <span class="register-form__required" aria-hidden="true">*</span></label>
         <input id="restaurant-name" class="input" type="text" maxlength="30" autocomplete="off" required
                placeholder="예: OO국밥 세종대점" aria-describedby="name-hint">
-        <p id="name-hint" class="field__message">지점이 여러 곳이면 지점명까지 입력해 주세요. 이 이름으로 네이버에서 주소를 찾아요.</p>
+        <p id="name-hint" class="field__message">이 이름으로 네이버에서 장소를 찾아요. 아래 후보 중 맞는 곳을 골라 주세요. 회사에서 4km 안의 음식점·카페만 등록할 수 있어요.</p>
         <div id="similar-names" class="similar-names" aria-live="polite"></div>
       </div>
 
-      <!-- URL + 이름으로 찾은 장소 (확인 결과) -->
+      <!-- URL + 이름으로 찾은 장소 후보 (확인 결과, 2026-11-24: 후보 중 하나를 고른다) -->
       <div id="check-result" class="check-result" aria-live="polite"></div>
 
-      <!-- 3. 카테고리 (구내식당은 등록 불가) -->
+      <!-- 3. 카테고리 (구내식당은 등록 불가). 칩에 마우스를 올리면 음식 예시, 고르면 아래에 예시 -->
       <div class="field">
-        <label class="field__label" for="category">카테고리 <span class="register-form__required" aria-hidden="true">*</span></label>
-        <select id="category" class="select" required>
-          <option value="">선택하세요</option>
-        </select>
+        <span class="field__label" id="category-label">카테고리 <span class="register-form__required" aria-hidden="true">*</span></span>
+        <div id="category" class="category-picker chip-tips" role="radiogroup" aria-labelledby="category-label" aria-describedby="category-hint"></div>
+        <p id="category-hint" class="field__message category-hint">후보를 고르면 네이버 분류로 카테고리를 미리 골라 둬요.</p>
       </div>
 
       <p id="form-message" class="field__message field__message--error" role="alert"></p>

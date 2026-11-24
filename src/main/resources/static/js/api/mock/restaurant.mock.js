@@ -143,20 +143,24 @@
       throw api.mockError(400, 'INVALID_REQUEST', 'URL과 식당 이름을 입력해 주세요.');
     }
     const key = mockPlaceKey(url);
-    if (!key) {
-      return { valid: false, reason: 'INVALID_FORMAT', message: '네이버 지도 URL만 입력할 수 있습니다.', place: null };
-    }
-    if (restaurants.some((r) => mockPlaceKey(r.mapUrl) === key)) {
-      return { valid: false, reason: 'DUPLICATE', message: '이미 등록된 식당입니다.', place: null };
-    }
-    if (name.includes('없는')) {
-      return { valid: false, reason: 'NOT_FOUND', message: '존재하지 않는 주소입니다.', place: null };
-    }
+    const fail = (reason, message) => ({ valid: false, reason, message, radiusKm: 4, candidates: [] });
+    if (!key) return fail('INVALID_FORMAT', '네이버 지도 URL만 입력할 수 있습니다.');
+    if (restaurants.some((r) => mockPlaceKey(r.mapUrl) === key)) return fail('DUPLICATE', '이미 등록된 식당입니다.');
+    if (name.includes('없는')) return fail('NOT_FOUND', '존재하지 않는 주소입니다.');
+    // 2026-11-24: 후보 목록 (가까운 지점 / 먼 지점 / 음식점 아님)
     return {
       valid: true,
       reason: null,
       message: null,
-      place: { name: name + ' 본점', address: '서울 광진구 능동로 ...', lat: 37.5502, lng: 127.0731 },
+      radiusKm: 4,
+      candidates: [
+        { name: name + ' 세종대점', address: '서울 광진구 능동로 ...', lat: 37.5502, lng: 127.0731, naverCategory: '음식점>한식',
+          distanceKm: 0.01, suggestedCategory: 'KOREAN', registrable: true, blockReason: null },
+        { name: name + ' 강남점', address: '서울 강남구 ...', lat: 37.4979, lng: 127.0276, naverCategory: '음식점>한식',
+          distanceKm: 7.03, suggestedCategory: 'KOREAN', registrable: false, blockReason: 'OUT_OF_RANGE' },
+        { name: name + ' 편의점', address: '서울 광진구 ...', lat: 37.5495, lng: 127.0735, naverCategory: '생활,편의>편의점',
+          distanceKm: 0.1, suggestedCategory: null, registrable: false, blockReason: 'NOT_A_RESTAURANT' },
+      ],
     };
   });
 
@@ -164,7 +168,8 @@
   api.mock('POST', '/restaurants/register', ({ body }) => {
     const name = (body.name || '').trim();
     const category = body.category;
-    if (!body.mapUrl || !name || name.length > 30 || !CATEGORIES.includes(category) || category === 'CAFETERIA') {
+    if (!body.mapUrl || !name || name.length > 30 || !CATEGORIES.includes(category) || category === 'CAFETERIA' ||
+        !body.placeName || !body.placeAddress) {
       throw api.mockError(400, 'INVALID_REQUEST', '입력값을 확인해 주세요.');
     }
     const key = mockPlaceKey(body.mapUrl.trim());

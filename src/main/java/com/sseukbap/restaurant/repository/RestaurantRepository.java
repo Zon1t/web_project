@@ -1,6 +1,7 @@
 package com.sseukbap.restaurant.repository;
 
 import com.sseukbap.restaurant.entity.Restaurant;
+import com.sseukbap.restaurant.entity.RestaurantCategory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 식당.
@@ -24,6 +26,9 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     /** 같은 지도 URL(표준 URL)의 식당이 있는지 (식당 등록 중복 확인) */
     boolean existsByMapUrl(String mapUrl);
+
+    /** 카테고리의 첫 식당. 회사 위치(구내식당 좌표)를 찾을 때 쓴다 (식당 등록 반경 검사) */
+    Optional<Restaurant> findFirstByCategoryOrderByRestaurantIdAsc(RestaurantCategory category);
 
     /**
      * 식당 목록 (검색·필터) + 식당별 최근 30일 따봉 수, 리뷰 수.

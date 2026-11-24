@@ -54,6 +54,51 @@
   padding-bottom: var(--space-6);
 }
 
+/* 고른 카테고리의 음식 예시 (2026-11-24) */
+.restaurant-category-hint:empty {
+  display: none;
+}
+
+.restaurant-category-hint {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+/* 결과 수 + 정렬 (2026-11-24) */
+.restaurant-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.restaurant-sort {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.restaurant-sort__btn {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.restaurant-sort__btn[aria-pressed="true"] {
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
 .restaurant-item {
   display: flex;
   justify-content: space-between;

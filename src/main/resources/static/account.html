@@ -18,14 +18,14 @@
   <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
   <header id="app-header" class="app-header"></header>
 
-  <!-- 계정 설정 (C, 2026-11-24): 닉네임 변경 · 비밀번호 변경. 회원 탈퇴는 C2에서 아래에 추가 -->
+  <!-- 계정 설정 (C, 2026-11-24): 닉네임·회사 이메일 변경 · 비밀번호 변경 · 회원 탈퇴 -->
   <main class="container account-page">
     <a class="ui-back" href="/mypage.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>마이페이지</a>
 
     <div class="ui-page-head">
       <div>
         <h1 class="ui-page-head__title">계정 설정</h1>
-        <p class="ui-page-head__desc">닉네임과 비밀번호를 바꿀 수 있어요.</p>
+        <p class="ui-page-head__desc">닉네임·회사 이메일·비밀번호를 바꾸거나 탈퇴할 수 있어요.</p>
       </div>
     </div>
 
@@ -37,6 +37,19 @@
         <div><dt>아이디</dt><dd id="account-login-id">-</dd></div>
         <div><dt>근무지</dt><dd>멀티캠퍼스 세종대</dd></div>
       </dl>
+
+      <form id="email-form" class="account-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="account-email">회사 이메일</label>
+          <div class="account-form__row">
+            <input id="account-email" class="input" type="email" maxlength="100" autocomplete="email"
+                   placeholder="name@samsung.com" aria-describedby="account-email-message account-email-hint">
+            <button id="email-submit" class="btn btn--primary" type="submit">등록</button>
+          </div>
+          <p id="account-email-hint" class="field__message">비밀번호·아이디를 찾을 때 이 이메일로 인증번호를 보내요.</p>
+          <p id="account-email-message" class="field__message" aria-live="polite"></p>
+        </div>
+      </form>
 
       <form id="nickname-form" class="account-form" novalidate>
         <div class="field">
@@ -79,6 +92,26 @@
         </div>
 
         <button id="password-submit" class="btn btn--primary account-form__submit" type="submit">비밀번호 변경</button>
+      </form>
+    </section>
+
+    <!-- ③ 회원 탈퇴 (C2) -->
+    <section class="account-card account-card--danger" aria-labelledby="account-withdraw-title">
+      <h2 id="account-withdraw-title" class="account-card__title">회원 탈퇴</h2>
+      <ul class="account-warn">
+        <li>탈퇴하면 되돌릴 수 없고, 같은 아이디로 다시 가입할 수 없어요.</li>
+        <li>내가 방장인 진행 중 식사팟은 삭제되고, 참여 중인 식사팟에서는 나가요.</li>
+        <li>관심 식당은 지워져요. 남긴 리뷰·대화는 '탈퇴한 회원'으로 남아요.</li>
+      </ul>
+
+      <form id="withdraw-form" class="account-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="account-withdraw-password">비밀번호 확인</label>
+          <input id="account-withdraw-password" class="input" type="password" maxlength="20"
+                 autocomplete="current-password" aria-describedby="account-withdraw-password-message" data-password-field>
+          <p id="account-withdraw-password-message" class="field__message" aria-live="polite"></p>
+        </div>
+        <button id="withdraw-submit" class="btn btn--danger account-form__submit" type="submit">회원 탈퇴</button>
       </form>
     </section>
   </main>

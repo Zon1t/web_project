@@ -15,6 +15,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     /** 로그인에서 사용 */
     Optional<Member> findByLoginId(String loginId);
 
+    /** 이메일 중복 확인 (소문자로 저장하므로 그대로 비교, 2026-11-24) */
+    boolean existsByEmail(String email);
+
+    /** 아이디 찾기: 이메일로 회원 (2026-11-24) */
+    Optional<Member> findByEmail(String email);
+
     /** 아이디 중복 확인 (대소문자 무시, 2026-11-24). User01이 있으면 user01도 가입할 수 없다 */
     boolean existsByLoginIdIgnoreCase(String loginId);
 

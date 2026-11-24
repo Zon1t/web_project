@@ -76,6 +76,38 @@ public class Member {
         return new Member(loginId, encodedPassword, nickname);
     }
 
+    /** 비밀번호 변경 (계정 설정·비밀번호 찾기). 반드시 암호화한 값을 넘긴다. */
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    /** 닉네임 변경 (계정 설정). 앞뒤 공백 제거·길이·중복 검사는 서비스에서 한다. */
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    /** 회사 이메일 등록·변경 (계정 설정·회원가입, 비밀번호·아이디 찾기용). 형식·중복 검사는 서비스에서 한다. null이면 삭제 */
+    public void changeEmail(String email) {
+        this.email = email;
+    }
+
+    /**
+     * 회원 탈퇴 (C2). 행은 지우지 않고 상태만 바꾼다. (리뷰·대화·등록한 식당은 남김)
+     * - 닉네임은 '탈퇴한회원' + 회원번호로 바꿔 원래 닉네임을 다른 사람이 쓸 수 있게 한다. (UK 때문에 번호를 붙임)
+     * - 이메일·재설정 토큰은 지운다. 아이디는 그대로 두어 다시 가입에 쓸 수 없다.
+     */
+    public void withdraw(LocalDateTime now) {
+        this.status = MemberStatus.WITHDRAWN;
+        this.withdrawnAt = now;
+        this.nickname = WITHDRAWN_NICKNAME_PREFIX + memberId;
+        this.email = null;
+        this.resetTokenHash = null;
+        this.resetTokenExpiresAt = null;
+    }
+
+    /** 탈퇴한 회원의 닉네임 앞부분. 이 글자로 시작하는 닉네임은 가입·변경에 쓸 수 없다 */
+    public static final String WITHDRAWN_NICKNAME_PREFIX = "탈퇴한회원";
+
     /** 탈퇴한 회원인지 */
     public boolean isWithdrawn() {
         return status == MemberStatus.WITHDRAWN;

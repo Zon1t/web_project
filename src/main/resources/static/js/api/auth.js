@@ -57,5 +57,10 @@
     confirmPasswordReset(body) {
       return api.post('/auth/password-reset/confirm', body);
     },
+
+    /** 아이디 찾기 — POST /api/auth/find-id → { email }. 등록된 이메일이면 아이디를 메일로 보낸다 (응답은 항상 같음) */
+    findId(email) {
+      return api.post('/auth/find-id', { email });
+    },
   };
 })(window);

@@ -1,5 +1,6 @@
 package com.sseukbap.auth;
 
+import com.sseukbap.auth.dto.FindIdRequest;
 import com.sseukbap.auth.dto.PasswordResetConfirmRequest;
 import com.sseukbap.auth.dto.PasswordResetRequest;
 import com.sseukbap.auth.dto.PasswordResetRequestResponse;
@@ -38,7 +39,6 @@ import static org.mockito.Mockito.verify;
 @Transactional
 class PasswordResetServiceTest {
 
-    private static final String EMAIL = "tester@samsung.com";
     private static final Pattern CODE = Pattern.compile("인증번호는 (\\d{6})");   // 아이디의 숫자와 헷갈리지 않게 문구로 찾는다
 
     @Autowired PasswordResetService passwordResetService;
@@ -48,12 +48,15 @@ class PasswordResetServiceTest {
     @MockitoBean MailSender mailSender;
 
     Member member;
+    String email;   // 이 회원이 등록한 회사 이메일 (2026-11-24: 등록 이메일과 같아야 메일을 보낸다)
 
     @BeforeEach
     void setUp() {
         String suffix = String.valueOf(ThreadLocalRandom.current().nextInt(10_000_000, 99_999_999));
-        member = memberRepository.saveAndFlush(
-                Member.create("tr" + suffix, passwordEncoder.encode("oldpass11"), "가" + suffix));
+        email = "tr" + suffix + "@samsung.com";
+        member = Member.create("tr" + suffix, passwordEncoder.encode("oldpass11"), "가" + suffix);
+        member.changeEmail(email);
+        member = memberRepository.saveAndFlush(member);
     }
 
     @Test
@@ -114,19 +117,45 @@ class PasswordResetServiceTest {
     @Test
     void 없는_아이디도_같은_응답이고_메일은_보내지_않는다() {
         PasswordResetRequestResponse response =
-                passwordResetService.request(new PasswordResetRequest("nobody" + member.getMemberId() + "x", EMAIL));
+                passwordResetService.request(new PasswordResetRequest("nobody" + member.getMemberId() + "x", email));
 
-        assertThat(response.email()).isEqualTo(EMAIL);
+        assertThat(response.email()).isEqualTo(email);
         assertThat(response.expiresInSeconds()).isEqualTo(300);
+        verify(mailSender, never()).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void 등록한_이메일과_다르면_같은_응답이지만_메일은_보내지_않는다() {
+        PasswordResetRequestResponse response = passwordResetService.request(
+                new PasswordResetRequest(member.getLoginId(), "other" + member.getMemberId() + "@samsung.com"));
+
+        assertThat(response.expiresInSeconds()).isEqualTo(300);
+        verify(mailSender, never()).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void 아이디_찾기는_등록한_이메일로_아이디를_보낸다() {
+        passwordResetService.findId(new FindIdRequest(email.toUpperCase()));
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(mailSender).send(eq(email), anyString(), body.capture());
+        assertThat(body.getValue()).contains(member.getLoginId());
+    }
+
+    @Test
+    void 아이디_찾기는_등록되지_않은_이메일이면_메일을_보내지_않는다() {
+        var response = passwordResetService.findId(new FindIdRequest("nobody" + member.getMemberId() + "@samsung.com"));
+
+        assertThat(response.email()).isEqualTo("nobody" + member.getMemberId() + "@samsung.com");
         verify(mailSender, never()).send(anyString(), anyString(), anyString());
     }
 
     /** 인증번호를 요청하고, 가짜 발송기에 넘어간 본문에서 6자리 번호를 꺼낸다 */
     private String requestCode(String loginId) {
-        passwordResetService.request(new PasswordResetRequest(loginId, EMAIL));
+        passwordResetService.request(new PasswordResetRequest(loginId, email.toUpperCase()));   // 대소문자는 무시
 
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
-        verify(mailSender).send(eq(EMAIL), anyString(), body.capture());
+        verify(mailSender).send(eq(email), anyString(), body.capture());
         Matcher matcher = CODE.matcher(body.getValue());
         assertThat(matcher.find()).isTrue();
         return matcher.group(1);

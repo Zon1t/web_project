@@ -53,6 +53,7 @@ public enum ErrorCode {
     // ===== 409 =====
     LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "LOGIN_ID_ALREADY_EXISTS", "이미 사용 중인 아이디입니다."),
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "NICKNAME_ALREADY_EXISTS", "이미 사용 중인 닉네임입니다."),
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 등록된 이메일입니다."),               // 2026-11-24 이메일 등록
     RESTAURANT_ALREADY_EXISTS(HttpStatus.CONFLICT, "RESTAURANT_ALREADY_EXISTS", "이미 등록된 식당입니다."),
     ALREADY_INTERESTED(HttpStatus.CONFLICT, "ALREADY_INTERESTED", "이미 관심 등록한 식당입니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "ALREADY_JOINED", "이미 참여 중인 식사팟입니다."),
@@ -70,6 +71,9 @@ public enum ErrorCode {
     CHAT_READ_ONLY(HttpStatus.CONFLICT, "CHAT_READ_ONLY", "식사가 완료되어 메시지를 보낼 수 없습니다."),
     INVALID_STATUS(HttpStatus.CONFLICT, "INVALID_STATUS", "현재 상태에서는 변경할 수 없습니다."),
     NOT_ENOUGH_CANDIDATES(HttpStatus.CONFLICT, "NOT_ENOUGH_CANDIDATES", "룰렛을 돌릴 식당이 부족합니다."),
+
+    // ===== 429 (2026-11-24 로그인 시도 제한) =====
+    TOO_MANY_LOGIN_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_LOGIN_ATTEMPTS", "로그인을 여러 번 실패했습니다. 5분 뒤에 다시 시도해 주세요."),
 
     // ===== 500, 502 =====
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),

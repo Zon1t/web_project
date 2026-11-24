@@ -2,11 +2,19 @@ package com.sseukbap.member;
 
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
+import com.sseukbap.member.dto.EmailChangeRequest;
 import com.sseukbap.member.dto.NicknameChangeRequest;
 import com.sseukbap.member.dto.PasswordChangeRequest;
+import com.sseukbap.member.dto.WithdrawRequest;
 import com.sseukbap.member.entity.Member;
+import com.sseukbap.member.entity.MemberStatus;
 import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.member.service.AccountService;
+import com.sseukbap.restaurant.entity.Interest;
+import com.sseukbap.restaurant.entity.Restaurant;
+import com.sseukbap.restaurant.entity.RestaurantCategory;
+import com.sseukbap.restaurant.repository.InterestRepository;
+import com.sseukbap.support.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +40,8 @@ class AccountServiceTest {
     @Autowired AccountService accountService;
     @Autowired MemberRepository memberRepository;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired InterestRepository interestRepository;
+    @Autowired TestData data;
 
     Member me;
     Member other;
@@ -102,6 +112,63 @@ class AccountServiceTest {
         var result = accountService.changeNickname(me.getMemberId(), new NicknameChangeRequest(me.getNickname()));
 
         assertThat(result.nickname()).isEqualTo(me.getNickname());
+    }
+
+    // ===== 이메일 (2026-11-24) =====
+
+    @Test
+    void 이메일을_등록하면_소문자로_저장되고_다른_회원이_쓰면_409() {
+        String email = "Acc" + me.getMemberId() + "@Samsung.com";
+        var result = accountService.changeEmail(me.getMemberId(), new EmailChangeRequest(" " + email + " "));
+
+        assertThat(result.email()).isEqualTo(email.toLowerCase());
+        assertError(() -> accountService.changeEmail(other.getMemberId(), new EmailChangeRequest(email)),
+                ErrorCode.EMAIL_ALREADY_EXISTS);
+    }
+
+    @Test
+    void 이메일_형식이_틀리면_INVALID_REQUEST() {
+        for (String email : new String[]{null, "", "abc", "a@b", "a b@c.com"}) {
+            assertError(() -> accountService.changeEmail(me.getMemberId(), new EmailChangeRequest(email)),
+                    ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    // ===== 회원 탈퇴 (C2, 2026-11-24) =====
+
+    @Test
+    void 탈퇴하면_상태_닉네임_이메일이_바뀌고_관심이_지워진다() {
+        accountService.changeEmail(me.getMemberId(), new EmailChangeRequest("bye" + me.getMemberId() + "@samsung.com"));
+        Restaurant restaurant = data.restaurant("탈퇴관심" + TestData.uniqueNumber(), RestaurantCategory.KOREAN);
+        interestRepository.saveAndFlush(Interest.create(restaurant, me));
+        String oldNickname = me.getNickname();
+
+        accountService.withdraw(me.getMemberId(), new WithdrawRequest(PASSWORD));
+
+        Member saved = memberRepository.findById(me.getMemberId()).orElseThrow();
+        assertThat(saved.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
+        assertThat(saved.getWithdrawnAt()).isNotNull();
+        assertThat(saved.getNickname()).isEqualTo("탈퇴한회원" + me.getMemberId());
+        assertThat(saved.getEmail()).isNull();
+        assertThat(interestRepository.existsByRestaurant_RestaurantIdAndMember_MemberId(
+                restaurant.getRestaurantId(), me.getMemberId())).isFalse();
+        // 원래 닉네임은 다른 사람이 쓸 수 있다
+        assertThat(memberRepository.existsByNickname(oldNickname)).isFalse();
+    }
+
+    @Test
+    void 탈퇴_비밀번호가_틀리면_INVALID_PASSWORD이고_아무것도_바뀌지_않는다() {
+        assertError(() -> accountService.withdraw(me.getMemberId(), new WithdrawRequest("wrong1234")),
+                ErrorCode.INVALID_PASSWORD);
+        assertThat(memberRepository.findById(me.getMemberId()).orElseThrow().isWithdrawn()).isFalse();
+    }
+
+    @Test
+    void 탈퇴한_회원은_계정_설정을_쓸_수_없다() {
+        accountService.withdraw(me.getMemberId(), new WithdrawRequest(PASSWORD));
+
+        assertError(() -> accountService.changeNickname(me.getMemberId(), new NicknameChangeRequest("다시닉" + me.getMemberId())),
+                ErrorCode.UNAUTHORIZED);
     }
 
     private static void assertError(org.assertj.core.api.ThrowableAssert.ThrowingCallable call, ErrorCode expected) {

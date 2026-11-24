@@ -7,6 +7,8 @@
  *        성공하면 로그인 화면으로 (완료 안내 + 아이디 채움)
  * - 남은 시간(5분)을 보여 주고, 끝나면 [다시 받기] 안내
  * - 실제 메일은 보내지 않는다. 인증번호는 서버 콘솔에 찍힌다 (LogMailSender)
+ * - 2026-11-24: 가입·계정 설정에서 등록한 회사 이메일과 같아야 메일이 간다 (화면 응답은 항상 같음)
+ * - [아이디 찾기] 탭: 회사 이메일 → 등록된 이메일이면 아이디를 메일로 (POST /api/auth/find-id)
  */
 (function () {
   'use strict';
@@ -16,6 +18,14 @@
   const CODE_PATTERN = /^\d{6}$/;
 
   const desc = document.getElementById('reset-desc');
+  const tabs = Array.from(document.querySelectorAll('.auth-tab'));
+  const findIdForm = document.getElementById('find-id-form');
+  const findIdSubmit = document.getElementById('find-id-submit');
+  const findEmail = field('find-email');
+  const DESC = {
+    password: '아이디와 가입할 때 등록한 회사 이메일을 입력하면 인증번호를 보내 드려요.',
+    id: '등록한 회사 이메일을 입력하면 아이디를 메일로 보내 드려요.',
+  };
   const notice = document.getElementById('reset-notice');
 
   const requestForm = document.getElementById('request-form');
@@ -37,6 +47,47 @@
   let expiresAt = 0;
 
   loginId.input.focus();
+
+  /* ---------- 탭: 비밀번호 찾기 | 아이디 찾기 ---------- */
+
+  tabs.forEach((tab) => tab.addEventListener('click', () => selectTab(tab.dataset.tab)));
+
+  function selectTab(name) {
+    tabs.forEach((tab) => {
+      const on = tab.dataset.tab === name;
+      tab.classList.toggle('is-selected', on);
+      tab.setAttribute('aria-selected', String(on));
+    });
+    hideNotice();
+    stopTimer();
+    findIdForm.hidden = name !== 'id';
+    requestForm.hidden = name !== 'password';
+    confirmForm.hidden = true;
+    desc.textContent = DESC[name];
+    (name === 'id' ? findEmail : loginId).input.focus();
+  }
+
+  findEmail.input.addEventListener('input', () => clearMessage(findEmail));
+
+  findIdForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    hideNotice();
+    const mail = findEmail.input.value.trim();
+    if (!EMAIL_PATTERN.test(mail)) {
+      setMessage(findEmail, mail ? '이메일 형식을 확인해 주세요.' : '이메일을 입력해 주세요.', 'error');
+      findEmail.input.focus();
+      return;
+    }
+    findIdSubmit.disabled = true;
+    try {
+      const result = await authApi.findId(mail);
+      showNotice(result.email + '으로 아이디를 보냈어요. 메일이 오지 않으면 등록한 이메일이 맞는지 확인해 주세요.', 'info');
+    } catch (err) {
+      showNotice(err.message, 'error');
+    } finally {
+      findIdSubmit.disabled = false;
+    }
+  });
 
   /* ---------- 1단계: 인증번호 받기 ---------- */
 
@@ -91,7 +142,7 @@
     requestForm.hidden = true;
     confirmForm.hidden = false;
     desc.textContent = '메일로 받은 인증번호와 새 비밀번호를 입력해 주세요.';
-    showNotice(sentTo.email + '으로 인증번호를 보냈어요. 메일이 오지 않으면 아이디와 이메일을 확인해 주세요.', 'info');
+    showNotice(sentTo.email + '으로 인증번호를 보냈어요. 메일이 오지 않으면 아이디와 등록한 이메일이 맞는지 확인해 주세요.', 'info');
     code.input.value = '';
     clearMessage(code);
     startTimer(seconds);
@@ -108,7 +159,7 @@
     stopTimer();
     confirmForm.hidden = true;
     requestForm.hidden = false;
-    desc.textContent = '아이디와 회사 이메일을 입력하면 인증번호를 보내 드려요.';
+    desc.textContent = DESC.password;
     hideNotice();
     loginId.input.focus();
   });

@@ -33,9 +33,18 @@
         <button class="btn" type="submit">검색</button>
       </form>
 
-      <div id="category-chips" class="restaurant-chips" role="group" aria-label="카테고리"></div>
+      <div id="category-chips" class="restaurant-chips chip-tips" role="group" aria-label="카테고리"></div>
+      <!-- 고른 카테고리의 음식 예시 (터치 화면에서도 보이게, 2026-11-24) -->
+      <p id="category-hint" class="text-muted restaurant-category-hint" aria-live="polite"></p>
 
-      <p id="result-summary" class="text-muted restaurant-summary" aria-live="polite"></p>
+      <!-- 결과 수 + 정렬 (2026-11-24: 가까운 순 / 따봉 순, 기준은 회사) -->
+      <div class="restaurant-summary-row">
+        <p id="result-summary" class="text-muted restaurant-summary" aria-live="polite"></p>
+        <div id="sort-toggle" class="restaurant-sort" role="group" aria-label="정렬">
+          <button type="button" class="restaurant-sort__btn" data-sort="distance" aria-pressed="true">가까운 순</button>
+          <button type="button" class="restaurant-sort__btn" data-sort="thumbs" aria-pressed="false">따봉 순</button>
+        </div>
+      </div>
 
       <!-- 목록 / 로딩 / 빈 상태 / 오류가 이 안에 그려진다 -->
       <div id="restaurant-result"></div>

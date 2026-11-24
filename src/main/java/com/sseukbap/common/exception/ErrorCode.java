@@ -22,6 +22,8 @@ public enum ErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "입력값을 확인해 주세요."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다."),
     INVALID_MAP_URL(HttpStatus.BAD_REQUEST, "INVALID_MAP_URL", "네이버 지도 URL만 입력할 수 있습니다."),
+    NOT_A_RESTAURANT(HttpStatus.BAD_REQUEST, "NOT_A_RESTAURANT", "음식점·카페만 등록할 수 있습니다."),          // 2026-11-24 식당 등록
+    RESTAURANT_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "RESTAURANT_OUT_OF_RANGE", "회사에서 4km 안의 식당만 등록할 수 있습니다."), // 반경은 설정값이라 서비스에서 문구를 다시 만든다
     INVALID_TAG(HttpStatus.BAD_REQUEST, "INVALID_TAG", "선택할 수 없는 태그입니다."),
     INVALID_IMAGE(HttpStatus.BAD_REQUEST, "INVALID_IMAGE", "jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다."),
     INVALID_MEAL_TIME(HttpStatus.BAD_REQUEST, "INVALID_MEAL_TIME", "선택할 수 없는 식사 시간입니다."),

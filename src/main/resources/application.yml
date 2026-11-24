@@ -26,3 +26,6 @@ server:
 upload:
   dir: uploads # 업로드 파일 저장 폴더 (프로젝트 폴더 기준, Git 제외)
 
+restaurant:
+  register-radius-km: 4 # 식당 등록 가능 거리: 회사(구내식당 좌표)에서 반경 km (2026-11-24)
+

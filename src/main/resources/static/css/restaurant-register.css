@@ -174,3 +174,114 @@
 .check-result__hint {
   color: var(--color-text-sub);
 }
+
+/* ---------- 후보 고르기 (2026-11-24) ---------- */
+.check-result--pick {
+  gap: var(--space-2);
+  border-color: var(--color-border-light);
+  background: var(--color-surface);
+}
+
+.check-result--fail .candidate-list {
+  margin: var(--space-1) 0;
+}
+
+.candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.candidate:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.candidate.is-picked {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.candidate:disabled {
+  background: var(--color-surface);
+  cursor: not-allowed;
+}
+
+.candidate__radio {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+}
+
+.candidate.is-picked .candidate__radio {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 3px var(--color-bg);
+  background: var(--color-primary);
+}
+
+.candidate:disabled .candidate__radio {
+  border-style: dashed;
+}
+
+.candidate__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.candidate__name {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.candidate__address {
+  color: var(--color-text-sub);
+}
+
+.candidate__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.candidate__block {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.candidate:disabled .candidate__name,
+.candidate:disabled .candidate__address {
+  color: var(--color-text-muted);
+}
+
+/* ---------- 카테고리 칩 + 음식 예시 (2026-11-24) ---------- */
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.category-hint {
+  min-height: 1.5em;
+}

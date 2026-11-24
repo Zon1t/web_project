@@ -26,6 +26,26 @@
       return String(value).replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
     },
 
+    /**
+     * 두 좌표 사이 직선거리(km). 서버 GeoDistance.java와 같은 공식 (2026-11-24)
+     * 좌표가 하나라도 없으면 null
+     */
+    distanceKm(lat1, lng1, lat2, lng2) {
+      if ([lat1, lng1, lat2, lng2].some((v) => typeof v !== 'number')) return null;
+      const rad = (deg) => (deg * Math.PI) / 180;
+      const dLat = rad(lat2 - lat1);
+      const dLng = rad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    },
+
+    /** 거리 표시: 1km 미만은 10m 단위 'm', 이상은 소수 첫째 자리 'km'. null이면 '' */
+    formatDistance(km) {
+      if (km === null || km === undefined) return '';
+      if (km < 1) return Math.max(10, Math.round((km * 1000) / 10) * 10) + 'm';
+      return (Math.round(km * 10) / 10).toFixed(1) + 'km';
+    },
+
     /** 따봉 아이콘 (이모지 대신 SVG) */
     thumbsUpIcon(size) {
       const px = size || 16;

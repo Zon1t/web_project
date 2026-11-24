@@ -19,7 +19,7 @@ import java.util.Optional;
 /**
  * 네이버 지역 검색 (NAVER API HUB) 호출.
  *
- * - GET https://naverapihub.apigw.ntruss.com/search/v1/local?query=검색어&display=1
+ * - GET https://naverapihub.apigw.ntruss.com/search/v1/local?query=검색어&display=5 (네이버 최대 5개)
  * - 키: application-local.yml의 naver.client-id / naver.client-secret (Git에 올리지 않는다)
  * - 응답 좌표 mapx(경도)·mapy(위도)는 WGS84 값 × 10^7 정수 문자열 → 소수로 바꾼다.
  * - 호출 실패(키 없음, 시간 초과, 오류 응답)는 502 MAP_API_ERROR
@@ -31,6 +31,7 @@ public class NaverLocalSearchClient {
     private static final String SEARCH_URL = "https://naverapihub.apigw.ntruss.com/search/v1/local";
     private static final int TIMEOUT_MILLIS = 3000;
     private static final int COORDINATE_SCALE = 7; // 10^7
+    private static final int MAX_DISPLAY = 5;      // 지역 검색 API가 한 번에 주는 최대 개수
 
     private final RestClient restClient;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -51,8 +52,8 @@ public class NaverLocalSearchClient {
         this.clientSecret = clientSecret;
     }
 
-    /** 검색어로 찾은 첫 번째 장소. 결과가 없으면 빈 값 */
-    public Optional<NaverPlace> searchFirst(String query) {
+    /** 검색어로 찾은 장소 (네이버 순서 그대로, 최대 5개). 결과가 없으면 빈 목록 */
+    public List<NaverPlace> search(String query) {
         if (clientId.isBlank() || clientSecret.isBlank()) {
             log.warn("네이버 검색 키가 없습니다. application-local.yml의 naver.client-id / client-secret을 확인하세요.");
             throw new BusinessException(ErrorCode.MAP_API_ERROR);
@@ -65,7 +66,7 @@ public class NaverLocalSearchClient {
             String body = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .queryParam("query", query)   // UTF-8로 인코딩된다
-                            .queryParam("display", 1)
+                            .queryParam("display", MAX_DISPLAY)
                             .build())
                     .header("X-NCP-APIGW-API-KEY-ID", clientId)
                     .header("X-NCP-APIGW-API-KEY", clientSecret)
@@ -78,12 +79,12 @@ public class NaverLocalSearchClient {
         }
 
         if (response == null || response.items() == null) {
-            return Optional.empty();
+            return List.of();
         }
         return response.items().stream()
                 .map(NaverLocalSearchClient::toPlace)
                 .flatMap(Optional::stream)
-                .findFirst();
+                .toList();
     }
 
     /** 검색 결과 1건 → NaverPlace. 좌표가 잘못됐으면 빈 값 (테스트를 위해 package-private) */
@@ -92,7 +93,8 @@ public class NaverLocalSearchClient {
             String address = isBlank(item.roadAddress()) ? item.address() : item.roadAddress();
             double lng = new BigDecimal(item.mapx().trim()).movePointLeft(COORDINATE_SCALE).doubleValue();
             double lat = new BigDecimal(item.mapy().trim()).movePointLeft(COORDINATE_SCALE).doubleValue();
-            return Optional.of(new NaverPlace(stripTags(item.title()), address, lat, lng));
+            String category = (item.category() == null) ? "" : item.category().trim();
+            return Optional.of(new NaverPlace(stripTags(item.title()), address, lat, lng, category));
         } catch (NumberFormatException | NullPointerException e) {
             return Optional.empty();
         }
@@ -123,6 +125,6 @@ public class NaverLocalSearchClient {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record LocalSearchItem(String title, String address, String roadAddress, String mapx, String mapy) {
+    record LocalSearchItem(String title, String category, String address, String roadAddress, String mapx, String mapy) {
     }
 }

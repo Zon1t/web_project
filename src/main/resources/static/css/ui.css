@@ -87,6 +87,48 @@ body > main {
   transform: scale(0.95);
 }
 
+/* 카테고리 칩 음식 예시 툴팁 (2026-11-24): <button class="chip" data-examples="한식: 국밥·찌개…">
+   마우스를 올리거나 키보드로 옮기면 보인다. 칩 묶음(부모)에 .chip-tips를 붙이면 그 묶음 바로 아래 왼쪽에 뜬다.
+   (칩마다 띄우면 오른쪽 끝 칩의 툴팁이 목록 패널 밖으로 나가 가로 스크롤이 생겨서 묶음 기준으로 띄운다)
+   터치 화면은 화면마다 아래 한 줄 안내로 보여 준다 */
+.chip-tips {
+  position: relative;
+}
+
+.chip[data-examples]:not([data-examples=""])::after {
+  content: attr(data-examples);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 25;
+  display: none;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: var(--color-on-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: normal;
+  pointer-events: none;
+  animation: ui-tip-in 0.15s ease-out;
+}
+
+@media (hover: hover) {
+  .chip[data-examples]:hover::after {
+    display: block;
+  }
+}
+
+.chip[data-examples]:focus-visible::after {
+  display: block;
+}
+
+@keyframes ui-tip-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
 a,
 .app-header__link {
   transition: color 0.15s;

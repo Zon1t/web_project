@@ -7,23 +7,37 @@
  *   3. 로딩 / 결과 없음 / 오류 화면을 보여 준다.
  *
  *   4. 같은 목록으로 오른쪽 지도 핀을 그리고, 목록 항목에 마우스를 올리면 핀을 강조한다. (restaurant-map.js)
+ *   5. (2026-11-24) 정렬: [가까운 순](기본) / [따봉 순]. 가까운 순은 회사(구내식당 좌표)에서의 거리를 화면에서 계산한다.
+ *      서버는 따봉 순으로 주므로 따봉 순은 받은 순서 그대로. 고른 정렬은 브라우저에 기억한다.
+ *      식당마다 회사까지 거리를 보여 준다. 좌표가 없는 식당은 맨 아래.
+ *   6. (2026-11-24) 카테고리 칩에 마우스를 올리면 음식 예시 툴팁, 고른 카테고리의 예시는 칩 아래 한 줄로.
  */
 (function () {
   'use strict';
 
   const CATEGORY_LABELS = restaurantApi.CATEGORY_LABELS;
+  const CATEGORY_EXAMPLES = restaurantApi.CATEGORY_EXAMPLES;
   const KEYWORD_MAX = 30;
+  const SORT_KEY = 'sseukbap.restaurantList.sort';
 
   const els = {
     form: document.getElementById('search-form'),
     keyword: document.getElementById('search-keyword'),
     chips: document.getElementById('category-chips'),
+    categoryHint: document.getElementById('category-hint'),
     summary: document.getElementById('result-summary'),
+    sortToggle: document.getElementById('sort-toggle'),
     result: document.getElementById('restaurant-result'),
   };
 
   // 현재 조회 조건
   const condition = { keyword: '', category: '' };
+
+  // 정렬 ('distance' | 'thumbs')와 마지막으로 받은 목록 (정렬만 바꿀 때 다시 불러오지 않는다)
+  let sort = readSort();
+  let lastList = null;
+  // 회사 위치: 목록에 구내식당이 있으면 그 좌표로 바꾼다 (카테고리로 거르면 구내식당이 빠지므로 기억해 둔다)
+  let office = restaurantApi.OFFICE_LOCATION;
 
   // 빠르게 칩을 여러 번 누르면 응답 순서가 뒤바뀔 수 있다. 마지막 요청의 응답만 화면에 그린다.
   let requestSeq = 0;
@@ -36,6 +50,7 @@
 
   readConditionFromUrl();
   renderChips();
+  renderSortToggle();
   bindEvents();
   restaurantMap.init(document.getElementById('restaurant-map')); // 지도는 목록과 따로 불러온다
   restaurantMap.onHover(highlightFromMap);                       // 지도 핀에 마우스 → 목록 항목 강조
@@ -149,6 +164,16 @@
       loadList();
     });
 
+    // 정렬: 다시 불러오지 않고 받은 목록을 다시 그린다
+    els.sortToggle.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-sort]');
+      if (!button || button.dataset.sort === sort) return;
+      sort = button.dataset.sort;
+      saveSort(sort);
+      renderSortToggle();
+      if (lastList) renderList(lastList);
+    });
+
     // 오류 화면의 [다시 시도] / 목록 항목 → 식당 상세 카드 (Ctrl·Shift 클릭은 새 탭 등 기본 동작)
     els.result.addEventListener('click', (event) => {
       if (event.target.closest('[data-action="retry"]')) loadList();
@@ -217,18 +242,67 @@
     els.chips.innerHTML = items
       .map(([value, label]) => {
         const selected = value === condition.category;
+        const examples = CATEGORY_EXAMPLES[value] || '';
         return (
           '<button type="button" class="chip' + (selected ? ' is-selected' : '') + '"' +
-          ' data-category="' + value + '" aria-pressed="' + selected + '">' +
+          ' data-category="' + value + '" aria-pressed="' + selected + '"' +
+          (examples ? ' data-examples="' + utils.escapeHtml(label + ': ' + examples) + '"' : '') + '>' +
           label +
           '</button>'
         );
       })
       .join('');
+    const hint = condition.category ? CATEGORY_EXAMPLES[condition.category] : '';
+    els.categoryHint.textContent = hint ? CATEGORY_LABELS[condition.category] + ': ' + hint : '';
   }
 
-  function renderList(list) {
-    els.summary.textContent = '총 ' + list.length + '곳 · 따봉순';
+  function renderSortToggle() {
+    els.sortToggle.querySelectorAll('[data-sort]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.sort === sort));
+    });
+  }
+
+  function readSort() {
+    try {
+      return localStorage.getItem(SORT_KEY) === 'thumbs' ? 'thumbs' : 'distance';
+    } catch (e) {
+      return 'distance';
+    }
+  }
+
+  function saveSort(value) {
+    try {
+      localStorage.setItem(SORT_KEY, value);
+    } catch (e) {
+      // 저장소를 못 쓰는 브라우저면 기억만 안 한다
+    }
+  }
+
+  // 식당마다 회사까지 거리(km)를 붙인다. 좌표가 없으면 null
+  function withDistance(list) {
+    const cafeteria = list.find((r) => r.cafeteria && typeof r.lat === 'number' && typeof r.lng === 'number');
+    if (cafeteria) office = { lat: cafeteria.lat, lng: cafeteria.lng };
+    return list.map((r, index) => ({
+      ...r,
+      order: index, // 서버 순서 (따봉 순)
+      distanceKm: utils.distanceKm(office.lat, office.lng, r.lat, r.lng),
+    }));
+  }
+
+  function sortList(list) {
+    if (sort !== 'distance') return list;
+    return list.slice().sort((a, b) => {
+      if (a.distanceKm === null && b.distanceKm === null) return a.order - b.order;
+      if (a.distanceKm === null) return 1;   // 좌표 없는 식당은 맨 아래
+      if (b.distanceKm === null) return -1;
+      return a.distanceKm - b.distanceKm || a.order - b.order;
+    });
+  }
+
+  function renderList(rawList) {
+    lastList = rawList;
+    const list = sortList(withDistance(rawList));
+    els.summary.textContent = '총 ' + list.length + '곳 · ' + (sort === 'distance' ? '회사에서 가까운 순' : '최근 30일 따봉 순');
     restaurantMap.highlight(null);
     restaurantMap.setRestaurants(list); // 지도 핀도 같은 목록으로
 
@@ -249,7 +323,8 @@
   function renderItem(r) {
     const esc = utils.escapeHtml;
     const categoryText = CATEGORY_LABELS[r.category] || r.category;
-    const meta = r.cafeteria ? categoryText + ' · 기본 등록' : categoryText;
+    const distanceText = r.cafeteria ? '회사 안' : (r.distanceKm === null ? '거리 정보 없음' : utils.formatDistance(r.distanceKm));
+    const meta = (r.cafeteria ? categoryText + ' · 기본 등록' : categoryText) + ' · ' + distanceText;
 
     return (
       '<li>' +

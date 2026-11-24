@@ -1,9 +1,9 @@
 package com.sseukbap.auth;
 
-import com.sseukbap.auth.dto.FindIdRequest;
 import com.sseukbap.auth.dto.PasswordResetConfirmRequest;
 import com.sseukbap.auth.dto.PasswordResetRequest;
 import com.sseukbap.auth.dto.PasswordResetRequestResponse;
+import com.sseukbap.auth.dto.PasswordResetVerifyRequest;
 import com.sseukbap.auth.mail.MailSender;
 import com.sseukbap.auth.service.PasswordResetService;
 import com.sseukbap.common.exception.BusinessException;
@@ -134,20 +134,33 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    void 아이디_찾기는_등록한_이메일로_아이디를_보낸다() {
-        passwordResetService.findId(new FindIdRequest(email.toUpperCase()));
+    void 인증번호_확인은_번호를_지우지_않아서_이어서_비밀번호를_바꿀_수_있다() {
+        String code = requestCode(member.getLoginId());
 
-        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
-        verify(mailSender).send(eq(email), anyString(), body.capture());
-        assertThat(body.getValue()).contains(member.getLoginId());
+        passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), code));
+        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22"));
+
+        Member saved = memberRepository.findById(member.getMemberId()).orElseThrow();
+        assertThat(passwordEncoder.matches("newpass22", saved.getPassword())).isTrue();
     }
 
     @Test
-    void 아이디_찾기는_등록되지_않은_이메일이면_메일을_보내지_않는다() {
-        var response = passwordResetService.findId(new FindIdRequest("nobody" + member.getMemberId() + "@samsung.com"));
+    void 인증번호_확인에서_틀리면_INVALID_RESET_CODE() {
+        String code = requestCode(member.getLoginId());
+        String wrong = code.equals("000000") ? "111111" : "000000";
 
-        assertThat(response.email()).isEqualTo("nobody" + member.getMemberId() + "@samsung.com");
-        verify(mailSender, never()).send(anyString(), anyString(), anyString());
+        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), wrong)));
+    }
+
+    @Test
+    void 인증번호_확인에서_다섯_번_틀리면_번호가_사라진다() {
+        String code = requestCode(member.getLoginId());
+        String wrong = code.equals("000000") ? "111111" : "000000";
+
+        for (int i = 0; i < 5; i++) {
+            assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), wrong)));
+        }
+        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), code)));
     }
 
     /** 인증번호를 요청하고, 가짜 발송기에 넘어간 본문에서 6자리 번호를 꺼낸다 */

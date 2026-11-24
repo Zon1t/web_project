@@ -7,7 +7,7 @@
  * - 비밀번호 변경 (PATCH /api/users/me/password)
  *   · 화면에서 먼저 규칙 검사(password-field.js의 ruleError), 최종 판단은 서버
  *   · 바꾼 뒤에도 로그인은 그대로 유지된다
- * - 회사 이메일 등록·변경 (PATCH /api/users/me/email) — 비밀번호·아이디 찾기에 쓴다 (2026-11-24)
+ * - 회사 이메일 등록·변경 (PATCH /api/users/me/email) — 비밀번호 찾기에 쓴다 (2026-11-24)
  * - 회원 탈퇴 (POST /api/users/me/withdraw, C2 2026-11-24)
  *   · 비밀번호 확인 + '되돌릴 수 없어요' 확인 창 → 성공하면 세션이 끊기고 랜딩 화면으로
  */

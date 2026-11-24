@@ -1,10 +1,9 @@
 package com.sseukbap.auth.service;
 
-import com.sseukbap.auth.dto.FindIdRequest;
-import com.sseukbap.auth.dto.FindIdResponse;
 import com.sseukbap.auth.dto.PasswordResetConfirmRequest;
 import com.sseukbap.auth.dto.PasswordResetRequest;
 import com.sseukbap.auth.dto.PasswordResetRequestResponse;
+import com.sseukbap.auth.dto.PasswordResetVerifyRequest;
 import com.sseukbap.auth.mail.MailSender;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
@@ -31,9 +30,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * - 아이디가 있는지 드러내지 않도록 요청 응답은 회원이 있든 없든 같다.
  * - 2026-11-24 (EMAIL 컬럼 추가 후): 입력한 이메일이 그 회원이 등록한 이메일과 같을 때만 보낸다.
  *   이메일을 등록하지 않은 회원·탈퇴한 회원에게는 보내지 않는다. (응답은 같음)
- * - 아이디 찾기도 여기서: 등록된 이메일이면 아이디를 메일로 보낸다.
- * - 같은 번호로 5번 틀리면 그 번호는 지운다. (다시 받아야 함)
- * - 번호는 한 번 쓰면 지운다.
+ * - 화면은 [인증번호 확인](verify)으로 번호만 먼저 확인하고, 마지막 변경(confirm) 때 같은 번호를 한 번 더 보낸다.
+ * - 아이디 찾기는 없앴다. (2026-11-24)
+ * - 같은 번호로 5번 틀리면 그 번호는 지운다. (verify·confirm 합쳐서, 다시 받아야 함)
+ * - 번호는 비밀번호를 바꾸면 지운다. (verify는 지우지 않음)
  */
 @Service
 @RequiredArgsConstructor
@@ -78,6 +78,14 @@ public class PasswordResetService {
     }
 
     /**
+     * 인증번호만 확인 (화면의 [인증번호 확인]). 맞아도 번호는 지우지 않는다 → 마지막 변경(confirm)에서 쓴다.
+     * 틀리면 INVALID_RESET_CODE, 틀린 횟수는 confirm과 함께 센다.
+     */
+    public void verify(PasswordResetVerifyRequest request) {
+        checkCode(AuthService.normalizeLoginId(request.loginId()), request.code());
+    }
+
+    /**
      * 인증번호 확인 + 새 비밀번호로 변경.
      * 비밀번호 규칙·확인값을 먼저 보고(번호 시도 횟수를 쓰지 않음), 그다음 인증번호를 확인한다.
      */
@@ -91,18 +99,8 @@ public class PasswordResetService {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        // 2. 인증번호 (없음·만료·불일치는 모두 같은 오류)
-        IssuedCode issued = codes.get(loginId);
-        if (issued == null || issued.isExpired()) {
-            codes.remove(loginId);
-            throw new BusinessException(ErrorCode.INVALID_RESET_CODE);
-        }
-        if (!issued.matches(request.code())) {
-            if (issued.failAndCount() >= MAX_ATTEMPTS) {
-                codes.remove(loginId, issued);
-            }
-            throw new BusinessException(ErrorCode.INVALID_RESET_CODE);
-        }
+        // 2. 인증번호
+        IssuedCode issued = checkCode(loginId, request.code());
         codes.remove(loginId, issued);   // 한 번만 쓸 수 있다
 
         // 3. 비밀번호 변경
@@ -111,22 +109,20 @@ public class PasswordResetService {
         member.changePassword(passwordEncoder.encode(request.newPassword()));
     }
 
-    /**
-     * 아이디 찾기: 등록된 이메일이면 그 이메일로 아이디를 보낸다. (탈퇴한 회원 제외)
-     * 등록되지 않은 이메일이어도 응답은 같다. (이메일 등록 여부를 숨김)
-     */
-    public FindIdResponse findId(FindIdRequest request) {
-        String email = EmailPolicy.normalizeAndValidate(request.email());
-
-        memberRepository.findByEmail(email)
-                .filter(member -> !member.isWithdrawn())
-                .ifPresent(member -> mailSender.send(
-                        email,
-                        "[슥밥] 아이디 찾기 안내",
-                        "이 이메일로 가입한 슥밥 아이디는 " + member.getLoginId() + " 입니다.\n"
-                                + "요청한 적이 없다면 이 메일은 무시해 주세요."));
-
-        return new FindIdResponse(email);
+    /** 발급한 번호와 맞는지 본다. 없음·만료·불일치는 모두 같은 오류, 5번 틀리면 번호를 지운다 */
+    private IssuedCode checkCode(String loginId, String code) {
+        IssuedCode issued = codes.get(loginId);
+        if (issued == null || issued.isExpired()) {
+            codes.remove(loginId);
+            throw new BusinessException(ErrorCode.INVALID_RESET_CODE);
+        }
+        if (!issued.matches(code)) {
+            if (issued.failAndCount() >= MAX_ATTEMPTS) {
+                codes.remove(loginId, issued);
+            }
+            throw new BusinessException(ErrorCode.INVALID_RESET_CODE);
+        }
+        return issued;
     }
 
     private String newCode() {

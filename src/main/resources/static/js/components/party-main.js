@@ -30,8 +30,13 @@
   const STATUS_LABELS = partyApi.STATUS_LABELS;
   const MEAL_TYPE_LABELS = partyApi.MEAL_TYPE_LABELS;
 
-  /** [다음에]를 누른 날짜를 기억하는 브라우저 저장소 키 (값: 'YYYY-MM-DD') */
-  const THUMBS_SNOOZE_KEY = 'sseukbap.thumbsBanner.snoozedDate';
+  /**
+   * [다음에]를 누른 날짜를 기억하는 브라우저 저장소 키 (값: 'YYYY-MM-DD')
+   * 회원별로 따로 기억한다: 'sseukbap.thumbsBanner.snoozedDate.{memberId}' (2026-11-24, A4)
+   * 헤더 종(app-header.js, B)도 같은 키를 읽어야 한다.
+   */
+  const THUMBS_SNOOZE_KEY_PREFIX = 'sseukbap.thumbsBanner.snoozedDate';
+  let snoozeKey = null;   // 로그인 회원을 알기 전에는 null (읽기·저장 안 함)
   const TODAY_PARTY_LIMIT = 4;
 
   /* ===================== 따봉 배너 ===================== */
@@ -41,6 +46,7 @@
    * [따봉] → 등록 후 다음 대상이 있으면 이어서 보여 준다. [다음에] → 오늘 하루 숨김.
    */
   async function renderThumbsBanner(container) {
+    snoozeKey = await loadSnoozeKey();
     if (isSnoozedToday()) {
       hide(container);
       return;
@@ -126,17 +132,29 @@
       '</section>';
   }
 
-  function isSnoozedToday() {
+  /** 로그인 회원 번호를 붙인 키. 회원 정보를 못 가져오면 null */
+  async function loadSnoozeKey() {
     try {
-      return global.localStorage.getItem(THUMBS_SNOOZE_KEY) === todayString();
+      const me = await global.authApi.me();
+      return THUMBS_SNOOZE_KEY_PREFIX + '.' + me.memberId;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function isSnoozedToday() {
+    if (!snoozeKey) return false;
+    try {
+      return global.localStorage.getItem(snoozeKey) === todayString();
     } catch (e) {
       return false; // 저장소를 못 쓰는 브라우저면 그냥 보여 준다
     }
   }
 
   function snoozeToday() {
+    if (!snoozeKey) return;   // 회원을 모르면 이번 화면에서만 숨긴다
     try {
-      global.localStorage.setItem(THUMBS_SNOOZE_KEY, todayString());
+      global.localStorage.setItem(snoozeKey, todayString());
     } catch (e) {
       // 저장 못 해도 이번 화면에서는 숨긴다
     }

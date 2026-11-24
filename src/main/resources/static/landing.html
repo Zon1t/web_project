@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>슥밥 | 우리 회사 사람들만의 밥 지도</title>
+  <meta name="description" content="회사 근처 맛집을 동료와 함께 기록하고, 같은 메뉴가 당기는 동료와 식사팟을 꾸리는 사내 서비스">
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/map-kit.css">
+  <link rel="stylesheet" href="/css/landing.css">
+</head>
+<!--
+  landing.html — 서비스 소개 랜딩 (B, 2026-11-24)
+  로그인 없이 열리는 화면이라 API를 부르지 않는다. (client.js·app-header.js를 쓰지 않음)
+  모든 버튼은 /login.html (계정이 없으면 /signup.html). 움직임은 js/pages/landing.js
+-->
+<body class="lp">
+  <!-- ① 상단 바: 로고 + 로그인 (app-header.js 대신 이 화면 전용) -->
+  <header class="app-header lp-header" id="lp-header">
+    <div class="app-header__inner">
+      <a class="app-header__logo brand-logo" id="lp-logo" href="/landing.html" aria-label="슥밥 소개">
+        <span class="brand-logo__text">슥<span class="brand-logo__accent">밥</span></span>
+      </a>
+      <a class="btn lp-header__login" href="/login.html">로그인</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ② 첫 화면 -->
+    <section class="lp-hero" id="lp-hero">
+      <div class="lp-wrap lp-hero__grid">
+        <div>
+          <p class="lp-hero__eyebrow">사원 전용 점심·저녁 메이트</p>
+          <h1 class="lp-hero__title" aria-label="오늘 점심, 슥 정하고 같이 먹자">
+            <span class="lp-hero__line" aria-hidden="true">오늘 점심,</span>
+            <span class="lp-hero__line" aria-hidden="true"><span class="lp-sseuk" id="lp-sseuk"><span class="lp-sseuk__letters">슥<span class="lp-sseuk__ghost lp-sseuk__ghost--2">슥</span><span class="lp-sseuk__ghost lp-sseuk__ghost--1">슥</span><span class="lp-sseuk__fill">슥</span></span></span><svg class="lp-swoosh" viewBox="0 0 140 56" aria-hidden="true" focusable="false"><path class="lp-swoosh__main" pathLength="1" d="M4 36 C 34 18, 78 14, 134 26"/><path class="lp-swoosh__sub" pathLength="1" d="M14 48 C 46 34, 84 32, 122 38"/></svg> 정하고</span>
+            <span class="lp-hero__line" aria-hidden="true">같이 먹자</span>
+          </h1>
+          <p class="lp-hero__desc">우리 회사 근처 맛집을 함께 기록하고,<br>같은 메뉴가 당기는 동료와 식사팟을 꾸려요.</p>
+          <div class="lp-hero__cta">
+            <a class="btn btn--primary lp-btn-lg" href="/login.html">로그인하고 시작하기
+              <svg class="lp-btn-arrow" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a class="btn btn--text lp-btn-lg" href="#lp-party">식사팟이 뭐예요?
+              <svg class="lp-btn-arrow lp-btn-arrow--down" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v11M5 11l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </div>
+        </div>
+
+        <!-- 오른쪽 그림 (장식): 작은 지도 + 식사팟 카드 -->
+        <div class="lp-hero__visual" id="lp-hero-visual" aria-hidden="true">
+          <div class="lp-layer lp-hero-map" data-depth="10">
+            <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" focusable="false">
+              <rect width="400" height="300" style="fill:var(--color-surface)"/>
+              <rect x="24" y="22" width="110" height="70" rx="14" style="fill:var(--color-success-soft)"/>
+              <path d="M0 120 H400 M0 220 H400 M150 0 V300 M300 0 V300" stroke-width="12" fill="none" style="stroke:var(--color-border-light)"/>
+              <path d="M0 270 C120 250 220 290 400 240" stroke-width="6" fill="none" style="stroke:var(--color-border-light)"/>
+              <rect x="196" y="140" width="64" height="58" rx="8" style="fill:var(--color-bg);stroke:var(--color-border)"/>
+              <text x="228" y="174" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--color-text)">우리 회사</text>
+            </svg>
+            <span class="lp-pin" style="left:24%;top:36%" data-lp-pin="KOREAN"></span>
+            <span class="lp-pin" style="left:84%;top:30%" data-lp-pin="JAPANESE"></span>
+            <span class="lp-pin" style="left:60%;top:84%" data-lp-pin="WESTERN"></span>
+          </div>
+          <div class="lp-layer lp-hero-card" data-depth="22">
+            <div class="lp-hero-card__meta"><span class="badge badge--recruiting">모집중</span>오늘 점심 11:30</div>
+            <p class="lp-hero-card__name">호파스타</p>
+            <p class="lp-hero-card__memo">"파스타 땡기는 사람 같이 가요!"</p>
+            <div class="lp-hero-card__foot">
+              <div class="lp-avatars">
+                <span class="lp-avatar">김</span><span class="lp-avatar lp-avatar--b">이</span><span class="lp-avatar lp-avatar--c lp-avatar--join">박</span><span class="lp-avatar lp-avatar--empty">+</span>
+                <span class="lp-count"><span class="lp-count__old">2/4명</span><span class="lp-count__new">3/4명</span></span>
+              </div>
+              <span class="btn btn--primary lp-press">참여하기</span>
+            </div>
+          </div>
+          <div class="lp-layer lp-hero__chip1" data-depth="34"><span class="lp-chip lp-chip--tag lp-float">#혼밥가능</span></div>
+          <div class="lp-layer lp-hero__chip2" data-depth="28"><span class="lp-chip lp-chip--thumb lp-float lp-float--late" data-lp-icon="thumbs">따봉 +1</span></div>
+        </div>
+      </div>
+      <div class="lp-scroll-cue" aria-hidden="true">스크롤<i></i></div>
+    </section>
+
+    <!-- ③ 공감 -->
+    <section class="lp-worry" aria-labelledby="lp-worry-title" id="lp-worry">
+      <div class="lp-wrap lp-worry__grid">
+        <div data-lp-reveal>
+          <p class="lp-eyebrow">점심 10분 전</p>
+          <h2 class="lp-h2" id="lp-worry-title">매일 11시 50분,<br>같은 고민</h2>
+          <div class="lp-clock" aria-hidden="true">
+            <svg viewBox="0 0 120 120" focusable="false">
+              <circle class="lp-clock__face" cx="60" cy="60" r="56"/>
+              <path class="lp-clock__lunch" d="M60 12 A48 48 0 0 1 101.6 36"/>
+              <g id="lp-clock-ticks"></g>
+              <line class="lp-clock__hand lp-clock__hand--hour" id="lp-clock-hour" x1="60" y1="60" x2="60" y2="32" style="transform:rotate(355deg)"/>
+              <line class="lp-clock__hand lp-clock__hand--min" id="lp-clock-min" x1="60" y1="60" x2="60" y2="18" style="transform:rotate(300deg)"/>
+              <circle class="lp-clock__pivot" cx="60" cy="60" r="4"/>
+            </svg>
+            <div>
+              <p class="lp-clock__time" id="lp-clock-time">11:50</p>
+              <p class="lp-clock__label">점심시간까지 <span id="lp-clock-left">10</span>분</p>
+            </div>
+          </div>
+        </div>
+        <ul class="lp-bubbles">
+          <li class="lp-bubble" data-lp-reveal style="--d:.05s"><span class="lp-avatar" aria-hidden="true">김</span><div class="lp-bubble__body"><p class="lp-bubble__q">"오늘 어디 가지?"</p><p class="lp-bubble__a">매번 가던 데만 가게 돼요.</p></div></li>
+          <li class="lp-bubble" data-lp-reveal style="--d:.2s"><span class="lp-avatar lp-avatar--b" aria-hidden="true">이</span><div class="lp-bubble__body"><p class="lp-bubble__q">"같이 갈 사람 있나?"</p><p class="lp-bubble__a">혼밥은 아쉽고, 물어보긴 애매해요.</p></div></li>
+          <li class="lp-bubble" data-lp-reveal style="--d:.35s"><span class="lp-avatar lp-avatar--c" aria-hidden="true">박</span><div class="lp-bubble__body"><p class="lp-bubble__q">"저번에 맛있던 데, 이름이 뭐였지?"</p><p class="lp-bubble__a">좋았던 곳도 금방 잊혀요.</p></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ④ 왜 회사 근처일까: 스크롤하면 지도가 채워진다 -->
+    <section class="lp-why" id="lp-why" aria-labelledby="lp-why-title">
+      <div class="lp-scene__sticky">
+        <div class="lp-wrap lp-why__grid">
+          <div class="lp-why__text">
+            <div class="lp-why__head">
+              <p class="lp-eyebrow">왜 회사 근처일까요</p>
+              <h2 class="lp-h2" id="lp-why-title">점심시간 1시간,<br>회사 앞 몇 블록이 우리 동네예요</h2>
+              <p class="lp-lead lp-why__lead">회사원의 식사는 늘 같은 반경, 같은 시간 안에서 정해져요.<br>그런데 그 동네 정보는 생각보다 흩어져 있어요.</p>
+            </div>
+            <ol class="lp-steps" id="lp-why-steps">
+              <li class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">1</span>
+                <span><span class="lp-step__title">맛집 앱에는 없는 정보</span>
+                <span class="lp-step__desc"><span>별점보다 궁금한 건 이런 거예요. "점심시간 안에 다녀올 수 있나?", "혼자 가도 괜찮나?", "팀 회식 자리는 있나?"</span></span></span></li>
+              <li class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">2</span>
+                <span><span class="lp-step__title">동료 머릿속에만 있는 정보</span>
+                <span class="lp-step__desc"><span>옆자리 선배가 아는 숨은 맛집은 메신저 대화 속에 묻혀 사라져요.</span></span></span></li>
+              <li class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">3</span>
+                <span><span class="lp-step__title">새로 온 사람은 처음부터 다시</span>
+                <span class="lp-step__desc"><span>입사하거나 부서를 옮기면, 근처 밥집을 하나하나 다시 알아가야 해요.</span></span></span></li>
+            </ol>
+            <p class="lp-why__conclusion">그래서 슥밥에는 <b>우리 회사 사람들이 직접 다녀온 근처 식당</b>만 모아요.<br>#도보5분이내 #혼밥가능 #단체석처럼 직장인에게 필요한 기준으로 남기고, 함께 쌓아 가요.</p>
+          </div>
+
+          <div class="lp-map-wrap">
+            <div class="lp-map" id="lp-map">
+              <svg class="lp-map__svg" viewBox="0 0 600 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+                <rect class="lp-map__park" x="40" y="30" width="150" height="90" rx="18"/>
+                <path class="lp-map__street" pathLength="1" d="M0 150 H600"/>
+                <path class="lp-map__street" pathLength="1" d="M0 300 H600"/>
+                <path class="lp-map__street" pathLength="1" d="M210 0 V440"/>
+                <path class="lp-map__street" pathLength="1" d="M420 0 V440"/>
+                <path class="lp-map__street lp-map__street--thin" pathLength="1" d="M0 390 C150 360 270 410 600 350"/>
+                <path class="lp-map__street lp-map__street--thin" pathLength="1" d="M520 0 C500 120 540 220 600 260"/>
+                <circle class="lp-map__ring" cx="315" cy="225" r="150"/>
+                <text class="lp-map__ring-label" x="315" y="66" text-anchor="middle">도보 5분</text>
+                <rect class="lp-map__office" x="278" y="196" width="74" height="58" rx="8"/>
+                <g class="lp-map__office-mark" id="lp-office-mark" transform="translate(303 202) scale(.5)"></g>
+                <text class="lp-map__office-label" x="315" y="244" text-anchor="middle">우리 회사</text>
+              </svg>
+              <!-- 식당 핀·태그는 landing.js가 그린다 (예시 식당) -->
+            </div>
+            <div class="lp-map__caption">
+              <span id="lp-caption-mark" aria-hidden="true"></span>
+              <strong>우리 회사 사람들만의 밥 지도</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 기능: 마우스를 올리면 카드 그림이 움직인다 (터치 화면은 보이면 자동) -->
+    <section class="lp-features" aria-labelledby="lp-features-title">
+      <div class="lp-wrap">
+        <div class="lp-features__head" data-lp-reveal>
+          <p class="lp-eyebrow">슥밥으로 이렇게</p>
+          <h2 class="lp-h2" id="lp-features-title">찾고, 남기고, 같이 가요</h2>
+        </div>
+        <div class="lp-features__grid">
+          <article class="lp-feature" data-lp-reveal data-lp-play style="--d:0s">
+            <div class="lp-feature__art lp-art-find" aria-hidden="true">
+              <svg class="lp-art-find__streets" viewBox="0 0 300 180" preserveAspectRatio="none" focusable="false"><path d="M0 70 H300 M0 140 H300 M110 0 V180 M220 0 V180" stroke-width="10" fill="none" style="stroke:var(--color-border-light)"/></svg>
+              <div class="lp-art-find__chips"><span class="lp-mini-chip">한식</span><span class="lp-mini-chip">중식</span><span class="lp-mini-chip">일식</span></div>
+              <span class="lp-pin lp-pin--sm" style="left:22%;top:62%;--d:0s" data-lp-pin="KOREAN"></span>
+              <span class="lp-pin lp-pin--sm" style="left:58%;top:52%;--d:.08s" data-lp-pin="KOREAN"></span>
+              <span class="lp-pin lp-pin--sm lp-pin--dim" style="left:44%;top:86%" data-lp-pin="CHINESE"></span>
+              <span class="lp-pin lp-pin--sm" style="left:84%;top:40%;--d:.16s" data-lp-pin="KOREAN"></span>
+              <span class="lp-pin lp-pin--sm lp-pin--dim" style="left:70%;top:90%" data-lp-pin="JAPANESE"></span>
+              <span class="lp-roulette" data-lp-icon="roulette"></span>
+            </div>
+            <div class="lp-feature__body">
+              <p class="lp-feature__kicker">찾기</p>
+              <h3 class="lp-feature__title">오늘 갈 곳을 빠르게</h3>
+              <p class="lp-feature__desc">지도에서 한식·중식·일식 같은 카테고리별로 근처 식당을 한눈에 봐요. 고르기 어려운 날에는 룰렛을 돌려 보세요.</p>
+            </div>
+          </article>
+
+          <article class="lp-feature" data-lp-reveal data-lp-play style="--d:.12s">
+            <div class="lp-feature__art lp-art-note" aria-hidden="true">
+              <div class="lp-review">
+                <div class="lp-review__who"><span class="lp-avatar lp-avatar--b">이</span>이○○ · 을지 칼국수</div>
+                <p class="lp-review__text">11시 반 전에 가면 웨이팅 없어요. 국물이 진해요!</p>
+                <div class="lp-review__tags"><span style="--d:0s">#혼밥가능</span><span style="--d:.08s">#도보5분이내</span><span style="--d:.16s">#가성비</span></div>
+              </div>
+              <span class="lp-heart"><svg viewBox="0 0 20 20" focusable="false"><path d="M10 17s-6.5-4-6.5-8.5A3.6 3.6 0 0 1 10 6.3a3.6 3.6 0 0 1 6.5 2.2C16.5 13 10 17 10 17z" fill="currentColor"/></svg></span>
+            </div>
+            <div class="lp-feature__body">
+              <p class="lp-feature__kicker">남기기</p>
+              <h3 class="lp-feature__title">좋았던 곳을 잊지 않게</h3>
+              <p class="lp-feature__desc">한 줄 평과 #가성비 #혼밥가능 #웨이팅많음 같은 태그, 사진 한 장으로 기록해요. 다시 가고 싶은 곳은 관심 식당에 담아 두세요.</p>
+            </div>
+          </article>
+
+          <article class="lp-feature" data-lp-reveal data-lp-play style="--d:.24s">
+            <div class="lp-feature__art lp-art-together" aria-hidden="true">
+              <span class="lp-bowl" id="lp-bowl"></span>
+              <span class="lp-avatar" style="--fx:-110px;--fy:-48px;--tx:-48px;--ty:-22px;--d:0s">김</span>
+              <span class="lp-avatar lp-avatar--b" style="--fx:112px;--fy:-50px;--tx:48px;--ty:-22px;--d:.06s">이</span>
+              <span class="lp-avatar lp-avatar--c" style="--fx:-96px;--fy:52px;--tx:-44px;--ty:28px;--d:.12s">박</span>
+              <span class="lp-avatar lp-avatar--d" style="--fx:104px;--fy:50px;--tx:44px;--ty:28px;--d:.18s">최</span>
+            </div>
+            <div class="lp-feature__body">
+              <p class="lp-feature__kicker">같이 가기</p>
+              <h3 class="lp-feature__title">밥 친구를 가볍게</h3>
+              <p class="lp-feature__desc">같이 먹을 사람이 필요하면 식사팟을 열어요. 부담 없이 들어오고, 확실할 때 확정해요.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 식사팟 5단계: 스크롤하면 오른쪽 카드가 단계별로 바뀐다 -->
+    <section class="lp-party" id="lp-party" aria-labelledby="lp-party-title">
+      <div class="lp-party__intro">
+        <div class="lp-wrap lp-party__intro-grid">
+          <div data-lp-reveal>
+            <p class="lp-eyebrow">식사팟</p>
+            <h2 class="lp-h2" id="lp-party-title">식사팟, 처음이세요?</h2>
+          </div>
+          <div class="lp-party__def" data-lp-reveal style="--d:.1s">
+            <p>식사팟은 <strong>같은 날, 같은 끼니에, 같은 식당</strong>에서 밥 먹을 동료를 모으는 작은 모임이에요.</p>
+            <p>2명부터 12명까지, 점심도 저녁도 오늘부터 2주 뒤까지 만들 수 있어요.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-party__scroll" id="lp-party-scroll">
+        <div class="lp-scene__sticky">
+          <div class="lp-wrap lp-party__grid">
+            <div>
+              <ol class="lp-steps" id="lp-party-steps">
+                <li><button type="button" class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">1</span>
+                  <span><span class="lp-step__title">팟 만들기</span>
+                  <span class="lp-step__desc"><span>가고 싶은 식당과 날짜, 점심·저녁을 고르고 "같이 가요!" 한마디를 남겨요. 팟을 만든 사람이 <b>방장</b>이 돼요.</span></span></span></button></li>
+                <li><button type="button" class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">2</span>
+                  <span><span class="lp-step__title">참여하기</span>
+                  <span class="lp-step__desc"><span>마음에 드는 팟이 보이면 [참여하기]를 눌러요. 방장의 수락 없이 바로 들어가서 대화방에서 이야기할 수 있어요.</span></span></span></button></li>
+                <li><button type="button" class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">3</span>
+                  <span><span class="lp-step__title">일정 확정</span>
+                  <span class="lp-step__desc"><span>사람이 모이면 방장이 시간과 만날 곳을 정해요. 예: 11:30, 정문 앞</span></span></span></button></li>
+                <li><button type="button" class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">4</span>
+                  <span><span class="lp-step__title">참석 확정</span>
+                  <span class="lp-step__desc"><span>일정을 보고 갈 수 있으면 [참석 확정]을 한 번 더 눌러요. 확정할 차례가 되면 종 알림이 알려 줘요. 못 가게 되면 약속 30분 전까지 취소할 수 있어요.</span></span></span></button></li>
+                <li><button type="button" class="lp-step"><span class="lp-step__bar"></span><span class="lp-step__num">5</span>
+                  <span><span class="lp-step__title">맛있게 먹고 따봉</span>
+                  <span class="lp-step__desc"><span>식사가 끝나면 함께 먹은 식당에 따봉을 남겨요.</span></span></span></button></li>
+              </ol>
+              <p class="lp-party__rule"><b>한 끼에는 한 팟만.</b> 같은 날 같은 끼니에는 팟 하나에만 들어갈 수 있어요.</p>
+            </div>
+
+            <!-- 미리보기 카드 (장식, 예시 식사팟) -->
+            <div class="lp-pcard-wrap" aria-hidden="true">
+              <div class="lp-pcard" id="lp-pcard">
+                <div class="lp-bell"><span data-lp-icon="bell"></span>참석을 확정해 주세요</div>
+                <div class="lp-pcard__top">
+                  <span class="lp-pcard__badges"><span class="badge badge--recruiting">모집중</span><span class="badge badge--scheduled">일정 확정</span><span class="badge badge--finished">식사 완료</span></span>
+                  <span>오늘 점심</span>
+                  <span class="lp-pcard__step" id="lp-pcard-step">1 / 5</span>
+                </div>
+                <p class="lp-pcard__name">호파스타</p>
+                <p class="lp-pcard__memo">"같이 가요! 파스타 땡기는 분"</p>
+                <div class="lp-pcard__sched">
+                  <span data-lp-icon="clock"></span>
+                  <span class="lp-sched-none">일정 미정 · 방장이 정할 거예요</span>
+                  <span class="lp-sched-set">11:30 · 정문 앞</span>
+                </div>
+                <div class="lp-pcard__members">
+                  <span class="lp-avatar">김<span class="lp-host-tag">방장</span><span class="lp-ck" style="--d:0s" data-lp-icon="check"></span></span>
+                  <span class="lp-avatar lp-avatar--b lp-joiner" style="--d:0s">이<span class="lp-ck" style="--d:.12s" data-lp-icon="check"></span></span>
+                  <span class="lp-avatar lp-avatar--c lp-joiner" style="--d:.3s">박<span class="lp-ck" style="--d:.24s" data-lp-icon="check"></span></span>
+                  <span class="lp-avatar lp-avatar--empty">+</span>
+                  <span class="lp-count"><span class="lp-count__old">1/4명</span><span class="lp-count__new">3/4명</span></span>
+                </div>
+                <div class="lp-pcard__chat">
+                  <p class="lp-pcard__chat-empty">참여하면 여기서 대화해요</p>
+                  <div class="lp-msg lp-msg--1"><div><div class="lp-msg__in"><span class="lp-msg__who lp-avatar--b">이</span><span class="lp-msg__text">저도 갈게요!</span></div></div></div>
+                  <div class="lp-msg lp-msg--2"><div><div class="lp-msg__in"><span class="lp-msg__who lp-avatar--c">박</span><span class="lp-msg__text">11시 반 어때요?</span></div></div></div>
+                  <div class="lp-msg lp-msg--sys lp-msg--3"><div><div class="lp-msg__in"><span class="lp-msg__text">방장이 일정을 정했어요 · 11:30 정문 앞</span></div></div></div>
+                  <div class="lp-msg lp-msg--sys lp-msg--4"><div><div class="lp-msg__in"><span class="lp-msg__text">식사가 완료되었어요</span></div></div></div>
+                </div>
+                <div class="lp-pcard__action">
+                  <span class="btn btn--primary lp-act lp-act--join">참여하기</span>
+                  <span class="btn lp-act lp-act--wait">참여 중 · 방장이 일정을 정하는 중</span>
+                  <span class="btn btn--primary lp-act lp-act--confirm">참석 확정</span>
+                  <span class="btn lp-act lp-act--confirmed"><span data-lp-icon="check"></span>참석 확정됨</span>
+                  <span class="btn lp-act lp-act--thumb"><span class="lp-act__do"><span data-lp-icon="thumbs"></span>호파스타에 따봉</span><span class="lp-act__done"><span data-lp-icon="thumbs"></span>따봉 완료! 랭킹에 반영돼요</span></span>
+                  <span class="lp-plus-one">+1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑦ 따봉과 랭킹 -->
+    <section class="lp-rank" aria-labelledby="lp-rank-title">
+      <div class="lp-wrap lp-rank__grid">
+        <div data-lp-reveal>
+          <p class="lp-eyebrow">따봉 랭킹</p>
+          <h2 class="lp-h2" id="lp-rank-title">요즘 우리 회사는<br>어디서 먹을까?</h2>
+          <p class="lp-lead">같이 먹은 식사팟이 끝나면 그 식당에 따봉을 남길 수 있어요.<br>최근 30일 동안 따봉을 많이 받은 곳이 랭킹으로 보여요.<br>오늘 갈 곳이 고민될 때 동료들의 선택을 참고해 보세요.</p>
+        </div>
+        <div class="lp-rank__board" id="lp-rank-board" data-lp-reveal style="--d:.1s" aria-hidden="true">
+          <div class="lp-rank__head"><strong>이달의 따봉 랭킹</strong><span>최근 30일 · 예시</span></div>
+          <ol class="lp-rank__list" id="lp-rank-list"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑧ 마지막 CTA -->
+    <section class="lp-cta" id="lp-cta" aria-labelledby="lp-cta-title">
+      <div class="lp-wrap">
+        <h2 id="lp-cta-title">우리 회사 사람들만의 <span class="lp-cta__mark">밥 지도<svg class="lp-swoosh" viewBox="0 0 140 56" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="lp-swoosh__main" pathLength="1" d="M4 30 C 34 18, 78 16, 134 24"/><path class="lp-swoosh__sub" pathLength="1" d="M14 44 C 46 34, 84 32, 122 36"/></svg></span></h2>
+        <p>슥밥은 사원 계정으로만 이용하는 사내 서비스예요.<br>오늘 점심부터 같이 정해 봐요.</p>
+        <div class="lp-cta__btns">
+          <a class="btn lp-btn-white lp-btn-lg" href="/login.html">로그인하고 시작하기
+            <svg class="lp-btn-arrow" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <p class="lp-cta__signup">처음이신가요? <a href="/signup.html">회원가입</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/utils.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/landing.js"></script>
+</body>
+</html>

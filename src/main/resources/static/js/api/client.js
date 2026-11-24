@@ -13,6 +13,8 @@
  *   1. 공통 응답 {statusCode, timestamp, path, message, data, error}에서 data만 돌려준다.
  *   2. 오류면 ApiError를 던진다. 화면에는 err.message(서버가 보낸 한글 문구)를 보여 주면 된다.
  *   3. 401이면 현재 주소를 redirect 값으로 붙여 로그인 화면으로 이동한다.
+ *      단, 홈(/, /index.html)이면 처음 온 사람일 수 있어서 서비스 소개 랜딩(/landing.html)으로 보낸다. (2026-11-24)
+ *      초대 링크 같은 다른 화면은 그대로 로그인 → 원래 화면으로 돌아간다.
  *   4. USE_MOCK이 true이고 등록된 목업이 있으면 서버 대신 목업 데이터를 돌려준다.
  *
  * 사용 예 (도메인 api 파일 안에서)
@@ -37,6 +39,10 @@
 
   // TODO(C와 확인): 로그인 화면 파일 이름
   const LOGIN_PAGE = '/login.html';
+
+  // 로그인 안 한 채 홈에 오면 로그인 대신 보여 줄 서비스 소개 화면 (2026-11-24)
+  const LANDING_PAGE = '/landing.html';
+  const HOME_PATHS = ['/', '/index.html'];
 
   const NETWORK_ERROR_MESSAGE = '서버와 연결할 수 없어요. 잠시 후 다시 시도해 주세요.';
   const UNKNOWN_ERROR_MESSAGE = '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
@@ -176,6 +182,11 @@
 
   function redirectToLogin() {
     if (global.location.pathname === LOGIN_PAGE) return; // 로그인 화면에서는 이동하지 않음
+    if (HOME_PATHS.includes(global.location.pathname)) {
+      // replace: 뒤로 가기를 눌러도 홈 → 랜딩으로 다시 튕기지 않게
+      global.location.replace(LANDING_PAGE);
+      return;
+    }
     const current = global.location.pathname + global.location.search;
     global.location.href = LOGIN_PAGE + '?redirect=' + encodeURIComponent(current);
   }

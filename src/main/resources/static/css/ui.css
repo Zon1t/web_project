@@ -240,6 +240,49 @@ a,
   from { opacity: 0; transform: translateY(16px) scale(0.96); }
 }
 
+/* ---------- 액션 효과: 아이콘 숑숑, 통통 (C, 2026-11-24) ---------- */
+.ui-burst {
+  position: fixed;
+  z-index: 110;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ui-burst--heart  { color: #ff6b81; }
+.ui-burst--thumbs { color: var(--color-primary); }
+
+.ui-burst--heart .ui-icon path { fill: currentColor; }
+
+.ui-burst__item {
+  position: absolute;
+  top: -9px;
+  left: -9px;
+  opacity: 0;
+  animation: ui-burst-up 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes ui-burst-up {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.4) rotate(0); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--rise) * -1)) scale(var(--scale)) rotate(var(--rot)); }
+}
+
+.ui-pop {
+  animation: ui-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes ui-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-burst { display: none; }
+  .ui-pop { animation: none; }
+}
+
 /* ---------- 모달 ---------- */
 html.has-modal {
   overflow: hidden;

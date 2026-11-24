@@ -15,6 +15,8 @@
  *   await ui.confirm({ title, message, html, confirmText, danger })   확인 모달 → true/false
  *   const m = ui.modal({ title, html, size, onClose })          모달 열기 → m.close(), m.body
  *   ui.skeleton('row', 3)                 회색 틀 로딩 HTML ('row' | 'card' | 'text')
+ *   ui.burst(button, { icon: 'heart' })   버튼에서 아이콘이 숑숑 올라오는 짧은 효과 ('heart' | 'thumbs', C 2026-11-24)
+ *   ui.pop(element)                       요소를 한 번 통통 튀게 (눌렀다는 느낌)
  */
 (function (global) {
   'use strict';
@@ -40,6 +42,7 @@
     map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
     calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>',
   };
 
   function icon(name, size) {
@@ -192,6 +195,50 @@
     }, (opts && opts.duration) || 2600);
   }
 
+  /* ===================== 액션 효과 (C, 2026-11-24) ===================== */
+
+  const reduceMotion = () => global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /**
+   * 관심·따봉처럼 '눌렀다'는 느낌이 필요할 때: anchor 위로 작은 아이콘 여러 개가 올라가며 사라진다.
+   * o.icon: 'heart' | 'thumbs' (기본 heart), o.count: 개수 (기본 6)
+   * 화면 위에 잠깐 붙였다가 지우므로 버튼이 다시 그려져도 괜찮다. 움직임 줄이기 설정이면 하지 않는다.
+   */
+  function burst(anchor, o) {
+    if (!anchor || reduceMotion()) return;
+    const opts = o || {};
+    const rect = anchor.getBoundingClientRect();
+    const layer = document.createElement('div');
+    layer.className = 'ui-burst ui-burst--' + (opts.icon || 'heart');
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.left = (rect.left + rect.width / 2) + 'px';
+    layer.style.top = (rect.top + rect.height / 2) + 'px';
+
+    const count = opts.count || 6;
+    for (let i = 0; i < count; i += 1) {
+      const item = document.createElement('span');
+      item.className = 'ui-burst__item';
+      item.style.setProperty('--dx', Math.round((Math.random() - 0.5) * 90) + 'px');
+      item.style.setProperty('--rise', Math.round(60 + Math.random() * 50) + 'px');
+      item.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 50) + 'deg');
+      item.style.setProperty('--scale', (0.7 + Math.random() * 0.6).toFixed(2));
+      item.style.animationDelay = (i * 45) + 'ms';
+      item.innerHTML = icon(opts.icon || 'heart', 18);
+      layer.appendChild(item);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 1400);
+  }
+
+  /** 요소를 한 번 통통 튀게 한다 (같은 요소에 여러 번 불러도 매번 다시 시작) */
+  function pop(element) {
+    if (!element || reduceMotion()) return;
+    element.classList.remove('ui-pop');
+    void element.offsetWidth; // 애니메이션을 처음부터 다시
+    element.classList.add('ui-pop');
+    element.addEventListener('animationend', () => element.classList.remove('ui-pop'), { once: true });
+  }
+
   /* ===================== 모달 ===================== */
 
   const openModals = [];
@@ -298,7 +345,7 @@
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
 
-  global.ui = { icon, avatar, avatarGlyph, illust, empty, toast, modal, confirm, skeleton };
+  global.ui = { icon, avatar, avatarGlyph, illust, empty, toast, modal, confirm, skeleton, burst, pop };
 
   // HTML에 <span data-ui-illust="bowl"></span> / <span data-ui-icon="clock"></span>처럼 적어 두면 그림을 채운다
   function hydrate() {

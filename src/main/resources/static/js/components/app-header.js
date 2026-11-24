@@ -170,6 +170,7 @@
     try {
       const me = await global.authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
       setUser(me.nickname);
+      if (me.admin) addAdminMenu();             // 관리자에게만 '관리자' 항목 (2026-11-24 A3)
       userArea.classList.add('is-ready');
     } catch (err) {
       // 401은 이동 처리됨. 그 외 오류면 닉네임 없이 메뉴만 쓸 수 있게 둔다.
@@ -177,6 +178,18 @@
       userButton.setAttribute('aria-label', '내 메뉴');
       userArea.classList.add('is-ready');
     }
+  }
+
+  /** 드롭다운의 로그아웃 위에 '관리자' 항목을 넣는다 (2026-11-24 A3, 실제 권한 검사는 서버가 한다) */
+  function addAdminMenu() {
+    if (menu.querySelector('[data-menu="admin"]')) return;
+    const link = document.createElement('a');
+    link.className = 'app-header__menu-item';
+    link.setAttribute('role', 'menuitem');
+    link.dataset.menu = 'admin';
+    link.href = '/admin.html';
+    link.textContent = '관리자';
+    menu.insertBefore(link, menu.querySelector('[data-action="logout"]'));
   }
 
   /** 닉네임·아바타 글자 표시 (처음 불러올 때, 계정 설정에서 닉네임을 바꿨을 때) */

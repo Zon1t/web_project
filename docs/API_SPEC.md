@@ -16,6 +16,7 @@
 - [4. restaurants — 랭킹·룰렛 (C)](#4-restaurants--랭킹룰렛-c)
 - [5. restaurants·reviews — 식당·리뷰·관심 (B)](#5-restaurantsreviews--식당리뷰관심-b)
 - [6. parties — 식사팟·대화·따봉 (A)](#6-parties--식사팟대화따봉-a)
+- [7. admin — 관리자 (A)](#7-admin--관리자-a-2026-11-24-추가)
 
 ---
 
@@ -165,7 +166,7 @@
 | 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 완료되었습니다' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (50개, 11/23 알림 API 추가, 11/24 계정 설정·비밀번호 찾기·탈퇴 API 7개 추가)
+### 전체 API 목록 (58개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -219,6 +220,14 @@
 | A | PATCH | `/api/parties/{partyId}/schedule` | 일정 확정·수정 (방장) |
 | A | PATCH | `/api/parties/{partyId}/status` | 모집 마감·재개 (방장) |
 | A | POST | `/api/parties/{partyId}/thumbs` | 따봉 등록 |
+| A | GET | `/api/admin/restaurants` | 관리자 식당 목록 (11/24 추가) |
+| A | PATCH | `/api/admin/restaurants/{restaurantId}` | 식당 숨김·카테고리 변경 (11/24 추가) |
+| A | GET | `/api/admin/suggestions` | 수정 제안 목록 (11/24 추가) |
+| A | PATCH | `/api/admin/suggestions/{suggestionId}` | 수정 제안 처리 상태 변경 (11/24 추가) |
+| A | GET | `/api/admin/reviews` | 관리자 리뷰 목록 (11/24 추가) |
+| A | PATCH | `/api/admin/reviews/{reviewId}` | 리뷰 숨김 (11/24 추가) |
+| A | GET | `/api/admin/cafeteria/menus` | 날짜별 구내식당 메뉴 조회 (11/24 추가) |
+| A | POST | `/api/admin/cafeteria/menus` | 구내식당 메뉴 저장 (11/24 추가) |
 
 ---
 ## 1. auth — 인증 (C)
@@ -429,10 +438,12 @@ null
   "memberId": 1,
   "loginId": "chef01",
   "nickname": "슥사인",
-  "email": "chef01@samsung.com"
+  "email": "chef01@samsung.com",
+  "admin": false
 }
 ```
 - email: 등록한 회사 이메일, 없으면 null (2026-11-24, 로그인 응답도 같음)
+- admin: 관리자(ROLE = 'ADMIN')면 true. 헤더 메뉴에 '관리자' 항목을 보여 줄 때 쓴다 (2026-11-24 A3, 로그인 응답도 같음)
 
 **오류**
 
@@ -2334,6 +2345,221 @@ null
 | 409 | ALREADY_THUMBED | 이미 따봉을 남겼습니다. | 중복 등록 |
 
 ---
+## 7. admin — 관리자 (A, 2026-11-24 추가)
+
+**공통**
+- `/api/admin/**`는 로그인 + 관리자(MEMBER.ROLE = 'ADMIN')만 쓸 수 있다. 로그인을 안 했으면 401, 관리자가 아니면 403 `FORBIDDEN`.
+- 관리자 여부는 요청마다 세션의 memberId로 MEMBER를 조회해 판단한다. (세션에 역할을 저장하지 않음 → DB에서 역할을 바꾸면 바로 반영)
+- 관리자 지정은 화면에 없다. `docs/sql/08_account_admin.sql`에서 `user05`를 지정하고, 바꾸려면 SQL로 `ROLE`을 고친다.
+- **숨김 반영 규칙**
+  - 숨긴 식당(HIDDEN_YN = 'Y'): 식당 목록·지도·자동완성·랭킹·룰렛 후보·룰렛 spin·마이페이지(등록한 식당·관심 식당·개수)에서 빠진다. 상세·관심 등록·리뷰 목록·리뷰 작성·수정 제안·식사팟 생성은 404 `RESTAURANT_NOT_FOUND`.
+  - 이미 만들어진 그 식당의 식사팟(진행 중·지난 팟)은 그대로 둔다. (식사 약속 유지)
+  - 숨긴 리뷰(HIDDEN_YN = 'Y'): 리뷰 목록·리뷰 수(목록·상세·랭킹의 2순위)·태그 TOP 3·마이페이지 내 리뷰에서 빠진다.
+
+---
+
+### GET /api/admin/restaurants — 관리자 식당 목록
+
+**요구사항**: 등록된 모든 식당(숨긴 식당 포함)을 회사까지 거리와 함께 보여 준다. 회사에서 식당 등록 반경(4km) 밖인 식당은 표시만 하고, `outOfRange=true`로 그것만 볼 수 있다.
+
+**Request — Query**
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| outOfRange | boolean | N | true면 반경 밖 식당만. 생략·false면 전체 |
+
+**시스템 처리**
+1. 회사 위치 = 구내식당(CAFETERIA) 좌표. 좌표가 없으면 거리는 null.
+2. 식당마다 거리(km, 소수 둘째 자리)와 반경 밖 여부, 숨기지 않은 리뷰 수, 등록자 닉네임을 붙인다.
+3. 정렬: 등록 순(restaurantId 오름차순)
+
+**Response 200 (data)**
+```json
+{
+  "radiusKm": 4.0,
+  "items": [
+    {
+      "restaurantId": 12,
+      "name": "세종원",
+      "category": "CHINESE",
+      "address": "서울특별시 광진구 ...",
+      "distanceKm": 0.41,
+      "outOfRange": false,
+      "hidden": false,
+      "cafeteria": false,
+      "reviewCount": 8,
+      "registeredBy": "밥친구",
+      "createdAt": "2026-11-20T10:00:00"
+    }
+  ]
+}
+```
+- registeredBy: 등록자 닉네임. 구내식당 초기 데이터는 null
+
+**오류**: 401 `UNAUTHORIZED`, 403 `FORBIDDEN`
+
+---
+
+### PATCH /api/admin/restaurants/{restaurantId} — 식당 숨김·카테고리 변경
+
+**Request — Body** (둘 중 하나 이상)
+```json
+{ "hidden": true, "category": "KOREAN" }
+```
+- category: `KOREAN`, `CHINESE`, `JAPANESE`, `WESTERN`, `SNACK`, `ETC`, `CAFE` 중 하나. `CAFETERIA`로는 바꿀 수 없고, 구내식당의 카테고리도 바꿀 수 없다.
+
+**시스템 처리**
+1. 식당을 조회한다(숨긴 식당 포함). 없으면 404.
+2. 둘 다 없거나 카테고리 값이 규칙에 맞지 않으면 400.
+3. 보낸 값만 바꾸고, 바뀐 식당 1건을 GET 목록의 item과 같은 모양으로 반환한다.
+
+**Response 200 (data)**: GET /api/admin/restaurants의 item 1개
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 바꿀 값을 확인해 주세요. | hidden·category 둘 다 없음, 잘못된 category, CAFETERIA 관련 변경 |
+| 401 | UNAUTHORIZED | 로그인이 필요합니다. | |
+| 403 | FORBIDDEN | 권한이 없습니다. | 관리자가 아님 |
+| 404 | RESTAURANT_NOT_FOUND | 식당을 찾을 수 없습니다. | 없는 restaurantId |
+
+---
+
+### GET /api/admin/suggestions — 수정 제안 목록
+
+**Request — Query**
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| status | string | N | `OPEN`(기본) / `DONE` / `ALL` |
+
+**Response 200 (data)** — 최신순(제안 일시 내림차순)
+```json
+[
+  {
+    "suggestionId": 3,
+    "restaurantId": 12,
+    "restaurantName": "세종원",
+    "nickname": "밥친구",
+    "content": "영업시간이 바뀌었어요.",
+    "status": "OPEN",
+    "createdAt": "2026-11-24T12:30:00"
+  }
+]
+```
+
+**오류**: 400 `INVALID_REQUEST`(status 값 오류), 401, 403
+
+---
+
+### PATCH /api/admin/suggestions/{suggestionId} — 수정 제안 처리 상태 변경
+
+**Request — Body**
+```json
+{ "status": "DONE" }
+```
+- `DONE`(처리 완료) 또는 `OPEN`(되돌리기)
+
+**Response 200 (data)**: GET 목록의 item 1개
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 처리 상태를 확인해 주세요. | status 없음·잘못된 값 |
+| 401 / 403 | | | 미로그인 / 관리자 아님 |
+| 404 | NOT_FOUND | 대상을 찾을 수 없습니다. | 없는 suggestionId |
+
+---
+
+### GET /api/admin/reviews — 관리자 리뷰 목록
+
+**요구사항**: 숨김 처리를 위해 최근 리뷰를 숨긴 리뷰까지 포함해 보여 준다.
+
+**Request — Query**
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| keyword | string | N | 리뷰 내용·식당 이름·작성자 닉네임 부분 일치 |
+
+**Response 200 (data)** — 최신순 최대 100건
+```json
+[
+  {
+    "reviewId": 31,
+    "restaurantId": 12,
+    "restaurantName": "세종원",
+    "nickname": "밥친구",
+    "content": "짜장면이 맛있어요.",
+    "hasImage": false,
+    "hidden": false,
+    "createdAt": "2026-11-24T12:30:00"
+  }
+]
+```
+
+**오류**: 401, 403
+
+---
+
+### PATCH /api/admin/reviews/{reviewId} — 리뷰 숨김
+
+**Request — Body**
+```json
+{ "hidden": true }
+```
+
+**Response 200 (data)**: GET 목록의 item 1개
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | hidden 없음 |
+| 401 / 403 | | | 미로그인 / 관리자 아님 |
+| 404 | REVIEW_NOT_FOUND | 리뷰를 찾을 수 없습니다. | 없는 reviewId |
+
+---
+
+### GET /api/admin/cafeteria/menus — 날짜별 구내식당 메뉴 조회
+
+**Request — Query**: date (YYYY-MM-DD, 필수)
+
+**Response 200 (data)**
+```json
+{ "menuDate": "2026-11-26", "lunch": ["현미밥", "김치찌개"], "dinner": [] }
+```
+
+**오류**: 400 `INVALID_REQUEST`(날짜 형식), 401, 403
+
+---
+
+### POST /api/admin/cafeteria/menus — 구내식당 메뉴 저장 (날짜·끼니별 교체)
+
+**요구사항**: 크롤링이 안 될 때 관리자가 직접 메뉴를 넣는다. 같은 날짜·끼니의 기존 메뉴는 모두 지우고 보낸 목록으로 바꾼다. 빈 목록을 보내면 그 끼니 메뉴를 지운다.
+(계획표에는 PUT이었지만 공통 `client.js`에 put 함수가 없어 POST로 정했다, 2026-11-24)
+
+**Request — Body**
+```json
+{ "menuDate": "2026-11-26", "mealType": "LUNCH", "menuNames": ["현미밥", "김치찌개", "제육볶음"] }
+```
+- menuNames: 최대 15개, 각 1~50자. 앞뒤 공백 제거, 빈 줄·중복은 하나로
+
+**Response 200 (data)**
+```json
+{ "menuDate": "2026-11-26", "mealType": "LUNCH", "menuNames": ["현미밥", "김치찌개", "제육볶음"] }
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 메뉴를 확인해 주세요. | 날짜·끼니 없음, 메뉴 개수·길이 초과 |
+| 401 / 403 | | | 미로그인 / 관리자 아님 |
+
+---
+
 ## 부록. 전체 오류 코드 (ErrorCode enum 작성용)
 
 API별 오류 표를 모은 것이다. message는 API마다 조금씩 다를 수 있으니(예: INVALID_REQUEST), 실제 응답 문구는 각 API 표를 따른다.

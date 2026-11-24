@@ -23,6 +23,7 @@ public interface ReviewTagRepository extends JpaRepository<ReviewTag, Long> {
               JOIN rt.tag t
               JOIN rt.review r
              WHERE r.restaurant.restaurantId = :restaurantId
+               AND r.hidden = false
              GROUP BY t.tagId, t.tagName, t.tagCategory
              ORDER BY COUNT(rt) DESC, t.tagId ASC
             """)

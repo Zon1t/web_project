@@ -97,7 +97,7 @@ public class PartyService {
         }
 
         // 5. 식당 확인
-        Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
+        Restaurant restaurant = restaurantRepository.findVisibleById(request.restaurantId())   // 숨긴 식당은 404 (A3)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
         Member host = partyFinder.getMember(memberId);
 

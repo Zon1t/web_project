@@ -65,7 +65,7 @@ public class ReviewService {
         }
 
         // 2. 식당 확인
-        if (!restaurantRepository.existsById(restaurantId)) {
+        if (restaurantRepository.findVisibleById(restaurantId).isEmpty()) {   // 숨긴 식당은 404 (A3)
             throw new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND);
         }
 
@@ -105,7 +105,7 @@ public class ReviewService {
         }
 
         // 2. 식당 확인
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+        Restaurant restaurant = restaurantRepository.findVisibleById(restaurantId)   // 숨긴 식당은 404 (A3)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
 
         // 3. 태그: 중복 제거 후 모두 TAG에 있는지 확인

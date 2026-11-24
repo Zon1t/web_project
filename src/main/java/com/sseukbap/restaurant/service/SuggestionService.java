@@ -36,7 +36,7 @@ public class SuggestionService {
         }
 
         // 2. 식당 확인
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+        Restaurant restaurant = restaurantRepository.findVisibleById(restaurantId)   // 숨긴 식당은 404 (A3)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
 
         // 3. 저장 (제안한 회원 = 로그인 회원)

@@ -60,6 +60,11 @@ public class Suggestion {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** 관리자 처리 상태 변경: DONE(처리 완료) / OPEN(되돌리기) (2026-11-24 A3) */
+    public void changeStatus(SuggestionStatus status) {
+        this.status = status;
+    }
+
     /** 수정 제안 저장 */
     public static Suggestion create(Restaurant restaurant, Member member, String content) {
         return new Suggestion(restaurant, member, content);

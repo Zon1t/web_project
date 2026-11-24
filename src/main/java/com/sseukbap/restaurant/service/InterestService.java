@@ -30,7 +30,7 @@ public class InterestService {
     @Transactional
     public InterestStatusResponse createInterest(Long restaurantId, Long memberId) {
         // 1. 식당 확인
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+        Restaurant restaurant = restaurantRepository.findVisibleById(restaurantId)   // 숨긴 식당은 404 (A3)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
 
         // 2. 이미 등록했으면 중단

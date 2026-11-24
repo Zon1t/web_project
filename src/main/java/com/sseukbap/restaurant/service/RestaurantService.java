@@ -63,7 +63,7 @@ public class RestaurantService {
     /** 식당 상세 조회. 리뷰 목록은 별도 API(페이징)로 조회한다. */
     public RestaurantDetailResponse getRestaurant(Long restaurantId, Long memberId) {
         // 1. 식당 조회
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+        Restaurant restaurant = restaurantRepository.findVisibleById(restaurantId)   // 숨긴 식당은 404 (A3)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESTAURANT_NOT_FOUND));
 
         // 2. 태그 TOP 3 (동수면 tagId 오름차순, 선택된 적 없는 태그 제외)
@@ -75,7 +75,7 @@ public class RestaurantService {
         long thumbsCount30d = restaurantRepository.countThumbsUp(
                 restaurantId, thumbsFromDate(today), today.plusDays(1));
         long interestCount = interestRepository.countByRestaurant_RestaurantId(restaurantId);
-        long reviewCount = reviewRepository.countByRestaurant_RestaurantId(restaurantId);
+        long reviewCount = reviewRepository.countByRestaurant_RestaurantIdAndHiddenFalse(restaurantId);
 
         // 4. 내 관심 여부
         boolean interested =

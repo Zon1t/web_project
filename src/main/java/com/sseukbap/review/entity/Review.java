@@ -73,6 +73,11 @@ public class Review {
         return new Review(restaurant, member, content, imagePath);
     }
 
+    /** 관리자 숨김·숨김 해제 (2026-11-24 A3) */
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
     /** 작성자 본인인지 확인 (리뷰 삭제 권한, 목록의 mine 필드) */
     public boolean isWrittenBy(Long memberId) {
         return member.getMemberId().equals(memberId);

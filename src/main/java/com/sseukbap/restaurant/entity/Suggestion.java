@@ -3,6 +3,8 @@ package com.sseukbap.restaurant.entity;
 import com.sseukbap.member.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,6 +48,10 @@ public class Suggestion {
 
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "STATUS", nullable = false, length = 10)
+    private SuggestionStatus status = SuggestionStatus.OPEN;   // 관리자가 처리하면 DONE (2026-11-24)
 
     private Suggestion(Restaurant restaurant, Member member, String content) {
         this.restaurant = restaurant;

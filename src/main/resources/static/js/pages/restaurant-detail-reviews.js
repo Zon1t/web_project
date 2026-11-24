@@ -84,10 +84,20 @@
         if (button.dataset.action === 'more') loadNextPage();
         if (button.dataset.action === 'retry-reviews') loadFirstPage();
         if (button.dataset.action === 'delete-review') deleteReview(button.dataset.reviewId, button);
+        if (button.dataset.action === 'toggle-image') toggleImage(button);
       });
     }
 
     /* ---------- 사진 ---------- */
+
+    // 목록의 사진을 누르면 그 리뷰 안에서 크게 펼치고, 다시 누르면 접는다 (C, 2026-11-24)
+    function toggleImage(button) {
+      const item = button.closest('.review-item');
+      const open = !item.classList.contains('is-image-open');
+      item.classList.toggle('is-image-open', open);
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? '사진 작게 보기' : '사진 크게 보기');
+    }
 
     function selectImage(file) {
       if (file) {
@@ -135,11 +145,22 @@
         els.length.textContent = '0 / ' + reviewApi.CONTENT_MAX;
         await loadFirstPage();
         onChange();
+        showCreatedFeedback();
       } catch (err) {
         if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
         setFormMessage(err.message);
       } finally {
         setSubmitting(false);
+      }
+    }
+
+    // 리뷰를 올린 뒤: 토스트 + 맨 위 내 리뷰를 잠깐 강조 (C, 2026-11-24)
+    function showCreatedFeedback() {
+      global.ui.toast('리뷰를 남겼어요. 고마워요!');
+      const mine = els.listArea.querySelector('.review-item.is-mine');
+      if (mine) {
+        mine.classList.add('is-new');
+        setTimeout(() => mine.classList.remove('is-new'), 1600);
       }
     }
 
@@ -266,13 +287,13 @@
           review.tags.map((name) => '<li class="detail-tag">#' + esc(name) + '</li>').join('') +
           '</ul>'
         : '';
-      // 사진 썸네일. 누르면 원본을 새 탭으로 연다. (목업은 blob: 임시 주소)
+      // 사진 썸네일. 누르면 이 리뷰 안에서 크게 펼친다 (2026-11-24, 전에는 새 탭). 목업은 blob: 임시 주소
       const hasImage = typeof review.imageUrl === 'string' &&
         (review.imageUrl.startsWith('/uploads/') || review.imageUrl.startsWith('blob:'));
       const image = hasImage
-        ? '<a class="review-item__image-link" href="' + esc(review.imageUrl) + '" target="_blank" rel="noopener">' +
-          '<img class="review-item__image" src="' + esc(review.imageUrl) + '" alt="' + esc(review.nickname) + '님의 리뷰 사진 (새 탭에서 크게 보기)" ' +
-          'width="56" height="56" loading="lazy"></a>'
+        ? '<button type="button" class="review-item__image-link" data-action="toggle-image" aria-expanded="false" aria-label="사진 크게 보기">' +
+          '<img class="review-item__image" src="' + esc(review.imageUrl) + '" alt="' + esc(review.nickname) + '님의 리뷰 사진" ' +
+          'width="56" height="56" loading="lazy"></button>'
         : '';
       const deleteButton = review.mine
         ? '<button type="button" class="btn review-item__delete" data-action="delete-review" ' +
@@ -280,7 +301,7 @@
         : '';
 
       return (
-        '<li class="review-item">' +
+        '<li class="review-item' + (review.mine ? ' is-mine' : '') + '">' +
         image +
         '<div class="review-item__body">' +
         '<p class="review-item__meta"><strong>' + esc(review.nickname) + '</strong>' +

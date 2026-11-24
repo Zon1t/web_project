@@ -399,10 +399,14 @@
   }
 
   function showThumbsDone(button, result) {
+    // 짧은 피드백: 따봉 아이콘이 숑숑 + 토스트 (C, 2026-11-24). 버튼이 바뀌기 전에 위치를 잡는다
+    ui.burst(button, { icon: 'thumbs' });
+    ui.toast('따봉을 남겼어요!');
     const slot = button.closest('.tm-slot');
     const note = slot.querySelector('.tm-cta__note');
     if (note) note.textContent = '따봉을 남겼어요';
     button.outerHTML = '<span class="tm-done">' + utils.thumbsUpIcon(16) + '최근 30일 따봉 ' + Number(result.thumbsCount30d) + '개</span>';
+    ui.pop(slot.querySelector('.tm-done'));
     slot.querySelectorAll('.tm-step').forEach((step) => {
       step.className = 'tm-step tm-step--done';
       step.removeAttribute('aria-current');

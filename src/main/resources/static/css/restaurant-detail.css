@@ -310,7 +310,45 @@
 
 .review-item__image-link {
   flex-shrink: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: none;
+  cursor: zoom-in;
+}
+
+/* 사진 크게 보기 (2026-11-24): 사진이 글 아래 한 줄 전체로 내려가고, 비율을 지켜 크게 */
+.review-item.is-image-open {
+  flex-wrap: wrap;
+}
+
+.review-item.is-image-open .review-item__image-link {
+  order: 3;
+  flex-basis: 100%;
+  cursor: zoom-out;
+}
+
+.review-item.is-image-open .review-item__image {
+  width: auto;
+  max-width: min(100%, 480px);
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  animation: review-image-open 0.2s ease-out;
+}
+
+@keyframes review-image-open {
+  from { opacity: 0.4; transform: scale(0.96); }
+}
+
+/* 방금 올린 내 리뷰를 잠깐 강조 (2026-11-24) */
+.review-item.is-new {
+  animation: review-new 1.6s ease-out;
+}
+
+@keyframes review-new {
+  0%, 30% { background: var(--color-primary-soft, #eaf2ff); }
+  100%    { background: transparent; }
 }
 
 .review-item__image {
@@ -456,6 +494,11 @@
 @media (prefers-reduced-motion: reduce) {
   .toast {
     transition: none;
+  }
+
+  .review-item.is-image-open .review-item__image,
+  .review-item.is-new {
+    animation: none;
   }
 }
 

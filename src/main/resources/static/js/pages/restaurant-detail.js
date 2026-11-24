@@ -70,6 +70,7 @@
         : await restaurantApi.addInterest(restaurantId);
       interest.interested = result.interested;
       interest.count = result.interestCount;
+      showInterestFeedback(result.interested);
     } catch (err) {
       if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
       if (err.error === 'ALREADY_INTERESTED' || err.error === 'INTEREST_NOT_FOUND') {
@@ -81,6 +82,18 @@
     } finally {
       interest.pending = false;
       renderInterest();
+    }
+  }
+
+  // 관심을 바꾼 뒤 짧은 피드백: 담으면 하트가 숑숑 + 버튼 통통, 빼면 토스트만 (C, 2026-11-24)
+  function showInterestFeedback(interested) {
+    const button = document.getElementById('interest-button');
+    if (interested) {
+      ui.burst(button, { icon: 'heart' });
+      ui.pop(button);
+      ui.toast('관심 식당에 담았어요');
+    } else {
+      ui.toast('관심 식당에서 뺐어요');
     }
   }
 

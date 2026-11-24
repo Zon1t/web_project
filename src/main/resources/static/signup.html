@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/css/footer.css">
   <link rel="stylesheet" href="/css/ui.css">
   <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/password-field.css">
 </head>
 <body>
   <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
@@ -51,14 +52,15 @@
         <div class="field">
           <label class="field__label" for="signup-password">비밀번호</label>
           <input id="signup-password" class="input" type="password" name="password" maxlength="20"
-                 placeholder="8~20자" autocomplete="new-password" aria-describedby="signup-password-message">
+                 placeholder="영문·숫자를 함께 넣어 8~20자" autocomplete="new-password" aria-describedby="signup-password-message"
+                 data-password-field>
           <p id="signup-password-message" class="field__message" aria-live="polite"></p>
         </div>
 
         <div class="field">
           <label class="field__label" for="signup-password-confirm">비밀번호 확인</label>
           <input id="signup-password-confirm" class="input" type="password" name="passwordConfirm" maxlength="20"
-                 autocomplete="new-password" aria-describedby="signup-password-confirm-message">
+                 autocomplete="new-password" aria-describedby="signup-password-confirm-message" data-password-field>
           <p id="signup-password-confirm-message" class="field__message" aria-live="polite"></p>
         </div>
 
@@ -116,6 +118,7 @@
   <script src="/js/components/brand.js"></script>
   <script src="/js/components/ui.js"></script>
   <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/password-field.js"></script>
   <script src="/js/components/app-footer.js"></script>
   <script src="/js/pages/signup.js"></script>
 </body>

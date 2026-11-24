@@ -146,6 +146,43 @@
   color: var(--color-danger);
 }
 
+/* 안내 (예: 비밀번호를 잊으셨나요?) — 2026-11-24 */
+.auth-notice--info {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+/* 브랜드 패널 없이 카드만 있는 화면 (비밀번호 찾기, 2026-11-24) */
+.auth-card--single {
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+/* 인증번호 남은 시간 */
+.reset-timer {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 로그인 버튼 아래 작은 링크 줄 */
+.auth-help {
+  margin-top: calc(var(--space-2) * -1);
+  text-align: center;
+}
+
+.auth-help__link {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.auth-help__link:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
 .auth-submit {
   width: 100%;
   margin-top: var(--space-2);

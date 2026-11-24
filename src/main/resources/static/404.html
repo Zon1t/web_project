@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>페이지를 찾을 수 없어요 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <style>
+    /* 404 화면 (C, 2026-11-24). 없는 화면 주소로 들어오면 서버(GlobalExceptionHandler)가 이 파일을 보여 준다 */
+    .nf-page {
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      background: var(--color-surface);
+    }
+
+    .nf-card {
+      width: 100%;
+      max-width: 420px;
+      padding: var(--space-10) var(--space-8);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      background: var(--color-bg);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+
+    .nf-code {
+      color: var(--color-primary);
+      font-size: 56px;
+      font-weight: var(--font-weight-extrabold);
+      line-height: 1;
+    }
+
+    .nf-title {
+      margin-top: var(--space-4);
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .nf-desc {
+      margin-top: var(--space-2);
+      color: var(--color-text-sub);
+      font-size: var(--font-size-sm);
+      word-break: keep-all;
+    }
+
+    .nf-actions {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-2);
+      margin-top: var(--space-6);
+    }
+  </style>
+</head>
+<body>
+  <main class="nf-page">
+    <section class="nf-card" aria-labelledby="nf-title">
+      <p class="nf-code" aria-hidden="true">404</p>
+      <h1 id="nf-title" class="nf-title">페이지를 찾을 수 없어요</h1>
+      <p class="nf-desc">주소가 바뀌었거나 없는 페이지예요.<br>홈에서 다시 찾아 주세요.</p>
+      <div class="nf-actions">
+        <a class="btn btn--primary" href="/">홈으로</a>
+        <button class="btn" type="button" onclick="history.back()">뒤로</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -51,4 +51,14 @@ public class Member {
     public static Member create(String loginId, String encodedPassword, String nickname) {
         return new Member(loginId, encodedPassword, nickname);
     }
+
+    /** 비밀번호 변경 (계정 설정). 반드시 암호화한 값을 넘긴다. */
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    /** 닉네임 변경 (계정 설정). 앞뒤 공백 제거·길이·중복 검사는 서비스에서 한다. */
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
 }

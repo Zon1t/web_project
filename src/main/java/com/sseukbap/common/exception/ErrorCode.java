@@ -21,6 +21,8 @@ public enum ErrorCode {
     // ===== 400 =====
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "입력값을 확인해 주세요."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "현재 비밀번호가 일치하지 않습니다."),       // 2026-11-24 비밀번호 변경
+    INVALID_RESET_CODE(HttpStatus.BAD_REQUEST, "INVALID_RESET_CODE", "인증번호가 맞지 않거나 시간이 지났습니다."), // 2026-11-24 비밀번호 찾기
     INVALID_MAP_URL(HttpStatus.BAD_REQUEST, "INVALID_MAP_URL", "네이버 지도 URL만 입력할 수 있습니다."),
     NOT_A_RESTAURANT(HttpStatus.BAD_REQUEST, "NOT_A_RESTAURANT", "음식점·카페만 등록할 수 있습니다."),          // 2026-11-24 식당 등록
     RESTAURANT_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "RESTAURANT_OUT_OF_RANGE", "회사에서 4km 안의 식당만 등록할 수 있습니다."), // 반경은 설정값이라 서비스에서 문구를 다시 만든다

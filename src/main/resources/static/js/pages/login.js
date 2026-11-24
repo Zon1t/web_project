@@ -5,12 +5,15 @@
  * - 성공 시 주소의 redirect 값(직전 화면)으로 돌아간다. 없으면 메인(/).
  *   client.js가 401일 때 /login.html?redirect=현재주소 로 보내 준다.
  * - 회원가입 직후 오면 가입 완료 안내와 가입한 아이디를 채워 준다.
+ * - 2026-11-24: 아이디는 소문자로 보낸다 (서버도 대소문자를 무시). 비밀번호 보기·Caps Lock 안내는 password-field.js
+ * - '비밀번호를 잊으셨나요?' → password-reset.html. 비밀번호를 바꾸고 돌아오면 완료 안내 + 아이디를 채워 준다
  */
 (function () {
   'use strict';
 
   const DEFAULT_TARGET = '/';
   const SIGNUP_DONE_KEY = 'sseukbap.signupLoginId';   // signup.js와 같은 값
+  const RESET_DONE_KEY = 'sseukbap.passwordResetLoginId';   // password-reset.js와 같은 값
 
   const form = document.getElementById('login-form');
   const notice = document.getElementById('login-notice');
@@ -18,12 +21,14 @@
   const passwordInput = document.getElementById('login-password');
   const submitButton = document.getElementById('login-submit');
 
+
   const target = getSafeRedirect();
 
   init();
 
   async function init() {
     showSignupDone();
+    showResetDone();
 
     // 이미 로그인한 상태면 바로 돌려보낸다. (로그인 화면에서는 401이어도 client.js가 이동시키지 않음)
     try {
@@ -45,7 +50,7 @@
     event.preventDefault();
     hideNotice();
 
-    const loginId = idInput.value.trim();
+    const loginId = idInput.value.trim().toLowerCase();
     const password = passwordInput.value;
     if (!loginId || !password) {
       showNotice('아이디와 비밀번호를 입력해 주세요.', 'error');
@@ -92,6 +97,21 @@
     if (loginId === null) return;
 
     showNotice('가입을 마쳤어요. 로그인해 주세요.', 'success');
+    idInput.value = loginId;
+  }
+
+  /** 비밀번호 찾기에서 바꾸고 돌아왔을 때 */
+  function showResetDone() {
+    let loginId = null;
+    try {
+      loginId = sessionStorage.getItem(RESET_DONE_KEY);
+      sessionStorage.removeItem(RESET_DONE_KEY);
+    } catch (e) {
+      return;
+    }
+    if (loginId === null) return;
+
+    showNotice('비밀번호를 바꿨어요. 새 비밀번호로 로그인해 주세요.', 'success');
     idInput.value = loginId;
   }
 

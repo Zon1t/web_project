@@ -44,5 +44,18 @@
     me() {
       return api.get('/auth/me');
     },
+
+    /**
+     * 비밀번호 찾기 1) 인증번호 요청 — POST /api/auth/password-reset/request → { email, expiresInSeconds }
+     * 아이디가 없어도 같은 응답 (2026-11-24). 지금은 메일 대신 서버 로그에 번호가 찍힌다
+     */
+    requestPasswordReset(loginId, email) {
+      return api.post('/auth/password-reset/request', { loginId, email });
+    },
+
+    /** 비밀번호 찾기 2) 인증번호 + 새 비밀번호 — POST /api/auth/password-reset/confirm → null */
+    confirmPasswordReset(body) {
+      return api.post('/auth/password-reset/confirm', body);
+    },
   };
 })(window);

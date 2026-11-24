@@ -4,6 +4,9 @@ import com.sseukbap.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -17,6 +20,9 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 모든 예외를 공통 응답 형식으로 바꿔 주는 곳.
@@ -79,10 +85,29 @@ public class GlobalExceptionHandler {
         return toResponse(ErrorCode.INVALID_IMAGE, null, request);
     }
 
-    /** 없는 주소 */
+    /**
+     * 없는 주소.
+     * - /api/ 요청: 지금처럼 JSON 404 NOT_FOUND
+     * - 화면 주소(예: /abc.html): JSON 글자가 그대로 보이지 않게 static/404.html을 404로 보여 준다 (2026-11-24, C1)
+     */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotFound(NoResourceFoundException e, HttpServletRequest request) {
+    public ResponseEntity<?> handleNotFound(NoResourceFoundException e, HttpServletRequest request) {
+        if (!request.getRequestURI().startsWith("/api/")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
+                    .body(notFoundPage());
+        }
         return toResponse(ErrorCode.NOT_FOUND, null, request);
+    }
+
+    /** static/404.html 내용. 파일을 못 읽으면 아주 짧은 안내로 대신한다 */
+    private String notFoundPage() {
+        try {
+            return new ClassPathResource("static/404.html").getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            return "<!doctype html><meta charset=\"utf-8\"><title>페이지를 찾을 수 없어요</title>"
+                    + "<p>페이지를 찾을 수 없어요. <a href=\"/\">홈으로</a></p>";
+        }
     }
 
     /** 그 외 예상하지 못한 모든 오류 → 500. 원인은 서버 로그에서 확인 */

@@ -2,6 +2,7 @@
  * mypage.js — 마이페이지 화면 (S-10, C)
  *
  * - 프로필: 닉네임, 아이디 + '나의 슥밥 기록' 카드 4개 (카드를 누르면 해당 탭으로 이동)
+ *   [계정 설정] 버튼 → account.html (닉네임·비밀번호 변경, 2026-11-24)
  * - 탭: 내 리뷰(기본) / 참여한 식사팟 / 등록한 식당 / 관심 식당
  *   · 탭은 처음 열 때 한 번만 불러오고 이후에는 저장해 둔 목록을 쓴다
  *   · 주소에 ?tab=parties 처럼 붙이면 그 탭으로 바로 연다
@@ -142,6 +143,7 @@
       '<p class="mypage-profile__nickname">' + esc(nickname) + ' 님</p>' +
       '<p class="mypage-profile__login-id">' + esc(summary.loginId) + '<span aria-hidden="true"> · </span>' + WORKPLACE + '</p>' +
       '</div>' +
+      '<a class="btn mypage-profile__settings" href="/account.html">계정 설정</a>' +
       '</div>' +
       '<h2 class="mypage-record__title">나의 슥밥 기록</h2>' +
       '<ul class="mypage-stats">' +

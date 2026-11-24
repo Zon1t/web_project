@@ -3,7 +3,7 @@
  *
  * ▼ HTML에는 자리만 둔다
  *   <header id="app-header" class="app-header"></header>                          ← 로그인 후 화면
- *   <header id="app-header" class="app-header" data-variant="simple"></header>    ← 로그인·회원가입 (로고만)
+ *   <header id="app-header" class="app-header" data-variant="simple"></header>    ← 로그인·회원가입 (로고만, 로고를 누르면 /landing.html)
  *   <header id="app-header" class="app-header" data-layout="wide"></header>       ← 지도처럼 화면 전체 폭을 쓰는 화면 (2026-11-23부터 헤더 위치는 다른 화면과 같음)
  *
  * ▼ CSS·JS
@@ -65,7 +65,11 @@
 
   header.innerHTML =
     '<div class="app-header__inner">' +
-    '<a class="app-header__logo brand-logo" href="/" aria-label="슥밥 홈">' + global.brand.wordmarkHtml() + '</a>' +
+    // 로그인·회원가입 화면(simple)은 로그인 전이라 홈 대신 서비스 소개로 (2026-11-24)
+    (isSimple
+      ? '<a class="app-header__logo brand-logo" href="/landing.html" aria-label="슥밥 소개">'
+      : '<a class="app-header__logo brand-logo" href="/" aria-label="슥밥 홈">') +
+    global.brand.wordmarkHtml() + '</a>' +
     (isSimple ? '' : navHtml() + userHtml()) +
     '</div>';
 

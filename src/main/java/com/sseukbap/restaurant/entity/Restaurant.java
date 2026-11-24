@@ -2,6 +2,7 @@ package com.sseukbap.restaurant.entity;
 
 import com.sseukbap.member.entity.Member;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,6 +17,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.type.YesNoConverter;
 
 import java.time.LocalDateTime;
 
@@ -62,6 +64,10 @@ public class Restaurant {
 
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Convert(converter = YesNoConverter.class)
+    @Column(name = "HIDDEN_YN", nullable = false, length = 1)
+    private boolean hidden;           // 관리자 숨김 (2026-11-24, 08_account_admin.sql). true면 목록·랭킹·룰렛 등에서 뺀다
 
     private Restaurant(String name, RestaurantCategory category, String mapUrl,
                        String address, Double lat, Double lng, Member member) {

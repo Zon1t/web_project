@@ -297,6 +297,58 @@ public class PartyService {
                 .toList();
     }
 
+    // ===== 회원 탈퇴 (C의 탈퇴 API가 호출, 2026-11-24) =====
+
+    /** 진행 중인 팟 상태 (FINISHED·DELETED가 아닌 것) */
+    private static final Set<PartyStatus> ACTIVE_STATUSES =
+            EnumSet.of(PartyStatus.RECRUITING, PartyStatus.SCHEDULED, PartyStatus.FULL, PartyStatus.CLOSED);
+
+    /**
+     * 탈퇴하는 회원의 식사팟 정리. 회원 정보(닉네임 등)를 바꾸기 전에, 같은 트랜잭션 안에서 호출한다.
+     * - 대상: 진행 중(RECRUITING·SCHEDULED·FULL·CLOSED) 팟만. FINISHED·DELETED는 그대로 둔다(이력·따봉 유지).
+     * - 방장인 팟 → DELETED + 시스템 메시지 (방장 나가기와 같은 처리)
+     * - 참여자인 팟 → 나가기 (30분 전 제한은 무시) + "○○님이 나갔습니다". FULL이었다면 SCHEDULED/RECRUITING
+     * - 팟마다 행 잠금(SELECT ... FOR UPDATE). 교착을 막으려고 partyId 오름차순으로 잠근다.
+     *
+     * @return 정리 결과 (삭제한 팟 수, 나간 팟 수)
+     */
+    @Transactional
+    public PartyWithdrawalResult cleanUpForWithdrawal(Long memberId) {
+        int deletedCount = 0;
+        int leftCount = 0;
+
+        for (Long partyId : mealPartyRepository.findPartyIdsOfMember(memberId, ACTIVE_STATUSES)) {
+            MealParty party = mealPartyRepository.findByIdForUpdate(partyId).orElse(null);
+            // 잠그기 전에 다른 요청으로 끝났거나 삭제됐으면 건너뛴다
+            if (party == null || !party.getStatus().isActive()) {
+                continue;
+            }
+
+            if (party.isHost(memberId)) {
+                party.delete();
+                partyChatRepository.save(PartyChat.createSystem(party, "방장이 탈퇴해 식사팟이 삭제되었습니다"));
+                deletedCount++;
+                continue;
+            }
+
+            PartyMember partyMember = partyMemberRepository.findByPartyIdAndMemberId(partyId, memberId).orElse(null);
+            if (partyMember == null) {
+                continue;
+            }
+            int memberCountAfter = (int) partyMemberRepository.countByPartyId(partyId) - 1;
+            partyMemberRepository.delete(partyMember);
+            party.leave(memberCountAfter);
+            partyChatRepository.save(PartyChat.createSystem(
+                    party, partyMember.getMember().getNickname() + "님이 나갔습니다"));
+            leftCount++;
+        }
+        return new PartyWithdrawalResult(deletedCount, leftCount);
+    }
+
+    /** 탈퇴 정리 결과 (로그·테스트 확인용) */
+    public record PartyWithdrawalResult(int deletedPartyCount, int leftPartyCount) {
+    }
+
     // ===== 목록 도우미 =====
 
     private Set<Long> getJoinedPartyIds(Long memberId, LocalDate date) {

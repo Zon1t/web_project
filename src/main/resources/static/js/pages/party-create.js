@@ -5,6 +5,7 @@
  *       /party-create.html?restaurantId=12 → 그 식당으로 고정 (식당 상세·룰렛에서 진입)
  *       ?date=2026-11-21 을 붙이면 그 날짜를 미리 고른다 (식사팟 목록에서 진입)
  *       ?restaurantId=12&restore=1 → 식당 등록을 마치고 돌아온 경우. 등록 전에 입력한 값을 되살린다 (T2)
+ *       ?restore=1 (restaurantId 없음) → 식당 등록 화면에서 [취소]·[뒤로]로 돌아온 경우. 입력값만 되살리고 알림은 없다
  *
  * 만든 것
  *   - 식당: 고정 또는 이름 검색(입력이 멈추고 300ms 뒤 검색, ↑↓ Enter 선택)
@@ -290,7 +291,10 @@
       memoCount.textContent = memoInput.value.length;
     }
     updateSubmit();
-    ui.toast('식당을 등록했어요. 입력하던 내용을 이어서 만들어 주세요');
+    // 등록을 마치고 온 경우(restaurantId 있음)에만. 등록 화면에서 [취소]로 돌아오면 restore=1만 붙어 온다 (B, 2026-11-25)
+    if (new URLSearchParams(location.search).get('restaurantId')) {
+      ui.toast('식당을 등록했어요. 입력하던 내용을 이어서 만들어 주세요');
+    }
   }
 
   /** ↑↓로 고르고 Enter로 선택, Esc로 닫기 */

@@ -18,11 +18,11 @@
   <header id="app-header" class="app-header"></header>
 
   <main class="container register-page">
-    <a class="ui-back" href="/restaurant-list.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>뒤로</a>
+    <a id="back-link" class="ui-back" href="/restaurant-list.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span><span id="back-label">뒤로</span></a>
     <div class="ui-page-head">
       <div>
         <h1 class="ui-page-head__title">식당 등록</h1>
-        <p class="ui-page-head__desc">알고 있는 맛집을 등록하면 모두가 지도에서 볼 수 있어요.</p>
+        <p id="page-desc" class="ui-page-head__desc">알고 있는 맛집을 등록하면 모두가 지도에서 볼 수 있어요.</p>
       </div>
     </div>
 
@@ -67,7 +67,7 @@
       <p id="form-message" class="field__message field__message--error" role="alert"></p>
 
       <div class="register-form__actions">
-        <a class="btn" href="/restaurant-list.html">취소</a>
+        <a id="cancel-link" class="btn" href="/restaurant-list.html">취소</a>
         <button id="submit-button" class="btn btn--primary" type="submit" disabled>등록하기</button>
       </div>
     </form>

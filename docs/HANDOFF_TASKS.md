@@ -28,12 +28,12 @@
 
 | ID | 작업 | 담당 | 브랜치 | 규모 | 선행 | 상태 |
 |---|---|---|---|---|---|---|
-| T0 | 식당 상세 리뷰 목록 우선 + 작성 폼 접기, 랜딩 문구 | B | `feature/restaurant-detail-scroll` | 작음 | - | **완료 (커밋 대기)** |
+| T0 | 식당 상세 리뷰 목록 우선 + 작성 폼 접기, 랜딩 문구 | B | `feature/restaurant-detail-scroll` | 작음 | - | **완료** (#76) |
 | T1 | 홈 식사팟: 참여 가능 → 참여 중 → 마감 순, 비활성 표시 | A | `feature/home-party-states` | 작음~중간 | - | 대기 |
-| T2 | 없는 식당으로 식사팟 만들기 → 식당 등록 후 자동 복귀 | B(등록) + A(만들기) | `feature/party-create-register-return` | 중간 | - | 대기 |
+| T2 | 없는 식당으로 식사팟 만들기 → 식당 등록 후 자동 복귀 | B(등록) + A(만들기) | `feature/party-create-register-return` | 중간 | - | **완료** (A #78, B #80: 등록 화면 문구·취소 시 입력값 복원) |
 | T3 | 아이디 = 회사 이메일(samsung.com), 닉네임 2~12자 | C (+DB) | `feature/c-final` | 큼 | 팀 합의 | **완료 (PR 대기)** — 아이디·이메일 따로 두는 것으로 변경(아래 참고), `10_email_login.sql` 실행 필요 |
 | T4 | 비공개 식사팟 (초대 코드로만 입장) | A (+DB) | `feature/private-party` | 큼 | 팀 합의 | 대기 |
-| T5 | 용어 통일 (식사팟·밥친구·점심 계획) | 전원 (화면별 담당) | `feature/wording-unify` | 중간 | - | 대기 (C 몫 완료: `feature/c-final`) |
+| T5 | 용어 통일 (식사팟·밥친구·점심 계획) | 전원 (화면별 담당) | `feature/wording-unify` | 중간 | - | 대기 (C 몫 완료: `feature/c-final`, B 몫 완료: `feature/wording-unify-landing`) |
 | T6 | 남은 개선 항목 (P0~P2 묶음) | 항목별 | 항목별 | 작음 위주 | - | 대기 |
 
 > **발표(11/26) 전 권장:** T1, T2, T5, T6의 P0. **T3·T4는 DB·명세가 바뀌므로 발표 후 권장.** 발표 전에 할 경우 반드시 `demo_reset.sql`로 리허설한다.
@@ -182,7 +182,7 @@
 
 | 위치 | 담당 | 고칠 문구 (예) |
 |---|---|---|
-| `landing.html`, `landing.js` | B | '점심·저녁 메이트', '동료와 식사팟을 꾸려요', '밥 친구', '작은 모임', '"같이 가요!" 한마디', `<meta description>`의 '동료·꾸리는' |
+| `landing.html`, `landing.js` | B | '점심·저녁 메이트', '동료와 식사팟을 꾸려요', '밥 친구', '작은 모임', '"같이 가요!" 한마디', `<meta description>`의 '동료·꾸리는' — **완료** (식사팟 맥락의 '동료'·'팟'도 정리. 맛집 기록 맥락의 '동료 머릿속에만 있는 정보'는 유지) |
 | `today-meal.js` (홈 '내 식사') | A | `○○ 자리가 비어 있어요` → `○○ 계획이 아직 없어요`, '같이 먹을 팟이 N개' → '참여할 수 있는 ○○ 식사팟이 N개 있어요', '[팟 보기]' → '[식사팟 보기]', 단독 '확정' → '참석 확정' |
 | `today-meal.js` 빈 칸 버튼 | A | 모집 0개일 때 문구 "직접 만들어 밥친구를 모아 보세요" + 버튼 **[식사팟 만들기]** (지금은 목록으로 감) |
 | `party-main.js` | A | '내 참여 확정' → '내 참석 확정', '같이 먹기', '다른 사람' → '밥친구' |
@@ -205,10 +205,10 @@
 | P0 | 방장 참석 확정 누락 | A | 작음 | 일정을 정한 직후 방장에게 "방장님도 참석 확정해 주세요" 안내. (자동 확정은 명세 변경이라 팀 합의 후) |
 | P0 | 홈 빈 칸 점선 테두리 | A | 작음 | `today-meal.css` 빈 슬롯 테두리 실선/배경으로 |
 | P0 | 데모 데이터 보강 | 팀 | 작음 | 최근 30일 따봉·리뷰 고르게, 시연용 팟(일정 확정 후 참석 확정 전 / 어제 식사 후 따봉 대기) |
-| P1 | 좁은 화면에서 지도가 목록 맨 아래 | B | 작음~중간 | 좁은 폭에서 지도 위 고정 또는 [지도/목록] 전환 |
-| P1 | 일정 확정 알림 없음 | B | 중간 | 헤더 종에 '일정이 정해졌어요, 참석 확정해 주세요' (`/api/parties/my/today`로 판단, 백엔드 변경 없음) |
+| P1 | 좁은 화면에서 지도가 목록 맨 아래 | B | 작음~중간 | 좁은 폭에서 지도 위 고정 또는 [지도/목록] 전환 — **진행 예정** (`feature/restaurant-list-mobile`) |
+| P1 | 일정 확정 알림 없음 | B | 중간 | **완료 (이미 구현돼 있었음)**: 헤더 종이 `/api/parties/my/action-pending`의 `CONFIRM`으로 "참석을 확정해 주세요"를 보여 준다 |
 | P1 | 식사 시간 지난 직후(최대 5분) 참여·확정 가능 | A | 작음 | 참여·확정 시 `PartyTimePolicy.isMealTimePassed` 확인 |
-| P1 | `USE_MOCK = true` 남아 있음 | B | 작음 | `client.js` 33행 `false` (목업 스크립트는 HTML에서 주석 상태라 현재 영향 없음) |
+| P1 | `USE_MOCK = true` 남아 있음 | B | 작음 | **완료** (`feature/wording-unify-landing`): `client.js` `USE_MOCK = false` |
 | P2 | 시간대 혼재 | C·A | 작음~중간 | **완료 (C, `feature/c-final`)**: `TimeZoneConfig`로 JVM 기본 시간대를 Asia/Seoul로 고정 |
 | P2 | CSRF 대비 | C | 작음 | **완료 (C1에서 이미 적용)**: `application.yml`에 `server.servlet.session.cookie.same-site: lax` |
 | P2 | 문서 불일치 | 팀 | 작음 | CLAUDE.md '태그 13개'(실제 18), 카페 카테고리, 한 끼 한 팟 규칙 → 노션 갱신 후 동기화 |

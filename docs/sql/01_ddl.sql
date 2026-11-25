@@ -16,14 +16,14 @@
 -- ---------------------------------------------------------------------
 CREATE TABLE MEMBER (
     MEMBER_ID   NUMBER                      NOT NULL,
-    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 영문·숫자 4~20자
+    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 내부 아이디: 영문·숫자 4~20자 (2026-11-25 T3: 가입 시 이메일 앞부분으로 자동 생성)
     PASSWORD    VARCHAR2(60)                NOT NULL,   -- BCrypt 해시
-    NICKNAME    VARCHAR2(30)                NOT NULL,   -- 2~10자
+    NICKNAME    VARCHAR2(36 CHAR)           NOT NULL,   -- 2~12자 (2026-11-25 T3: 30바이트 → 36 CHAR, 기존 DB는 10_email_login.sql)
     CREATED_AT  DATE         DEFAULT SYSDATE NOT NULL,
     -- 2026-11-24 추가 (기존 DB는 08_account_admin.sql)
     STATUS                  VARCHAR2(10)  DEFAULT 'ACTIVE' NOT NULL,   -- ACTIVE / WITHDRAWN
     WITHDRAWN_AT            DATE,                                      -- 탈퇴 일시
-    EMAIL                   VARCHAR2(100),                             -- 계정 찾기용
+    EMAIL                   VARCHAR2(100),                             -- 회사 이메일 = 로그인 아이디 (2026-11-25 T3, 기존 회원 때문에 아직 NULL 허용)
     RESET_TOKEN_HASH        VARCHAR2(64),                              -- 재설정 토큰 SHA-256 16진수
     RESET_TOKEN_EXPIRES_AT  DATE,                                      -- 재설정 토큰 만료
     ROLE                    VARCHAR2(10)  DEFAULT 'USER' NOT NULL,     -- USER / ADMIN

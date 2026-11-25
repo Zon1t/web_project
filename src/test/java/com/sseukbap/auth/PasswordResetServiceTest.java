@@ -61,19 +61,19 @@ class PasswordResetServiceTest {
 
     @Test
     void 받은_인증번호로_비밀번호를_바꿀_수_있다() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
 
-        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22"));
+        passwordResetService.confirm(new PasswordResetConfirmRequest(email, code, "newpass22", "newpass22"));
 
         Member saved = memberRepository.findById(member.getMemberId()).orElseThrow();
         assertThat(passwordEncoder.matches("newpass22", saved.getPassword())).isTrue();
     }
 
     @Test
-    void 아이디를_대문자로_입력해도_된다() {
-        String code = requestCode(member.getLoginId().toUpperCase());
+    void 이메일을_대문자로_입력해도_된다() {
+        String code = requestCode(email.toUpperCase());
 
-        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId().toUpperCase(), code, "newpass22", "newpass22"));
+        passwordResetService.confirm(new PasswordResetConfirmRequest(email.toUpperCase(), code, "newpass22", "newpass22"));
 
         Member saved = memberRepository.findById(member.getMemberId()).orElseThrow();
         assertThat(passwordEncoder.matches("newpass22", saved.getPassword())).isTrue();
@@ -81,64 +81,65 @@ class PasswordResetServiceTest {
 
     @Test
     void 인증번호는_한_번만_쓸_수_있다() {
-        String code = requestCode(member.getLoginId());
-        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22"));
+        String code = requestCode(email);
+        passwordResetService.confirm(new PasswordResetConfirmRequest(email, code, "newpass22", "newpass22"));
 
         assertResetCodeError(() -> passwordResetService.confirm(
-                new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass33", "newpass33")));
+                new PasswordResetConfirmRequest(email, code, "newpass33", "newpass33")));
     }
 
     @Test
     void 다섯_번_틀리면_맞는_번호도_쓸_수_없다() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
         String wrong = code.equals("000000") ? "111111" : "000000";
 
         for (int i = 0; i < 5; i++) {
             assertResetCodeError(() -> passwordResetService.confirm(
-                    new PasswordResetConfirmRequest(member.getLoginId(), wrong, "newpass22", "newpass22")));
+                    new PasswordResetConfirmRequest(email, wrong, "newpass22", "newpass22")));
         }
         assertResetCodeError(() -> passwordResetService.confirm(
-                new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22")));
+                new PasswordResetConfirmRequest(email, code, "newpass22", "newpass22")));
     }
 
     @Test
     void 새_비밀번호_규칙이_틀리면_번호를_쓰지_않고_INVALID_REQUEST() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
 
         assertThatThrownBy(() -> passwordResetService.confirm(
-                new PasswordResetConfirmRequest(member.getLoginId(), code, "onlyletters", "onlyletters")))
+                new PasswordResetConfirmRequest(email, code, "onlyletters", "onlyletters")))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.INVALID_REQUEST);
 
         // 번호는 그대로 남아 있어서 규칙에 맞게 다시 하면 된다
-        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22"));
+        passwordResetService.confirm(new PasswordResetConfirmRequest(email, code, "newpass22", "newpass22"));
     }
 
     @Test
-    void 없는_아이디도_같은_응답이고_메일은_보내지_않는다() {
-        PasswordResetRequestResponse response =
-                passwordResetService.request(new PasswordResetRequest("nobody" + member.getMemberId() + "x", email));
+    void 등록되지_않은_이메일도_같은_응답이고_메일은_보내지_않는다() {
+        String unknown = "nobody" + member.getMemberId() + "@samsung.com";
+        PasswordResetRequestResponse response = passwordResetService.request(new PasswordResetRequest(unknown));
 
-        assertThat(response.email()).isEqualTo(email);
+        assertThat(response.email()).isEqualTo(unknown);
         assertThat(response.expiresInSeconds()).isEqualTo(300);
         verify(mailSender, never()).send(anyString(), anyString(), anyString());
     }
 
     @Test
-    void 등록한_이메일과_다르면_같은_응답이지만_메일은_보내지_않는다() {
-        PasswordResetRequestResponse response = passwordResetService.request(
-                new PasswordResetRequest(member.getLoginId(), "other" + member.getMemberId() + "@samsung.com"));
+    void 탈퇴한_회원에게는_보내지_않는다() {
+        member.withdraw(java.time.LocalDateTime.now());   // 이메일은 남지만 (2026-11-25 T3) 보내지 않는다
+        memberRepository.flush();
 
-        assertThat(response.expiresInSeconds()).isEqualTo(300);
+        passwordResetService.request(new PasswordResetRequest(email));
+
         verify(mailSender, never()).send(anyString(), anyString(), anyString());
     }
 
     @Test
     void 인증번호_확인은_번호를_지우지_않아서_이어서_비밀번호를_바꿀_수_있다() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
 
-        passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), code));
-        passwordResetService.confirm(new PasswordResetConfirmRequest(member.getLoginId(), code, "newpass22", "newpass22"));
+        passwordResetService.verify(new PasswordResetVerifyRequest(email, code));
+        passwordResetService.confirm(new PasswordResetConfirmRequest(email, code, "newpass22", "newpass22"));
 
         Member saved = memberRepository.findById(member.getMemberId()).orElseThrow();
         assertThat(passwordEncoder.matches("newpass22", saved.getPassword())).isTrue();
@@ -146,26 +147,26 @@ class PasswordResetServiceTest {
 
     @Test
     void 인증번호_확인에서_틀리면_INVALID_RESET_CODE() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
         String wrong = code.equals("000000") ? "111111" : "000000";
 
-        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), wrong)));
+        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(email, wrong)));
     }
 
     @Test
     void 인증번호_확인에서_다섯_번_틀리면_번호가_사라진다() {
-        String code = requestCode(member.getLoginId());
+        String code = requestCode(email);
         String wrong = code.equals("000000") ? "111111" : "000000";
 
         for (int i = 0; i < 5; i++) {
-            assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), wrong)));
+            assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(email, wrong)));
         }
-        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(member.getLoginId(), code)));
+        assertResetCodeError(() -> passwordResetService.verify(new PasswordResetVerifyRequest(email, code)));
     }
 
     /** 인증번호를 요청하고, 가짜 발송기에 넘어간 본문에서 6자리 번호를 꺼낸다 */
-    private String requestCode(String loginId) {
-        passwordResetService.request(new PasswordResetRequest(loginId, email.toUpperCase()));   // 대소문자는 무시
+    private String requestCode(String input) {
+        passwordResetService.request(new PasswordResetRequest(input));
 
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
         verify(mailSender).send(eq(email), anyString(), body.capture());

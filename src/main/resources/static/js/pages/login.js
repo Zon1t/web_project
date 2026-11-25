@@ -5,8 +5,10 @@
  * - 성공 시 주소의 redirect 값(직전 화면)으로 돌아간다. 없으면 메인(/).
  *   client.js가 401일 때 /login.html?redirect=현재주소 로 보내 준다.
  * - 회원가입 직후 오면 가입 완료 안내와 가입한 아이디를 채워 준다.
- * - 2026-11-24: 아이디는 소문자로 보낸다 (서버도 대소문자를 무시). 비밀번호 보기·Caps Lock 안내는 password-field.js
- * - '비밀번호를 잊으셨나요?' → password-reset.html. 비밀번호를 바꾸고 돌아오면 완료 안내 + 아이디를 채워 준다
+ * - 2026-11-25 T3: 아이디 또는 회사 이메일로 로그인한다 (소문자로 보냄). 이메일이 없는 기존 회원은
+ *   서버가 emailRequired = true를 주므로 계정 설정의 이메일 등록으로 보낸다.
+ * - 비밀번호 보기·Caps Lock 안내는 password-field.js
+ * - '비밀번호를 잊으셨나요?' → password-reset.html. 비밀번호를 바꾸고 돌아오면 완료 안내 + 이메일을 채워 준다
  */
 (function () {
   'use strict';
@@ -14,6 +16,7 @@
   const DEFAULT_TARGET = '/';
   const SIGNUP_DONE_KEY = 'sseukbap.signupLoginId';   // signup.js와 같은 값
   const RESET_DONE_KEY = 'sseukbap.passwordResetLoginId';   // password-reset.js와 같은 값
+  const EMAIL_REQUIRED_URL = '/account.html?emailRequired=1';   // 이메일 등록 안내 (account.js)
 
   const form = document.getElementById('login-form');
   const notice = document.getElementById('login-notice');
@@ -32,8 +35,8 @@
 
     // 이미 로그인한 상태면 바로 돌려보낸다. (로그인 화면에서는 401이어도 client.js가 이동시키지 않음)
     try {
-      await authApi.me();
-      location.replace(target);
+      const me = await authApi.me();
+      location.replace(me.emailRequired ? EMAIL_REQUIRED_URL : target);
       return;
     } catch (err) {
       // 로그인 안 됨 → 그대로 로그인 화면
@@ -50,18 +53,19 @@
     event.preventDefault();
     hideNotice();
 
-    const loginId = idInput.value.trim().toLowerCase();
+    const account = idInput.value.trim().toLowerCase();   // 아이디 또는 회사 이메일
     const password = passwordInput.value;
-    if (!loginId || !password) {
+    if (!account || !password) {
       showNotice('아이디와 비밀번호를 입력해 주세요.', 'error');
-      (loginId ? passwordInput : idInput).focus();
+      (account ? passwordInput : idInput).focus();
       return;
     }
 
     setLoading(true);
     try {
-      await authApi.login(loginId, password);
-      location.replace(target);
+      const member = await authApi.login(account, password);
+      // 이메일이 없는 기존 회원: 먼저 회사 이메일을 등록하게 한다
+      location.replace(member.emailRequired ? EMAIL_REQUIRED_URL : target);
     } catch (err) {
       showNotice(err.message, 'error');   // 서버 문구는 client.js가 해요체로 바꿔 준다 ('…일치하지 않아요.')
       passwordInput.value = '';

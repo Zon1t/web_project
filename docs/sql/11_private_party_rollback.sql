@@ -1,0 +1,15 @@
+-- =====================================================================
+-- 11_private_party_rollback.sql : 11_private_party.sql 되돌리기
+--   - 비공개 식사팟 컬럼을 지운다. 비공개였던 식사팟은 모두 공개 식사팟이 된다.
+--   - 이 스크립트를 실행하면 비공개 기능이 있는 코드로는 서버가 동작하지 않는다. (코드도 함께 되돌릴 것)
+--   - 여러 번 실행해도 된다. 없는 컬럼(ORA-00904)·제약조건(ORA-02443)은 건너뛴다.
+-- =====================================================================
+
+BEGIN EXECUTE IMMEDIATE 'ALTER TABLE MEAL_PARTY DROP CONSTRAINT UK_MEAL_PARTY_INVITE_CODE'; EXCEPTION WHEN OTHERS THEN IF SQLCODE NOT IN (-904, -2443) THEN RAISE; END IF; END;
+/
+BEGIN EXECUTE IMMEDIATE 'ALTER TABLE MEAL_PARTY DROP CONSTRAINT CK_MEAL_PARTY_PRIVATE_YN'; EXCEPTION WHEN OTHERS THEN IF SQLCODE NOT IN (-904, -2443) THEN RAISE; END IF; END;
+/
+BEGIN EXECUTE IMMEDIATE 'ALTER TABLE MEAL_PARTY DROP COLUMN INVITE_CODE'; EXCEPTION WHEN OTHERS THEN IF SQLCODE NOT IN (-904, -2443) THEN RAISE; END IF; END;
+/
+BEGIN EXECUTE IMMEDIATE 'ALTER TABLE MEAL_PARTY DROP COLUMN PRIVATE_YN'; EXCEPTION WHEN OTHERS THEN IF SQLCODE NOT IN (-904, -2443) THEN RAISE; END IF; END;
+/

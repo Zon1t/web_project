@@ -52,7 +52,7 @@ class PartyActionPendingTest {
         PartyCreateRequest request = new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
                 MealType.LUNCH, LocalTime.of(12, 0), 4, null);
         partyId = partyService.createParty(request, host.getMemberId(), NINE_AM).partyId();
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
     }
 
     @Test
@@ -78,7 +78,7 @@ class PartyActionPendingTest {
         assertThat(items.get(0).time()).isEqualTo(LocalTime.of(12, 30));
         assertThat(items.get(0).meetPlace()).isEqualTo("정문");
 
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         assertThat(pending(user02)).isEmpty();
     }
 

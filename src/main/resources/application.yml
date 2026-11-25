@@ -28,6 +28,9 @@ server:
         http-only: true       # JS에서 세션 쿠키를 읽지 못하게
         same-site: lax        # 다른 사이트에서 보낸 요청에는 쿠키를 붙이지 않음
 
+auth:
+  allowed-email-domains: samsung.com   # 가입·로그인에 쓸 수 있는 회사 이메일 도메인 (쉼표로 여러 개, 2026-11-25 T3)
+
 upload:
   dir: uploads # 업로드 파일 저장 폴더 (프로젝트 폴더 기준, Git 제외)
 

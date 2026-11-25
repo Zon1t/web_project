@@ -23,7 +23,7 @@
     <div class="ui-page-head">
       <div>
         <h1 class="ui-page-head__title">식사팟 만들기</h1>
-        <p class="ui-page-head__desc">식당과 시간을 정하면 같이 먹을 사람을 모을 수 있어요.</p>
+        <p class="ui-page-head__desc">식당과 시간을 정하면 밥친구를 모을 수 있어요.</p>
       </div>
     </div>
 
@@ -83,11 +83,23 @@
         </div>
       </div>
 
-      <!-- 한마디 -->
+      <!-- 방 설명 -->
       <div class="field">
         <label class="field__label" for="memo">방 설명</label>
         <input id="memo" class="input" type="text" maxlength="50" placeholder="예: 빨리 먹고 복귀해요 / 조용히 먹고 싶은 분">
         <p class="field__message"><span id="memo-count">0</span> / 50자</p>
+      </div>
+
+      <!-- 공개 범위 (2026-11-25 비공개 식사팟) -->
+      <div class="field">
+        <span class="field__label" id="private-label">공개 범위</span>
+        <label class="party-form__private">
+          <input id="private-toggle" type="checkbox" aria-describedby="private-desc">
+          <span class="party-form__private-text">
+            <b>비공개: 초대받은 사람만</b>
+            <span id="private-desc" class="text-muted">목록과 홈에 보이지 않아요. 만든 뒤 초대 링크를 보내 밥친구를 불러 주세요.</span>
+          </span>
+        </label>
       </div>
 
       <p id="form-message" class="field__message field__message--error" role="alert"></p>

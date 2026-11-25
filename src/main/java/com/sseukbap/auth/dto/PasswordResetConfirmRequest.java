@@ -2,10 +2,10 @@ package com.sseukbap.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-/** POST /api/auth/password-reset/confirm 요청 (2026-11-24). 규칙 검사는 서비스에서 한다 */
+/** POST /api/auth/password-reset/confirm 요청 (2026-11-24). 규칙 검사는 서비스에서 한다. 2026-11-25 T3: loginId → email */
 public record PasswordResetConfirmRequest(
         @NotBlank(message = "입력값을 확인해 주세요.")
-        String loginId,
+        String email,
 
         @NotBlank(message = "인증번호를 입력해 주세요.")
         String code,

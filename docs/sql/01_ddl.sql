@@ -16,14 +16,14 @@
 -- ---------------------------------------------------------------------
 CREATE TABLE MEMBER (
     MEMBER_ID   NUMBER                      NOT NULL,
-    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 영문·숫자 4~20자
+    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 내부 아이디: 영문·숫자 4~20자 (2026-11-25 T3: 가입 시 이메일 앞부분으로 자동 생성)
     PASSWORD    VARCHAR2(60)                NOT NULL,   -- BCrypt 해시
-    NICKNAME    VARCHAR2(30)                NOT NULL,   -- 2~10자
+    NICKNAME    VARCHAR2(36 CHAR)           NOT NULL,   -- 2~12자 (2026-11-25 T3: 30바이트 → 36 CHAR, 기존 DB는 10_email_login.sql)
     CREATED_AT  DATE         DEFAULT SYSDATE NOT NULL,
     -- 2026-11-24 추가 (기존 DB는 08_account_admin.sql)
     STATUS                  VARCHAR2(10)  DEFAULT 'ACTIVE' NOT NULL,   -- ACTIVE / WITHDRAWN
     WITHDRAWN_AT            DATE,                                      -- 탈퇴 일시
-    EMAIL                   VARCHAR2(100),                             -- 계정 찾기용
+    EMAIL                   VARCHAR2(100),                             -- 회사 이메일 = 로그인 아이디 (2026-11-25 T3, 기존 회원 때문에 아직 NULL 허용)
     RESET_TOKEN_HASH        VARCHAR2(64),                              -- 재설정 토큰 SHA-256 16진수
     RESET_TOKEN_EXPIRES_AT  DATE,                                      -- 재설정 토큰 만료
     ROLE                    VARCHAR2(10)  DEFAULT 'USER' NOT NULL,     -- USER / ADMIN
@@ -136,12 +136,16 @@ CREATE TABLE MEAL_PARTY (
     CONFIRMED_TIME  VARCHAR2(5),                                     -- 방장 확정 시간 'HH:mm'
     MEET_PLACE      VARCHAR2(90),                                    -- 30자
     CONFIRM_MEMO    VARCHAR2(150),                                   -- 50자
+    PRIVATE_YN      CHAR(1)       DEFAULT 'N'            NOT NULL,   -- 비공개 식사팟 (11/25, 11_private_party.sql)
+    INVITE_CODE     VARCHAR2(32),                                    -- 비공개 초대 코드 22자, 공개는 NULL
     CREATED_AT      DATE          DEFAULT SYSDATE        NOT NULL,
     CONSTRAINT PK_MEAL_PARTY            PRIMARY KEY (PARTY_ID),
     CONSTRAINT CK_MEAL_PARTY_MEAL_TYPE  CHECK (MEAL_TYPE IN ('LUNCH', 'DINNER')),
     CONSTRAINT CK_MEAL_PARTY_CAPACITY   CHECK (CAPACITY BETWEEN 2 AND 12),
     CONSTRAINT CK_MEAL_PARTY_STATUS     CHECK (STATUS IN
         ('RECRUITING', 'SCHEDULED', 'FULL', 'CLOSED', 'FINISHED', 'DELETED')),
+    CONSTRAINT CK_MEAL_PARTY_PRIVATE_YN CHECK (PRIVATE_YN IN ('Y', 'N')),
+    CONSTRAINT UK_MEAL_PARTY_INVITE_CODE UNIQUE (INVITE_CODE),
     CONSTRAINT FK_MEAL_PARTY_RESTAURANT FOREIGN KEY (RESTAURANT_ID) REFERENCES RESTAURANT (RESTAURANT_ID),
     CONSTRAINT FK_MEAL_PARTY_MEMBER     FOREIGN KEY (HOST_ID)       REFERENCES MEMBER (MEMBER_ID)
 );

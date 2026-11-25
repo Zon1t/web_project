@@ -7,9 +7,10 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * 회사 이메일 규칙 (2026-11-24). 회원가입·계정 설정·비밀번호/아이디 찾기가 같이 쓴다.
+ * 이메일 형식 규칙 (2026-11-24). 회원가입·계정 설정·비밀번호 찾기가 같이 쓴다.
+ * 회사 도메인 제한은 CompanyEmailPolicy (2026-11-25, T3)
  * - 앞뒤 공백 제거 + 소문자로 통일해 저장·비교한다.
- * - 형식: 아이디@도메인.끝 , 100자 이하. (회사 도메인은 제한하지 않음)
+ * - 형식: 아이디@도메인.끝 , 100자 이하.
  */
 public final class EmailPolicy {
 
@@ -26,6 +27,15 @@ public final class EmailPolicy {
             return null;
         }
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** "jiho.lee@samsung.com" → "jiho.lee". '@'가 없으면 그대로 (2026-11-25) */
+    public static String localPart(String email) {
+        if (email == null) {
+            return null;
+        }
+        int at = email.indexOf('@');
+        return (at < 0) ? email : email.substring(0, at);
     }
 
     /** 정리한 값이 형식에 맞지 않으면 400 INVALID_REQUEST */

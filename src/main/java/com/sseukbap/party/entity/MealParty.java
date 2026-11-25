@@ -20,16 +20,23 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.type.YesNoConverter;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Base64;
 
 /**
  * 식사팟 (MEAL_PARTY 테이블). 기준: docs/sql/01_ddl.sql
  *
  * - 소프트 삭제: 삭제해도 행을 지우지 않고 status = DELETED. 모든 조회·집계에서 DELETED를 빼야 한다.
  * - 방장 = host. 방장도 PARTY_MEMBER에 참여자로 들어간다. (생성자 = 방장 + 첫 참여자)
+ * - 비공개 식사팟(2026-11-25, T4): privateParty = true면 참여자에게만 목록에 보이고,
+ *   참여자가 아니면 초대 코드(inviteCode)가 맞아야 상세·참여 가능. 공개 식사팟은 inviteCode = null
  * - 참여·나가기·일정·마감 같은 상태 변경 메서드는 각 기능 브랜치에서 추가한다.
  *   상태 계산은 PartyStatus의 after...() 메서드를 쓴다.
  */
@@ -38,6 +45,10 @@ import java.time.LocalTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MealParty {
+
+    /** 초대 코드: 16바이트 난수 → URL에 그대로 쓸 수 있는 Base64 (22자). 순번처럼 추측할 수 없다 */
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int INVITE_CODE_BYTES = 16;
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SEQ_MEAL_PARTY_GENERATOR")
@@ -84,11 +95,18 @@ public class MealParty {
     @Column(name = "CONFIRM_MEMO", length = 150)
     private String confirmMemo;             // 확정 메모 50자
 
+    @Convert(converter = YesNoConverter.class)
+    @Column(name = "PRIVATE_YN", nullable = false, length = 1)
+    private boolean privateParty;           // 비공개 식사팟 (11_private_party.sql)
+
+    @Column(name = "INVITE_CODE", length = 32)
+    private String inviteCode;              // 비공개 식사팟 초대 코드. 공개 식사팟은 null
+
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private MealParty(Restaurant restaurant, Member host, LocalDate partyDate, MealType mealType,
-                      LocalTime mealTime, int capacity, String memo) {
+                      LocalTime mealTime, int capacity, String memo, boolean privateParty) {
         this.restaurant = restaurant;
         this.host = host;
         this.partyDate = partyDate;
@@ -97,6 +115,8 @@ public class MealParty {
         this.capacity = capacity;
         this.memo = memo;
         this.status = PartyStatus.RECRUITING;
+        this.privateParty = privateParty;
+        this.inviteCode = privateParty ? newInviteCode() : null;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -107,7 +127,37 @@ public class MealParty {
      */
     public static MealParty create(Restaurant restaurant, Member host, LocalDate partyDate, MealType mealType,
                                    LocalTime mealTime, int capacity, String memo) {
-        return new MealParty(restaurant, host, partyDate, mealType, mealTime, capacity, memo);
+        return create(restaurant, host, partyDate, mealType, mealTime, capacity, memo, false);
+    }
+
+    /** 공개/비공개를 정해서 생성. 비공개면 초대 코드를 함께 만든다 */
+    public static MealParty create(Restaurant restaurant, Member host, LocalDate partyDate, MealType mealType,
+                                   LocalTime mealTime, int capacity, String memo, boolean privateParty) {
+        return new MealParty(restaurant, host, partyDate, mealType, mealTime, capacity, memo, privateParty);
+    }
+
+    // ===== 비공개 식사팟 =====
+
+    /**
+     * 받은 코드가 이 팟의 초대 코드와 같은지. 공개 식사팟이나 코드가 없으면 false.
+     * 한 글자씩 비교 시간이 달라지지 않게 MessageDigest.isEqual로 비교한다.
+     */
+    public boolean matchesInviteCode(String code) {
+        if (inviteCode == null || code == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(inviteCode.getBytes(StandardCharsets.UTF_8), code.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** 초대 코드 새로 만들기 (방장). 예전 링크는 더 이상 맞지 않는다. 비공개 여부·방장 확인은 Service에서 */
+    public void regenerateInviteCode() {
+        this.inviteCode = newInviteCode();
+    }
+
+    private static String newInviteCode() {
+        byte[] bytes = new byte[INVITE_CODE_BYTES];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     /** 방장이 일정을 확정했는지 */

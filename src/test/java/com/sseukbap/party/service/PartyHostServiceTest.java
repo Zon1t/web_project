@@ -80,13 +80,13 @@ class PartyHostServiceTest {
         assertThat(party.getConfirmedTime()).isEqualTo(LocalTime.of(12, 0));
         assertThat(party.getMeetPlace()).isEqualTo("1층 로비");
         assertThat(party.getConfirmMemo()).isEqualTo("늦으면 채팅 남겨 주세요");
-        assertThat(lastChat(partyId)).isEqualTo("방장이 일정을 확정했습니다 · 12:00 · 1층 로비");
+        assertThat(lastChat(partyId)).isEqualTo("방장이 일정을 확정했어요 · 12:00 · 1층 로비");
     }
 
     @Test
     void 일정을_정하면_방장은_자동으로_참석_확정된다() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         updateSchedule(partyId, "12:00", "정문", null);
         flushAndClear();
@@ -99,17 +99,17 @@ class PartyHostServiceTest {
     @Test
     void 확정_후에는_참여_확정을_할_수_있다() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         updateSchedule(partyId, "12:00", "정문", null);
 
         // 방장(자동 확정) + user02
-        assertThat(partyMemberService.confirmParty(partyId, user02.getMemberId()).confirmedCount()).isEqualTo(2);
+        assertThat(partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING).confirmedCount()).isEqualTo(2);
     }
 
     @Test
     void FULL이나_CLOSED는_일정만_저장하고_상태_유지() {
         Long full = createParty(2);
-        partyMemberService.joinParty(full, user02.getMemberId());   // FULL
+        partyMemberService.joinParty(full, user02.getMemberId(), PartyTestSupport.MORNING);   // FULL
         PartyTestSupport.moveToTomorrow(em, full);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long closed = createParty(4);
         partyHostService.updateStatus(closed, CLOSE, host.getMemberId());
@@ -123,9 +123,9 @@ class PartyHostServiceTest {
     @Test
     void 수정하면_참여자_확정은_초기화되고_방장만_다시_자동_확정된다() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         updateSchedule(partyId, "12:00", "1층 로비", null);   // 방장 자동 확정
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         flushAndClear();
         assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isEqualTo(2);
 
@@ -138,7 +138,7 @@ class PartyHostServiceTest {
         assertThat(partyService.getParty(partyId, host.getMemberId()).myConfirmed()).isTrue();
         assertThat(partyService.getParty(partyId, user02.getMemberId()).myConfirmed()).isFalse();
         assertThat(mealPartyRepository.findById(partyId).orElseThrow().getConfirmedTime()).isEqualTo(LocalTime.of(12, 30));
-        assertThat(lastChat(partyId)).isEqualTo("방장이 일정을 변경했습니다 · 12:30 · 정문. 참여 확정을 다시 해 주세요");
+        assertThat(lastChat(partyId)).isEqualTo("방장이 일정을 바꿨어요 · 12:30 · 정문. 참석 확정을 다시 해 주세요");
     }
 
     // ===== 일정 오류 =====
@@ -156,7 +156,7 @@ class PartyHostServiceTest {
     @Test
     void 방장이_아니면_일정_NOT_HOST() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         assertThatThrownBy(() -> partyHostService.updateSchedule(partyId, scheduleRequest("12:00", "정문", null),
                 user02.getMemberId(), NINE_AM))
@@ -185,11 +185,11 @@ class PartyHostServiceTest {
 
         PartyStatusUpdateResponse closed = partyHostService.updateStatus(partyId, CLOSE, host.getMemberId());
         assertThat(closed.status()).isEqualTo(PartyStatus.CLOSED);
-        assertThat(lastChat(partyId)).isEqualTo("방장이 모집을 마감했습니다");
+        assertThat(lastChat(partyId)).isEqualTo("방장이 모집을 마감했어요");
 
         PartyStatusUpdateResponse reopened = partyHostService.updateStatus(partyId, REOPEN, host.getMemberId());
         assertThat(reopened.status()).isEqualTo(PartyStatus.RECRUITING);
-        assertThat(lastChat(partyId)).isEqualTo("방장이 모집을 다시 열었습니다");
+        assertThat(lastChat(partyId)).isEqualTo("방장이 모집을 다시 열었어요");
     }
 
     @Test
@@ -205,7 +205,7 @@ class PartyHostServiceTest {
     @Test
     void 정원이_차_있으면_재개_후_FULL() {
         Long partyId = createParty(2);
-        partyMemberService.joinParty(partyId, user02.getMemberId());   // FULL
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);   // FULL
         assertThat(partyHostService.updateStatus(partyId, CLOSE, host.getMemberId()).status())
                 .isEqualTo(PartyStatus.CLOSED);
 

@@ -25,6 +25,8 @@
   const POLL_INTERVAL_MS = 3000;
 
   const partyId = new URLSearchParams(location.search).get('partyId');
+  // 비공개 식사팟 초대 링크의 코드 (2026-11-25 T4). 상세 조회·참여하기에 함께 보낸다
+  const inviteCode = new URLSearchParams(location.search).get('code') || null;
 
   const root = document.getElementById('party-root');
   const chatRoot = document.getElementById('chat-root');
@@ -94,7 +96,7 @@
   async function loadDetail(withSpinner) {
     if (withSpinner) showLoading();
     try {
-      state.detail = await partyApi.getDetail(partyId);
+      state.detail = await partyApi.getDetail(partyId, inviteCode);
       render();
       syncChat();
     } catch (err) {
@@ -114,7 +116,7 @@
 
   function render() {
     const d = state.detail;
-    document.title = d.restaurantName + ' ' + MEAL_TYPE_LABELS[d.mealType] + '팟 | 슥밥';
+    document.title = d.restaurantName + ' ' + MEAL_TYPE_LABELS[d.mealType] + ' 식사팟 | 슥밥';
     root.innerHTML =
       renderHead(d) +
       renderInfo(d) +
@@ -130,12 +132,13 @@
       '<div class="party-head__top">' +
       '<h1 id="party-title" class="party-head__title">' +
       '<a href="' + restaurantUrl + '">' + esc(d.restaurantName) + '</a> ' +
-      esc(MEAL_TYPE_LABELS[d.mealType]) + '팟' +
+      esc(MEAL_TYPE_LABELS[d.mealType]) + ' 식사팟' +
       // 오늘이 아닌 팟은 제목 옆에 날짜를 붙여 오늘 팟과 구분한다 (11/20)
       (partyApi.isToday(d.partyDate) ? '' : ' <span class="party-head__when">' + esc(partyApi.shortDateLabel(d.partyDate)) + '</span>') +
       '</h1>' +
       '<span class="party-head__meta">' +
       '<span class="badge badge--' + esc(String(d.status).toLowerCase()) + '">' + esc(STATUS_LABELS[d.status] || '') + '</span>' +
+      (d.isPrivate ? '<span class="badge party-badge--private">' + partyApi.lockIcon(12) + '비공개</span>' : '') +
       '<span class="text-muted">' + esc(CATEGORY_LABELS[d.category] || '') + '</span>' +
       '</span>' +
       '</div>' +
@@ -206,7 +209,8 @@
     } else if (!isMember) {
       body = isJoinable
         ? row(button('join', '참여하기', 'btn--primary')) +
-          hint('참여하면 대화방에 들어가요. 방장이 일정을 정하면 참석 확정을 한 번 더 해 주세요.')
+          hint('참여하면 대화방에 들어가요. 방장이 일정을 정하면 참석 확정을 한 번 더 해 주세요.') +
+          (d.isPrivate ? hint('초대받은 사람만 들어올 수 있는 비공개 식사팟이에요.') : '')
         : row(button('', '마감', 'btn--primary', true)) +
           hint(d.status === 'FULL' ? '정원이 가득 찼어요.' : '방장이 모집을 마감했어요.');
     } else {
@@ -218,21 +222,26 @@
       if (d.schedule && !d.myConfirmed) {
         // 할 일 상자 안에 [참석 확정] 버튼이 있으므로 여기서는 생략
       } else if (d.myConfirmed) {
-        buttons.push(button('cancel-confirm', '확정 취소', '', deadlinePassed));
+        buttons.push(button('cancel-confirm', '참석 확정 취소', '', deadlinePassed));
       }
 
       // 확정자는 기준 시간 30분 전까지만 나갈 수 있다. 방장이 나가면 팟이 삭제된다.
       const leaveLocked = d.myConfirmed && deadlinePassed && d.myRole !== 'HOST';
-      buttons.push(button('leave', d.myRole === 'HOST' ? '나가기 (팟 삭제)' : '나가기', '', leaveLocked));
+      buttons.push(button('leave', d.myRole === 'HOST' ? '나가기 (식사팟 삭제)' : '나가기', '', leaveLocked));
 
       if (d.myConfirmed) {
         hints.push(deadlinePassed
-          ? '식사 30분 전이 지나 확정 취소·나가기를 할 수 없어요.'
-          : '확정 취소·나가기는 ' + deadlineTime + '까지 할 수 있어요.');
+          ? '식사 30분 전이 지나 참석 확정 취소·나가기를 할 수 없어요.'
+          : '참석 확정 취소·나가기는 ' + deadlineTime + '까지 할 수 있어요.');
       }
       // 방장은 대화창 아래 버튼 줄에 초대 링크가 있다
       if (isJoinable && d.myRole !== 'HOST') {
         buttons.push(button('invite', '초대 링크 복사'));
+      }
+      if (d.isPrivate && isJoinable) {
+        hints.push(d.myRole === 'HOST'
+          ? '비공개 식사팟이에요. 목록에 보이지 않으니 [초대 링크]로 밥친구를 불러 주세요.'
+          : '비공개 식사팟이에요. 초대 링크를 받은 사람만 들어올 수 있어요.');
       }
       body = renderTodo(d) + row(buttons.join('')) + hints.map(hint).join('');
     }
@@ -249,7 +258,7 @@
   function renderTodo(d) {
     if (!d.schedule && d.myRole === 'HOST') {
       return '<div class="party-todo">' + ui.icon('calendar', 18) +
-        '<p><b>일정을 정해 주세요.</b><br>최종 시간과 만날 장소를 정하면 참여자들에게 참석 확정을 요청해요.</p>' +
+        '<p><b>일정을 정해 주세요.</b><br>최종 시간과 만날 장소를 정하면 밥친구들에게 참석 확정을 요청해요.</p>' +
         button('open-schedule', '일정 정하기', 'btn--primary') + '</div>';
     }
     if (!d.schedule) {
@@ -284,7 +293,7 @@
     return (
       '<section aria-labelledby="members-title">' +
       '<div class="party-members__head">' +
-      '<h2 id="members-title"><b>참여자 ' + d.memberCount + ' / ' + d.capacity + '명</b></h2>' +
+      '<h2 id="members-title"><b>밥친구 ' + d.memberCount + ' / ' + d.capacity + '명</b></h2>' +
       '<span class="text-muted">참석 확정 ' + d.confirmedCount + '명</span>' +
       '</div>' +
       '<ul>' + items.join('') + '</ul>' +
@@ -309,7 +318,8 @@
       button('open-schedule', d.schedule ? '일정 수정' : '일정 정하기', d.schedule ? '' : 'btn--primary') +
       (d.status === 'CLOSED' ? button('reopen', '모집 재개') : button('close', '모집 마감')) +
       (isJoinable ? button('invite', '초대 링크') : '') +
-      button('delete', '팟 삭제', 'btn--danger');
+      (d.isPrivate ? button('regenerate-code', '링크 새로 만들기') : '') +
+      button('delete', '식사팟 삭제', 'btn--danger');
     hostBar.hidden = false;
   }
 
@@ -340,7 +350,9 @@
     root.innerHTML =
       '<div class="state state--empty">' +
       '<p class="state__title">식사팟을 찾을 수 없어요</p>' +
-      '<p class="state__desc">주소가 맞는지 확인해 주세요.</p>' +
+      '<p class="state__desc">' + (inviteCode
+        ? '초대 링크가 바뀌었을 수 있어요. 방장에게 새 링크를 받아 주세요.'
+        : '주소가 맞는지 확인해 주세요.') + '</p>' +
       '<a class="btn" href="' + partyApi.LIST_URL + '">식사팟 목록으로</a>' +
       '</div>';
   }
@@ -397,6 +409,9 @@
         break;
       case 'invite':
         copyInviteLink();
+        break;
+      case 'regenerate-code':
+        regenerateInviteCode();
         break;
       case 'open-schedule':
         openScheduleDialog();
@@ -456,14 +471,14 @@
       partyDate: d.partyDate, memberCount: d.memberCount, capacity: d.capacity, memo: d.memo,
     });
     if (!ok) return;
-    runAction(() => partyApi.join(partyId), '참여했어요. 대화방에서 인사해 보세요!');
+    runAction(() => partyApi.join(partyId, inviteCode), '참여했어요. 대화방에서 인사해 보세요!');
   }
 
   async function cancelConfirm() {
     const ok = await ui.confirm({
       title: '참석 확정을 취소할까요?',
-      message: '팟에는 그대로 남아 있어요. 마음이 바뀌면 다시 확정할 수 있어요.',
-      confirmText: '확정 취소',
+      message: '식사팟에는 그대로 남아 있어요. 마음이 바뀌면 다시 참석 확정할 수 있어요.',
+      confirmText: '참석 확정 취소',
     });
     if (!ok) return;
     runAction(() => partyApi.cancelConfirm(partyId), '참석 확정을 취소했어요.');
@@ -474,7 +489,7 @@
     const ok = await ui.confirm({
       title: isHost ? '나가면 식사팟이 삭제돼요' : '식사팟에서 나갈까요?',
       message: isHost
-        ? '방장이 나가면 팟이 삭제되고 되돌릴 수 없어요. 그래도 나갈까요?'
+        ? '방장이 나가면 식사팟이 삭제되고 되돌릴 수 없어요. 그래도 나갈까요?'
         : '나가면 대화방에서도 빠져요.',
       confirmText: '나가기',
       danger: true,
@@ -499,7 +514,7 @@
   async function deleteParty() {
     const ok = await ui.confirm({
       title: '식사팟을 삭제할까요?',
-      message: '삭제하면 되돌릴 수 없어요. 참여자들에게도 사라져요.',
+      message: '삭제하면 되돌릴 수 없어요. 밥친구들에게도 사라져요.',
       confirmText: '삭제',
       danger: true,
     });
@@ -535,6 +550,29 @@
     } catch (err) {
       if (err.statusCode === 401) return;
       setFeedback('error', err.message);
+    }
+  }
+
+  /** 비공개 식사팟: 초대 링크 새로 만들기 (방장). 예전 링크로는 더 이상 들어올 수 없다 (2026-11-25 T4) */
+  async function regenerateInviteCode() {
+    const ok = await ui.confirm({
+      title: '초대 링크를 새로 만들까요?',
+      message: '지금까지 보낸 링크로는 더 이상 들어올 수 없어요. 이미 참여한 밥친구는 그대로예요.',
+      confirmText: '새로 만들기',
+    });
+    if (!ok) return;
+    try {
+      await partyApi.regenerateInviteCode(partyId);
+      const d = state.detail;
+      if (d && (d.status === 'RECRUITING' || d.status === 'SCHEDULED')) {
+        await copyInviteLink();   // 새 링크를 바로 복사해 준다
+      } else {
+        ui.toast('새 초대 링크를 만들었어요. 모집을 다시 열면 [초대 링크]로 복사할 수 있어요.', { type: 'success' });
+      }
+    } catch (err) {
+      if (err.statusCode === 401) return;
+      setFeedback('error', err.message);
+      if (err.error === 'PARTY_DELETED') showDeleted();
     }
   }
 
@@ -590,8 +628,8 @@
       dialog.close();
       state.feedback = null;
       ui.toast(result.confirmationsReset
-        ? '일정을 바꿨어요. 참여자들의 참석 확정을 다시 받아야 해요. (방장은 자동 확정)'
-        : '일정을 정했어요. 방장은 자동으로 참석 확정됐고, 이제 참여자들에게 확정을 받아요.', { type: 'success', duration: 4000 });
+        ? '일정을 바꿨어요. 밥친구들의 참석 확정을 다시 받아야 해요. (방장은 자동 참석 확정)'
+        : '일정을 정했어요. 방장은 자동으로 참석 확정됐고, 이제 밥친구들에게 참석 확정을 받아요.', { type: 'success', duration: 4000 });
       await loadDetail(false);
     } catch (err) {
       if (err.statusCode === 401) return;

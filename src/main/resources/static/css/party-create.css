@@ -98,8 +98,48 @@
 }
 
 .party-form__option-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
   padding: var(--space-3);
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 검색 결과가 없을 때: [식당 등록하고 이어서 만들기] (T2) */
+.party-form__register {
+  height: 36px;
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 공개 범위: 비공개 체크 (2026-11-25) ---------- */
+.party-form__private {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.party-form__private:has(input:checked) {
+  border-color: var(--color-primary);
+}
+
+.party-form__private input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.party-form__private-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   font-size: var(--font-size-sm);
 }
 

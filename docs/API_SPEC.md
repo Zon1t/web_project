@@ -26,11 +26,12 @@
 | --- | --- |
 | 구조 | REST API + JS fetch. 서버는 JSON만 응답하고 화면은 JS로 렌더링 |
 | Base URL | `/api` |
-| 인증 | 세션 방식. 로그인 성공 시 `JSESSIONID` 쿠키 발급(HttpOnly, SameSite=Lax), 이후 요청에 쿠키 자동 포함. 아무 요청 없이 60분이 지나면 세션 만료. 회원가입·아이디 중복 확인·닉네임 중복 확인·로그인·비밀번호 찾기를 제외한 모든 API는 로그인 필요 |
-| 아이디 | 영문·숫자 4~20자. 앞뒤 공백 제거 후 **소문자로 통일**해 저장·비교한다 (2026-11-24). `User01`과 `user01`은 같은 아이디 |
-| 비밀번호 규칙 | 8~20자, 영문과 숫자를 모두 포함, 공백 불가, 아이디와 같으면 안 됨 (대소문자 무시). 회원가입·비밀번호 변경 공통 (2026-11-24) |
-| 회사 이메일 | 선택. 앞뒤 공백 제거 후 소문자로 저장·비교, 100자 이하, 중복 불가. 비밀번호 찾기는 등록한 이메일로만 메일을 보낸다 (2026-11-24) |
-| 회원 탈퇴 | 행은 지우지 않고 `STATUS = WITHDRAWN`. 닉네임은 `탈퇴한회원{memberId}`로 바뀌어 리뷰·대화에 그대로 보이고, 원래 닉네임은 다른 사람이 쓸 수 있다. 아이디는 재사용 불가, 로그인·찾기 불가. `탈퇴한회원`으로 시작하는 닉네임은 가입·변경에 쓸 수 없다 (2026-11-24) |
+| 인증 | 세션 방식. 로그인 성공 시 `JSESSIONID` 쿠키 발급(HttpOnly, SameSite=Lax), 이후 요청에 쿠키 자동 포함. 아무 요청 없이 60분이 지나면 세션 만료. 회원가입·이메일 중복 확인·닉네임 중복 확인·로그인·비밀번호 찾기를 제외한 모든 API는 로그인 필요 |
+| 아이디 | 영문·숫자 4~20자, 앞뒤 공백 제거 후 소문자로 저장·비교(대소문자만 다른 아이디 불가), 중복 불가. 2026-11-25 T3: 아이디와 회사 이메일을 **따로** 받고, 로그인은 아이디 또는 이메일로 한다. 이메일이 없는 기존 회원은 로그인 응답 `emailRequired = true` |
+| 비밀번호 규칙 | 8~20자, 영문과 숫자를 모두 포함, 공백 불가, 아이디와 같으면 안 됨 (대소문자 무시). 회원가입·비밀번호 변경·비밀번호 찾기 공통 (2026-11-24) |
+| 회사 이메일 | **필수** (2026-11-25 T3). 앞뒤 공백 제거 후 소문자로 저장·비교, 100자 이하, 중복 불가. 도메인은 설정 `auth.allowed-email-domains`(기본 `samsung.com`)만 허용 → 아니면 400 `INVALID_EMAIL_DOMAIN` |
+| 닉네임 | 앞뒤 공백 제거 후 **2~12자** (2026-11-25 T3, 기존 2~10자), 중복 불가, `탈퇴한회원`으로 시작 불가 |
+| 회원 탈퇴 | 행은 지우지 않고 `STATUS = WITHDRAWN`. 닉네임은 `탈퇴한회원{memberId}`로 바뀌어 리뷰·대화에 그대로 보이고, 원래 닉네임은 다른 사람이 쓸 수 있다. 아이디·이메일은 그대로 남아 같은 이메일로 다시 가입할 수 없고, 로그인·비밀번호 찾기도 안 된다 (2026-11-25 T3: 탈퇴해도 이메일을 지우지 않음). `탈퇴한회원`으로 시작하는 닉네임은 가입·변경에 쓸 수 없다 (2026-11-24) |
 | 없는 화면 주소 | `/api/`가 아닌 없는 주소(예: `/abc.html`)는 JSON 대신 `404.html` 화면을 404로 보여 준다 (2026-11-24) |
 | 요청 형식 | `Content-Type: application/json` (파일 첨부가 있는 리뷰 작성만 `multipart/form-data`) |
 | 날짜·시간 | 날짜 `YYYY-MM-DD`, 시간 `HH:mm`, 일시 ISO-8601 |
@@ -60,8 +61,9 @@
 | 400 | `INVALID_REQUEST` | 필수값 누락, 형식·길이 오류 |
 | 400 | `INVALID_PASSWORD` | 현재 비밀번호가 틀림 (비밀번호 변경, 2026-11-24) |
 | 400 | `INVALID_RESET_CODE` | 비밀번호 찾기 인증번호가 없음·만료·불일치 (2026-11-24) |
+| 400 | `INVALID_EMAIL_DOMAIN` | 회사 도메인(@samsung.com)이 아닌 이메일 (2026-11-25 T3) |
 | 409 | `EMAIL_ALREADY_EXISTS` | 다른 회원이 등록한 회사 이메일 (2026-11-24) |
-| 429 | `TOO_MANY_LOGIN_ATTEMPTS` | 같은 아이디로 로그인 5번 연속 실패 → 5분 잠금 (2026-11-24) |
+| 429 | `TOO_MANY_LOGIN_ATTEMPTS` | 같은 이메일(아이디)로 로그인 5번 연속 실패 → 5분 잠금 (2026-11-24) |
 | 401 | `UNAUTHORIZED` | 로그인하지 않음 또는 세션 만료 (FE는 로그인 화면으로 이동) |
 | 403 | `FORBIDDEN` | 권한 없음 (예: 방장 전용 기능, 본인 리뷰가 아님) |
 | 404 | `NOT_FOUND` | 대상 데이터 없음 |
@@ -163,14 +165,15 @@
 
 | 작업 | 주기 | 내용 |
 | --- | --- | --- |
-| 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 완료되었습니다' 생성 |
+| 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 끝났어요' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (58개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가)
+### 전체 API 목록 (59개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
 | C | GET | `/api/auth/check-id` | 아이디 중복 확인 |
+| C | GET | `/api/auth/check-email` | 이메일 중복 확인 (11/25 추가) |
 | C | GET | `/api/auth/check-nickname` | 닉네임 중복 확인 |
 | C | POST | `/api/auth/signup` | 회원가입 |
 | C | POST | `/api/auth/login` | 로그인 |
@@ -213,6 +216,7 @@
 | A | GET | `/api/parties/{partyId}/chats` | 대화 메시지 조회 (폴링) |
 | A | POST | `/api/parties/{partyId}/chats` | 대화 메시지 전송 |
 | A | GET | `/api/parties/{partyId}/invite-link` | 식사팟 초대 링크 조회 |
+| A | POST | `/api/parties/{partyId}/invite-code` | 비공개 식사팟 초대 코드 새로 만들기 (방장, 11/25 추가) |
 | A | POST | `/api/parties/{partyId}/members` | 식사팟 참여하기 (1차) |
 | A | DELETE | `/api/parties/{partyId}/members/me` | 식사팟 나가기 |
 | A | POST | `/api/parties/{partyId}/members/me/confirm` | 참여 확정 (2차) |
@@ -234,9 +238,7 @@
 
 ### GET /api/auth/check-id — 아이디 중복 확인
 
-**요구사항**: 입력한 아이디를 사용할 수 있는지 반환한다. 로그인 없이 호출할 수 있다. 결과는 회원가입 화면의 입력창 아래에 표시한다.
-
-> 2026-11-24 변경: 아이디를 소문자로 바꿔 비교 (대소문자만 다른 아이디도 사용 불가), 응답 loginId는 소문자 값
+**요구사항**: 입력한 아이디를 사용할 수 있는지 반환한다. 로그인 없이 호출할 수 있다. 결과는 회원가입 화면의 아이디 입력창 아래에 표시한다. 대소문자는 무시한다.
 
 **Request — Query**
 
@@ -246,8 +248,8 @@
 
 **시스템 처리**
 1. loginId의 앞뒤 공백을 제거하고 소문자로 바꾼 뒤 형식을 검증한다.
-2. 대소문자를 무시하고 같은 loginId의 MEMBER가 있는지 조회한다.
-3. 사용 가능 여부를 반환한다.
+2. 대소문자 무시로 같은 LOGIN_ID의 MEMBER(탈퇴한 회원 포함)가 있는지 조회한다.
+3. 없으면 available = true.
 
 **Response 200 (data)**
 ```json
@@ -256,12 +258,47 @@
   "available": true
 }
 ```
+- loginId: 소문자로 바꾼 값
 
 **오류**
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 아이디는 영문·숫자 4~20자로 입력해 주세요. | loginId 누락·형식 오류 |
+
+---
+
+### GET /api/auth/check-email — 이메일 중복 확인
+
+> 2026-11-25 추가 (T3): 가입할 때 회사 이메일이 필수가 되어 추가.
+
+**요구사항**: 입력한 회사 이메일로 가입할 수 있는지 반환한다. 로그인 없이 호출할 수 있다. 결과는 회원가입 화면의 입력창 아래에 표시한다.
+
+**Request — Query**
+
+| 이름 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| email | string | O | 공통 규칙 '회사 이메일' |
+
+**시스템 처리**
+1. email의 앞뒤 공백을 제거하고 소문자로 바꾼 뒤 형식·회사 도메인을 검증한다.
+2. 같은 EMAIL의 MEMBER(탈퇴한 회원 포함)가 있는지 조회한다.
+3. 없으면 available = true.
+
+**Response 200 (data)**
+```json
+{
+  "email": "chef01@samsung.com",
+  "available": true
+}
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | INVALID_REQUEST | 이메일 형식을 확인해 주세요. | email 누락·형식 오류 |
+| 400 | INVALID_EMAIL_DOMAIN | 회사 이메일(@samsung.com)만 쓸 수 있습니다. | 회사 도메인이 아님 |
 
 ---
 
@@ -273,7 +310,7 @@
 
 | 이름 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| nickname | string | O | 앞뒤 공백 제거 후 2~10자 |
+| nickname | string | O | 앞뒤 공백 제거 후 2~12자 (2026-11-25) |
 
 **시스템 처리**
 1. nickname의 앞뒤 공백을 제거하고 길이를 검증한다.
@@ -293,47 +330,50 @@
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 닉네임은 2~10자로 입력해 주세요. | nickname 누락·길이 오류 |
+| 400 | INVALID_REQUEST | 닉네임은 2~12자로 입력해 주세요. | nickname 누락·길이 오류 |
 
 ---
 
 ### POST /api/auth/signup — 회원가입
 
-**요구사항**: 아이디·비밀번호·닉네임으로 계정을 생성한다. 로그인 없이 호출할 수 있다. 화면의 중복 확인 여부와 관계없이 서버에서 아이디·닉네임 중복을 다시 검사한다. (중복 확인 후 가입 사이에 다른 사람이 같은 값으로 가입할 수 있음) 가입 후 자동 로그인하지 않으며, FE는 로그인 화면으로 이동한다.
+> 2026-11-25 변경 (T3): 회사 이메일 필수 추가, 닉네임 2~12자.
+
+**요구사항**: 아이디·회사 이메일·비밀번호·닉네임으로 계정을 생성한다. 로그인 없이 호출할 수 있다. 화면의 중복 확인 여부와 관계없이 서버에서 아이디·이메일·닉네임 중복을 다시 검사한다. (중복 확인 후 가입 사이에 다른 사람이 같은 값으로 가입할 수 있음) 가입 후 자동 로그인하지 않으며, FE는 로그인 화면으로 이동한다.
 
 **Request — Body**
 ```json
 {
   "loginId": "chef01",
+  "email": "chef01@samsung.com",
   "password": "password12",
   "passwordConfirm": "password12",
-  "nickname": "슥사인",
-  "email": "chef01@samsung.com"
+  "nickname": "슥사인"
 }
 ```
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| loginId | string | O | 영문·숫자 4~20자 (소문자로 바꿔 저장) |
+| loginId | string | O | 공통 규칙 '아이디' (영문·숫자 4~20자, 소문자로 바꿔 저장) |
+| email | string | O | 공통 규칙 '회사 이메일' (소문자로 바꿔 저장) |
 | password | string | O | 공통 규칙 '비밀번호 규칙' (8~20자, 영문+숫자, 공백 불가, 아이디와 다르게) |
 | passwordConfirm | string | O | password와 동일 |
-| nickname | string | O | 2~10자, 앞뒤 공백 제거, 중복 불가, `탈퇴한회원`으로 시작 불가 |
-| email | string | X | 회사 이메일 (2026-11-24). 공통 규칙 '회사 이메일' |
+| nickname | string | O | 2~12자, 앞뒤 공백 제거, 중복 불가, `탈퇴한회원`으로 시작 불가 |
 
 **시스템 처리**
-1. 필수값·형식·길이를 검증한다. loginId는 앞뒤 공백 제거 후 소문자로 바꾼다.
-1-1. password가 비밀번호 규칙에 맞는지 확인한다. (2026-11-24)
+1. 필수값·형식·길이를 검증한다. loginId는 소문자로 바꾼다. email은 앞뒤 공백 제거 후 소문자로 바꾸고 형식·회사 도메인을 검증한다.
+1-1. password가 비밀번호 규칙에 맞는지 확인한다. (아이디와 같으면 안 됨)
 2. password와 passwordConfirm이 같은지 확인한다.
-3. 대소문자를 무시하고 같은 loginId의 MEMBER가 있으면 중단한다.
+3. 대소문자 무시로 같은 LOGIN_ID, 또는 같은 EMAIL의 MEMBER(탈퇴한 회원 포함)가 있으면 중단한다.
 4. nickname(공백 제거 값)으로 MEMBER를 조회해 이미 있으면 중단한다.
 5. 비밀번호를 BCrypt로 암호화한다.
-6. MEMBER를 저장한다. 동시 가입으로 UK 제약(UK_MEMBER_LOGIN_ID, UK_MEMBER_NICKNAME) 위반이 발생하면 해당 409 오류로 응답한다.
+6. MEMBER를 저장한다. 동시 가입으로 UK 제약(UK_MEMBER_EMAIL, UK_MEMBER_NICKNAME, UK_MEMBER_LOGIN_ID) 위반이 발생하면 해당 409 오류로 응답한다.
 7. 생성된 회원 정보를 반환한다.
 
 **Response 200 (data)**
 ```json
 {
   "memberId": 1,
+  "email": "chef01@samsung.com",
   "loginId": "chef01",
   "nickname": "슥사인"
 }
@@ -343,19 +383,22 @@
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 형식·길이 오류 |
+| 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 필수값 누락, 아이디 형식 오류, 길이 오류 |
+| 400 | INVALID_REQUEST | 이메일 형식을 확인해 주세요. / 사용할 수 없는 닉네임입니다. | email 형식 오류, 닉네임이 '탈퇴한회원'으로 시작 |
+| 400 | INVALID_EMAIL_DOMAIN | 회사 이메일(@samsung.com)만 쓸 수 있습니다. | 회사 도메인이 아님 |
 | 400 | INVALID_REQUEST | 비밀번호는 8~20자로, 영문과 숫자를 함께 넣어 주세요. / 비밀번호에는 공백을 넣을 수 없습니다. / 아이디와 다른 비밀번호를 입력해 주세요. | 비밀번호 규칙 위반 |
 | 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | password ≠ passwordConfirm |
-| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | 같은 loginId 존재 (대소문자 무시) |
+| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | 같은 loginId 존재 (대소문자 무시, 탈퇴한 회원 포함) |
+| 409 | EMAIL_ALREADY_EXISTS | 이미 등록된 이메일입니다. | 같은 email 존재 (탈퇴한 회원 포함) |
 | 409 | NICKNAME_ALREADY_EXISTS | 이미 사용 중인 닉네임입니다. | 같은 nickname 존재 |
-| 400 | INVALID_REQUEST | 이메일 형식을 확인해 주세요. / 사용할 수 없는 닉네임입니다. | email 형식 오류, 닉네임이 '탈퇴한회원'으로 시작 |
-| 409 | EMAIL_ALREADY_EXISTS | 이미 등록된 이메일입니다. | 같은 email 존재 |
 
 ---
 
 ### POST /api/auth/login — 로그인
 
-**요구사항**: 아이디·비밀번호를 확인해 세션을 생성한다. 실패 시 아이디와 비밀번호 중 무엇이 틀렸는지 구분하지 않는다. 탈퇴한 회원도 같은 실패로 응답한다. 같은 아이디로 5번 연속 실패하면 5분 동안 로그인을 막는다(서버 메모리, 2026-11-24). 로그인 없이 호출할 수 있다. FE는 성공 후 로그인 화면 주소의 redirect 값(없으면 메인)으로 이동한다.
+> 2026-11-25 변경 (T3): `loginId`에 회사 이메일도 넣을 수 있다. 응답에 `emailRequired` 추가.
+
+**요구사항**: 아이디(또는 회사 이메일)·비밀번호를 확인해 세션을 생성한다. 실패 시 아이디와 비밀번호 중 무엇이 틀렸는지 구분하지 않는다. 탈퇴한 회원도 같은 실패로 응답한다. 같은 입력값으로 5번 연속 실패하면 5분 동안 로그인을 막는다(서버 메모리). 로그인 없이 호출할 수 있다. FE는 성공 후 `emailRequired`면 계정 설정의 이메일 등록으로, 아니면 로그인 화면 주소의 redirect 값(없으면 메인)으로 이동한다.
 
 **Request — Body**
 ```json
@@ -365,15 +408,15 @@
 }
 ```
 
-| 필드 | 타입 | 필수 |
-| --- | --- | --- |
-| loginId | string | O |
-| password | string | O |
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| loginId | string | O | 아이디 또는 회사 이메일 (대소문자 무시) |
+| password | string | O | |
 
 **시스템 처리**
-1. 필수값을 검증한다.
-1-1. 그 아이디(소문자)가 잠겨 있으면 비밀번호를 보지 않고 429로 중단한다. (2026-11-24)
-2. loginId를 소문자로 바꿔 MEMBER를 조회한다. 없으면 대소문자를 무시하고 한 번 더 찾는다(소문자 통일 전에 대문자로 가입한 계정, 1명일 때만). 그래도 없으면 로그인 실패로 처리한다. (2026-11-24)
+1. 필수값을 검증한다. loginId는 앞뒤 공백 제거 후 소문자로 바꾼다.
+1-1. 그 값이 잠겨 있으면 비밀번호를 보지 않고 429로 중단한다.
+2. `@`가 있으면 EMAIL로, 없으면 LOGIN_ID로(대소문자 무시) MEMBER를 조회한다. 없으면 로그인 실패로 처리한다.
 3. 탈퇴한 회원이면 실패로 처리한다. 입력 비밀번호와 저장된 암호화 비밀번호를 비교한다. 실패하면 실패 횟수를 1 늘리고(5번째면 5분 잠금), 성공하면 실패 횟수를 지운다.
 4. 기존 세션이 있으면 무효화하고 새 세션을 생성한다.
 5. 세션에 memberId를 저장한다.
@@ -384,16 +427,20 @@
 {
   "memberId": 1,
   "loginId": "chef01",
-  "nickname": "슥사인"
+  "nickname": "슥사인",
+  "email": "chef01@samsung.com",
+  "admin": false,
+  "emailRequired": false
 }
 ```
+- emailRequired: 이메일이 없는 기존 회원이면 true. FE는 계정 설정(`/account.html?emailRequired=1`)의 이메일 등록으로 보낸다
 
 **오류**
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 아이디와 비밀번호를 입력해 주세요. | 필수값 누락 |
-| 401 | LOGIN_FAILED | 아이디 또는 비밀번호가 일치하지 않습니다. | 아이디 없음, 비밀번호 불일치, 탈퇴한 회원 |
+| 401 | LOGIN_FAILED | 아이디 또는 비밀번호가 일치하지 않습니다. | 회원 없음, 비밀번호 불일치, 탈퇴한 회원 |
 | 429 | TOO_MANY_LOGIN_ATTEMPTS | 로그인을 여러 번 실패했습니다. 5분 뒤에 다시 시도해 주세요. | 5번 연속 실패 후 5분 안 |
 
 ---
@@ -439,10 +486,12 @@ null
   "loginId": "chef01",
   "nickname": "슥사인",
   "email": "chef01@samsung.com",
-  "admin": false
+  "admin": false,
+  "emailRequired": false
 }
 ```
-- email: 등록한 회사 이메일, 없으면 null (2026-11-24, 로그인 응답도 같음)
+- email: 회사 이메일(= 로그인 아이디), 이메일이 없는 기존 회원은 null (2026-11-24, 로그인 응답도 같음)
+- emailRequired: email이 null이면 true (2026-11-25 T3, 로그인 응답도 같음)
 - admin: 관리자(ROLE = 'ADMIN')면 true. 헤더 메뉴에 '관리자' 항목을 보여 줄 때 쓴다 (2026-11-24 A3, 로그인 응답도 같음)
 
 **오류**
@@ -456,27 +505,27 @@ null
 ### POST /api/auth/password-reset/request — 비밀번호 찾기 인증번호 요청
 
 > 2026-11-24 추가. **실제 메일은 보내지 않는다.** 인증번호는 서버 로그(LogMailSender)에 찍힌다. 시연 때는 콘솔에서 번호를 확인한다.
+>
+> 2026-11-25 변경 (T3): 아이디 + 이메일 → **이메일만**
 
-**요구사항**: 아이디와 회사 이메일을 받아 6자리 인증번호를 메일로 보낸다. 로그인 없이 호출할 수 있다. 아이디가 있는지 드러내지 않도록 **회원이 있든 없든 같은 응답**을 준다. 다시 요청하면 앞 번호는 쓸 수 없다.
+**요구사항**: 회사 이메일을 받아 6자리 인증번호를 메일로 보낸다. 로그인 없이 호출할 수 있다. 가입 여부를 드러내지 않도록 **회원이 있든 없든 같은 응답**을 준다. 다시 요청하면 앞 번호는 쓸 수 없다.
 
 **Request — Body**
 ```json
 {
-  "loginId": "chef01",
   "email": "chef01@samsung.com"
 }
 ```
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| loginId | string | O | 대소문자 무시 |
-| email | string | O | 이메일 형식, 100자 이하. **가입·계정 설정에서 등록한 이메일과 같아야** 메일을 보낸다 (대소문자 무시) |
+| email | string | O | 이메일 형식, 100자 이하 (대소문자 무시) |
 
 **시스템 처리**
 1. 필수값·이메일 형식을 검증한다.
-2. loginId를 소문자로 바꿔 MEMBER를 조회한다. (로그인과 같은 방식)
-3. 회원이 있고, 탈퇴하지 않았고, 등록한 이메일이 입력한 이메일과 같으면 6자리 무작위 번호를 만들어 서버 메모리에 5분간 저장하고(같은 아이디의 이전 번호는 버림), email로 메일을 보낸다.
-4. 회원이 없거나, 탈퇴했거나, 이메일을 등록하지 않았거나 다르면 아무것도 하지 않는다.
+2. email을 소문자로 바꿔 MEMBER를 조회한다.
+3. 회원이 있고 탈퇴하지 않았으면 6자리 무작위 번호를 만들어 서버 메모리에 5분간 저장하고(같은 이메일의 이전 번호는 버림), email로 메일을 보낸다.
+4. 회원이 없거나 탈퇴했으면 아무것도 하지 않는다.
 5. 회원 여부와 관계없이 같은 응답을 반환한다.
 
 **Response 200 (data)**
@@ -491,7 +540,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 아이디를 입력해 주세요. / 이메일을 입력해 주세요. / 이메일 형식을 확인해 주세요. | 필수값 누락, 이메일 형식 오류 |
+| 400 | INVALID_REQUEST | 이메일을 입력해 주세요. / 이메일 형식을 확인해 주세요. | 필수값 누락, 이메일 형식 오류 |
 
 ---
 
@@ -504,19 +553,19 @@ null
 **Request — Body**
 ```json
 {
-  "loginId": "chef01",
+  "email": "chef01@samsung.com",
   "code": "482913"
 }
 ```
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| loginId | string | O | 인증번호를 요청한 아이디 (대소문자 무시) |
+| email | string | O | 인증번호를 요청한 이메일 (대소문자 무시, 2026-11-25 T3: loginId → email) |
 | code | string | O | 6자리 숫자 |
 
 **시스템 처리**
 1. 필수값을 검증한다.
-2. loginId의 인증번호가 있고 5분이 지나지 않았는지 확인한다.
+2. email의 인증번호가 있고 5분이 지나지 않았는지 확인한다.
 3. code가 맞는지 확인한다. 틀리면 시도 횟수를 늘리고, 5번 틀리면 그 번호를 지운다. (confirm과 횟수를 같이 센다)
 
 **Response 200 (data)**
@@ -542,7 +591,7 @@ null
 **Request — Body**
 ```json
 {
-  "loginId": "chef01",
+  "email": "chef01@samsung.com",
   "code": "482913",
   "newPassword": "newpass99",
   "newPasswordConfirm": "newpass99"
@@ -551,7 +600,7 @@ null
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| loginId | string | O | 인증번호를 요청한 아이디 (대소문자 무시) |
+| email | string | O | 인증번호를 요청한 이메일 (대소문자 무시, 2026-11-25 T3: loginId → email) |
 | code | string | O | 6자리 숫자 |
 | newPassword | string | O | 공통 규칙 '비밀번호 규칙' |
 | newPasswordConfirm | string | O | newPassword와 동일 |
@@ -559,7 +608,7 @@ null
 **시스템 처리**
 1. 필수값을 검증한다.
 2. newPassword가 비밀번호 규칙에 맞는지, newPasswordConfirm과 같은지 확인한다. (여기서 실패하면 인증번호 시도 횟수에 넣지 않는다)
-3. loginId의 인증번호가 있고 5분이 지나지 않았는지 확인한다.
+3. email의 인증번호가 있고 5분이 지나지 않았는지 확인한다.
 4. code가 맞는지 확인한다. 틀리면 시도 횟수를 늘리고, 5번 틀리면 그 번호를 지운다.
 5. 인증번호를 지운다. (한 번만 사용 가능)
 6. 새 비밀번호를 BCrypt로 암호화해 저장한다.
@@ -644,7 +693,7 @@ null
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| nickname | string | O | 앞뒤 공백 제거 후 2~10자, 다른 회원과 중복 불가 |
+| nickname | string | O | 앞뒤 공백 제거 후 2~12자 (2026-11-25), 다른 회원과 중복 불가 |
 
 **시스템 처리**
 1. nickname의 앞뒤 공백을 제거하고 길이를 검증한다.
@@ -664,7 +713,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | INVALID_REQUEST | 닉네임은 2~10자로 입력해 주세요. | nickname 누락·길이 오류 |
+| 400 | INVALID_REQUEST | 닉네임은 2~12자로 입력해 주세요. | nickname 누락·길이 오류 |
 | 400 | INVALID_REQUEST | 사용할 수 없는 닉네임입니다. | '탈퇴한회원'으로 시작 |
 | 409 | NICKNAME_ALREADY_EXISTS | 이미 사용 중인 닉네임입니다. | 다른 회원이 사용 중 |
 
@@ -674,7 +723,7 @@ null
 
 > 2026-11-24 추가. 비밀번호 찾기에 쓴다.
 
-**요구사항**: 계정 설정 화면에서 회사 이메일을 등록하거나 바꾼다.
+**요구사항**: 계정 설정 화면에서 회사 이메일을 등록하거나 바꾼다. 2026-11-25 T3: 회사 도메인만 허용한다. 바꾸면 다음 로그인부터 새 이메일로도 로그인할 수 있다. 이메일이 없는 기존 회원(emailRequired)은 여기서 등록한다.
 
 **Request — Body**
 ```json
@@ -705,7 +754,8 @@ null
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 이메일 형식을 확인해 주세요. | 누락, 형식 오류, 100자 초과 |
-| 409 | EMAIL_ALREADY_EXISTS | 이미 등록된 이메일입니다. | 다른 회원이 사용 중 |
+| 400 | INVALID_EMAIL_DOMAIN | 회사 이메일(@samsung.com)만 쓸 수 있습니다. | 회사 도메인이 아님 (2026-11-25) |
+| 409 | EMAIL_ALREADY_EXISTS | 이미 등록된 이메일입니다. | 다른 회원(탈퇴한 회원 포함)이 사용 중 |
 
 ---
 
@@ -734,7 +784,7 @@ null
    - 참여자인 팟 → 나가기(30분 전 제한 없음) + 시스템 메시지, FULL이었다면 상태 복귀
    - FINISHED·DELETED 팟은 그대로
 4. 그 회원의 INTEREST를 모두 지운다.
-5. MEMBER: STATUS = WITHDRAWN, WITHDRAWN_AT = 지금, NICKNAME = '탈퇴한회원' + memberId, EMAIL = NULL, 재설정 토큰 NULL
+5. MEMBER: STATUS = WITHDRAWN, WITHDRAWN_AT = 지금, NICKNAME = '탈퇴한회원' + memberId, 재설정 토큰 NULL. EMAIL은 남긴다 (2026-11-25 T3: 같은 이메일로 재가입 방지)
 6. 세션을 무효화한다.
 
 **Response 200 (data)**
@@ -1598,6 +1648,22 @@ null
 
 > 공통: 모든 식사팟 API는 팟이 없으면 404 `PARTY_NOT_FOUND`, status가 DELETED면 404 `PARTY_DELETED`('삭제된 식사팟입니다.')로 응답한다. 목록류는 DELETED를 제외한다.
 
+### 비공개 식사팟 공통 규칙 (2026-11-25 추가)
+
+- 만들 때 `isPrivate: true`로 만들면 비공개 식사팟이다. 서버가 추측할 수 없는 초대 코드(`inviteCode`, 22자)를 만든다. 공개 식사팟은 코드가 없다.
+- 비공개 식사팟은 **참여자에게만** 목록·메인('오늘의 식사팟', '내 식사')에 보인다. 참여자가 아니면 어디에도 나오지 않는다.
+- 참여자가 아닌 사람은 초대 코드가 맞아야 상세 조회·참여하기를 할 수 있다. 코드가 없거나 틀리면 **404 PARTY_NOT_FOUND**로 존재를 숨긴다. (삭제된 팟이어도 같다)
+- 초대 링크(`invite-link`)의 path에 `&code=초대코드`가 붙는다. 방장이 코드를 새로 만들면 예전 링크는 더 이상 쓸 수 없다.
+- 한 끼에 팟 하나·정원·행 잠금·대화·따봉·랭킹 규칙은 공개 식사팟과 같다.
+- 만든 뒤에 공개/비공개를 바꾸는 기능은 없다.
+
+| 컬럼 (MEAL_PARTY) | 설명 |
+| --- | --- |
+| PRIVATE_YN | 'Y'면 비공개. 기본 'N' |
+| INVITE_CODE | 비공개 식사팟 초대 코드 (UK). 공개 식사팟은 NULL |
+
+---
+
 ### POST /api/parties/create — 식사팟 생성
 
 **요구사항**: 오늘부터 14일 후까지의 식사팟을 만든다. 날짜를 보내지 않으면 오늘 팟이다. 생성자는 방장(HOST)이자 첫 참여자로 등록되고, 상태는 RECRUITING이다. FE는 성공 후 식사팟 상세로 이동한다. 식당 상세에서 들어온 경우 restaurantId는 화면에서 고정된 값을 보낸다.
@@ -1614,7 +1680,8 @@ null
   "mealType": "LUNCH",
   "mealTime": "12:00",
   "capacity": 4,
-  "memo": "같이 국밥 드실 분!"
+  "memo": "같이 국밥 드실 분!",
+  "isPrivate": false
 }
 ```
 
@@ -1626,6 +1693,7 @@ null
 | mealTime | string | O | HH:mm. LUNCH 11:00~13:30, DINNER 17:00~19:30, 30분 단위. 오늘 팟이면 현재 시각 이후 |
 | capacity | number | O | 2~12 (방장 포함) |
 | memo | string | X | 최대 50자 |
+| isPrivate | boolean | X | true면 비공개 식사팟 (11/25 추가). 없으면 false |
 
 **시스템 처리**
 1. 필수값·형식·범위를 검증한다. partyDate가 없으면 오늘로 한다.
@@ -1634,9 +1702,9 @@ null
 4. partyDate + mealTime이 현재 시각보다 이후인지 확인한다. (미래 날짜는 항상 통과)
    4-1. 로그인 회원이 같은 partyDate·같은 mealType의 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 이미 PARTY_MEMBER로 있으면 중단한다.
 5. RESTAURANT가 있는지 확인한다.
-6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING)
+6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING, private_yn = isPrivate, 비공개면 invite_code 생성)
 7. PARTY_MEMBER에 방장을 저장한다. (confirmed_yn = N)
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었어요'를 저장한다.
 9. 6~8을 하나의 트랜잭션으로 처리한다.
 
 **Response 200 (data)**
@@ -1675,7 +1743,7 @@ null
 
 **시스템 처리**
 1. 파라미터 값을 검증한다.
-2. party_date = date(없으면 오늘), status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다.
+2. party_date = date(없으면 오늘), status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다. 비공개 식사팟은 로그인 회원이 참여자인 것만 남긴다. (11/25)
 3. 정렬: 기준 시간(confirmed_time, 없으면 meal_time) 오름차순 → party_id 오름차순.
 4. 팟별 참여 인원 수와 내 참여 여부를 계산한다.
 5. 끼니별 개수(lunchCount, dinnerCount)는 mealType·limit과 무관하게 같은 status·excludeJoined 조건으로 센다. (탭 숫자 표시용)
@@ -1698,12 +1766,14 @@ null
       "capacity": 4,
       "status": "RECRUITING",
       "memo": "같이 국밥 드실 분!",
-      "joined": false
+      "joined": false,
+      "isPrivate": false
     }
   ]
 }
 ```
 - time: 확정 시간이 있으면 확정 시간, 없으면 예정 시간
+- isPrivate: 비공개 식사팟이면 true (참여자에게만 보이므로 true면 joined도 true)
 - FE 버튼: joined=true → [상세 보기] / joined=false이고 RECRUITING·SCHEDULED → [참여하기] / joined=false이고 FULL·CLOSED → [마감] 비활성
 
 **오류**
@@ -1741,7 +1811,8 @@ null
     "memberCount": 5,
     "confirmedCount": 3,
     "myConfirmed": false,
-    "meetPlace": "1층 로비"
+    "meetPlace": "1층 로비",
+    "isPrivate": false
   }
 ]
 ```
@@ -1838,8 +1909,16 @@ null
 
 **Request — Path**: partyId (number)
 
+**Request — Query** (11/25 추가)
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| code | string | X | 비공개 식사팟 초대 코드. 초대 링크에 붙어 있다 |
+
 **시스템 처리**
-1. partyId로 MEAL_PARTY를 조회한다. 없으면 PARTY_NOT_FOUND, status가 DELETED면 PARTY_DELETED로 중단한다.
+1. partyId로 MEAL_PARTY를 조회한다. 없으면 PARTY_NOT_FOUND로 중단한다.
+   1-1. 비공개 식사팟이고 로그인 회원이 참여자가 아니며 code가 초대 코드와 다르면 PARTY_NOT_FOUND로 중단한다. (존재 숨김, 11/25)
+   1-2. status가 DELETED면 PARTY_DELETED로 중단한다.
 2. 식당 정보, 참여자 목록(닉네임, 방장 여부, 확정 여부)을 조회한다.
 3. 로그인 회원의 역할(HOST, MEMBER, NONE)과 확정 여부를 계산한다.
 4. 확정 취소 가능 시각(기준 시간 - 30분)을 계산한다.
@@ -1871,10 +1950,12 @@ null
     { "memberId": 5, "nickname": "슥사인", "host": false, "confirmed": false }
   ],
   "myRole": "MEMBER",
-  "myConfirmed": false
+  "myConfirmed": false,
+  "isPrivate": false
 }
 ```
 - schedule: 방장이 일정을 확정하지 않았으면 null
+- isPrivate: 비공개 식사팟이면 true (11/25 추가). 초대 코드는 응답에 넣지 않는다 (초대 링크 API로 받는다)
 - cancelDeadline: 기준 시간 30분 전. 이후에는 확정 취소·확정자 나가기 불가
 
 | 조건 | 표시 버튼 |
@@ -1891,7 +1972,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId, 비공개 식사팟에 코드 없음·틀림 (참여자 제외) |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED (초대 링크로 진입한 경우 포함) |
 
 ---
@@ -1953,7 +2034,7 @@ null
       "chatId": 104,
       "type": "SYSTEM",
       "nickname": null,
-      "content": "방장이 일정을 확정했습니다 · 12:00 · 1층 로비",
+      "content": "방장이 일정을 확정했어요 · 12:00 · 1층 로비",
       "mine": false,
       "createdAt": "2026-11-17T11:10:00"
     },
@@ -2037,6 +2118,7 @@ null
 2. 로그인 회원이 참여자인지 확인한다.
 3. status가 RECRUITING·SCHEDULED가 아니면 중단한다. (마감·완료된 팟은 초대 불가)
 4. 문구 '[닉네임]님이 [식당명] [점심/저녁] 식사에 초대하셨습니다~'와 상세 화면 경로를 만든다. 오늘이 아닌 팟은 식당명 앞에 날짜를 넣는다: '[닉네임]님이 11월 21일 [식당명] 점심 식사에 초대하셨습니다~' (2026-11-20 추가)
+5. 비공개 식사팟이면 경로 끝에 `&code=초대코드`를 붙인다. (11/25 추가)
 
 **Response 200 (data)**
 ```json
@@ -2046,6 +2128,7 @@ null
 }
 ```
 - path: FE 화면 경로 규칙이 정해지면 그에 맞춰 수정
+- 비공개 식사팟: `"/party-detail.html?partyId=31&code=Xk3v9QpL0aZ7mN2bC4dE5f"`
 
 **오류**
 
@@ -2058,24 +2141,69 @@ null
 
 ---
 
+### POST /api/parties/{partyId}/invite-code — 비공개 식사팟 초대 코드 새로 만들기 (방장)
+
+> 2026-11-25 추가
+
+**요구사항**: 비공개 식사팟의 초대 코드를 새로 만든다. 예전 초대 링크는 더 이상 쓸 수 없다. (이미 참여한 사람은 그대로 참여자)
+
+**Request — Path**: partyId (number) / Body 없음
+
+**시스템 처리**
+1. MEAL_PARTY를 행 잠금 조회한다. 없으면 PARTY_NOT_FOUND, DELETED면 PARTY_DELETED로 중단한다.
+2. 로그인 회원이 방장인지 확인한다.
+3. FINISHED면 중단한다.
+4. 비공개 식사팟이 아니면 중단한다.
+5. 새 초대 코드를 저장하고 새 경로를 반환한다.
+
+**Response 200 (data)**
+```json
+{
+  "path": "/party-detail.html?partyId=31&code=Xk3v9QpL0aZ7mN2bC4dE5f"
+}
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 403 | NOT_HOST | 방장만 초대 링크를 새로 만들 수 있습니다. | 방장이 아님 |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | INVALID_STATUS | 비공개 식사팟만 초대 링크를 새로 만들 수 있습니다. | 공개 식사팟 |
+
+---
+
 ### POST /api/parties/{partyId}/members — 식사팟 참여하기 (1차)
 
 **요구사항**: 수락 절차 없이 식사팟에 참여한다(1차 참여). RECRUITING·SCHEDULED 상태이고 정원 미만일 때만 가능하다. 동시에 여러 명이 마지막 자리에 참여해도 정원을 넘지 않아야 한다. 정원에 도달하면 자동 마감(FULL)한다. 같은 날짜·같은 끼니에는 팟 하나만 참여할 수 있다(참여 확정 전이어도).
 
 > 2026-11-23 변경: 한 끼에 팟 하나 — 같은 날짜·같은 끼니의 다른 팟(DELETED 제외)에 이미 들어가 있으면 참여 불가 (409 `ALREADY_JOINED_SAME_MEAL`). 초대 링크로 들어와도 같다.
 
-**Request — Path**: partyId (number) / Body 없음
+**Request — Path**: partyId (number)
+
+**Request — Body** (선택, 11/25 추가. 공개 식사팟은 Body 없이 보내도 된다)
+```json
+{
+  "inviteCode": "Xk3v9QpL0aZ7mN2bC4dE5f"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| inviteCode | string | X | 비공개 식사팟이면 필요. 초대 링크의 code 값 |
 
 **시스템 처리**
 1. 트랜잭션을 시작하고 MEAL_PARTY 행을 잠금 조회한다. (SELECT ... FOR UPDATE)
-2. 팟이 없거나 DELETED면 중단한다.
-3. status가 FINISHED면 중단한다.
+2. 팟이 없으면 중단한다. 비공개 식사팟이고 참여자가 아니며 inviteCode가 다르면 PARTY_NOT_FOUND로 중단한다. (11/25) 그다음 DELETED면 중단한다.
+3. status가 FINISHED이거나 기준 시간(confirmed_time, 없으면 meal_time)이 지났으면 중단한다. (11/25: 스케줄러가 FINISHED로 바꾸기 전 최대 5분 틈 방지)
 4. 이미 PARTY_MEMBER에 있으면 중단한다.
    4-1. 같은 party_date·같은 meal_type의 다른 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 PARTY_MEMBER로 있으면 중단한다.
 5. status가 FULL·CLOSED이거나 현재 인원 ≥ capacity면 중단한다.
 6. PARTY_MEMBER를 저장한다. (confirmed_yn = N)
 7. 참여 후 인원이 capacity와 같으면 status = FULL로 변경한다.
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여했습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여했어요'를 저장한다.
 9. 커밋한다. FE는 식사팟 상세로 이동(또는 상세 재조회)한다.
 
 **Response 200 (data)**
@@ -2091,12 +2219,12 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId, 비공개 식사팟에 코드 없음·틀림 |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED |
 | 409 | ALREADY_JOINED | 이미 참여 중인 식사팟입니다. | 중복 참여 |
 | 409 | ALREADY_JOINED_SAME_MEAL | 같은 시간대에 이미 참여 중인 식사팟이 있습니다. | 같은 날짜·끼니의 다른 팟에 이미 참여 중 |
 | 409 | PARTY_FULL | 이미 마감된 식사팟입니다. | FULL, CLOSED, 정원 도달 |
-| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED, 기준 시간 지남 |
 
 ---
 
@@ -2114,7 +2242,7 @@ null
 5. 참여 확정자이고 현재 시각이 기준 시간 30분 전 이후면 중단한다.
 6. PARTY_MEMBER를 삭제한다.
 7. status = FULL이고 인원이 capacity 미만이 되면, 일정이 있으면 SCHEDULED, 없으면 RECRUITING으로 변경한다. (CLOSED는 유지)
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 나갔습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 나갔어요'를 저장한다.
 9. 커밋한다. FE는 식사팟 목록으로 이동한다.
 
 **Response 200 (data)**
@@ -2144,12 +2272,12 @@ null
 
 **시스템 처리**
 1. MEAL_PARTY를 조회한다. 없거나 DELETED면 중단한다.
-2. status가 FINISHED면 중단한다.
+2. status가 FINISHED이거나 기준 시간이 지났으면 중단한다. (11/25)
 3. 로그인 회원이 참여자인지 확인한다.
 4. 일정(confirmed_time)이 없으면 중단한다.
 5. 이미 확정했으면 중단한다.
 6. PARTY_MEMBER.confirmed_yn을 Y로 변경한다.
-7. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여를 확정했습니다'를 저장한다.
+7. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참석을 확정했어요'를 저장한다.
 8. 확정 인원 수를 반환한다.
 
 **Response 200 (data)**
@@ -2169,7 +2297,7 @@ null
 | 409 | NOT_JOINED | 참여하지 않은 식사팟입니다. | 참여자가 아님 |
 | 409 | SCHEDULE_NOT_SET | 방장이 아직 일정을 확정하지 않았습니다. | 일정 없음 |
 | 409 | ALREADY_CONFIRMED | 이미 참여를 확정했습니다. | 중복 확정 |
-| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED, 기준 시간 지남 |
 
 ---
 
@@ -2185,7 +2313,7 @@ null
 3. 로그인 회원이 참여자이고 확정 상태인지 확인한다.
 4. 현재 시각이 confirmed_time 30분 전 이후면 중단한다.
 5. PARTY_MEMBER.confirmed_yn을 N으로 변경한다.
-6. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여 확정을 취소했습니다'를 저장한다.
+6. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참석 확정을 취소했어요'를 저장한다.
 7. 확정 인원 수를 반환한다.
 
 **Response 200 (data)**
@@ -2242,7 +2370,7 @@ null
 7. confirmed_time, meet_place, confirm_memo를 저장한다.
 8. status가 RECRUITING이면 SCHEDULED로 변경한다. (SCHEDULED·FULL·CLOSED는 유지)
 8-1. 방장의 PARTY_MEMBER.confirmed_yn을 Y로 변경한다. (방장 자동 참석 확정, 6번 초기화 뒤에 처리)
-9. PARTY_CHAT에 시스템 메시지를 저장한다. 최초: '방장이 일정을 확정했습니다 · 12:00 · 1층 로비' / 수정: '방장이 일정을 변경했습니다 · 12:30 · 정문. 참여 확정을 다시 해 주세요'
+9. PARTY_CHAT에 시스템 메시지를 저장한다. 최초: '방장이 일정을 확정했어요 · 12:00 · 1층 로비' / 수정: '방장이 일정을 바꿨어요 · 12:30 · 정문. 참석 확정을 다시 해 주세요'
 10. 커밋한다.
 
 **Response 200 (data)**
@@ -2291,7 +2419,7 @@ null
 4. status가 FINISHED면 중단한다.
 5. CLOSE: status가 RECRUITING·SCHEDULED·FULL이어야 한다. status = CLOSED.
 6. REOPEN: status가 CLOSED여야 한다. 인원 = capacity면 FULL, 아니면 일정이 있으면 SCHEDULED, 없으면 RECRUITING.
-7. PARTY_CHAT에 시스템 메시지 '방장이 모집을 마감했습니다' 또는 '방장이 모집을 다시 열었습니다'를 저장한다.
+7. PARTY_CHAT에 시스템 메시지 '방장이 모집을 마감했어요' 또는 '방장이 모집을 다시 열었어요'를 저장한다.
 8. 커밋한다.
 
 **Response 200 (data)**
@@ -2570,6 +2698,7 @@ API별 오류 표를 모은 것이다. message는 API마다 조금씩 다를 수
 | --- | --- | --- | --- |
 | 400 | INVALID_REQUEST | 입력값을 확인해 주세요. | 공통 |
 | 400 | PASSWORD_MISMATCH | 비밀번호가 일치하지 않습니다. | 회원가입 |
+| 400 | INVALID_EMAIL_DOMAIN | 회사 이메일(@samsung.com)만 쓸 수 있습니다. | 회원가입, 이메일 중복 확인, 이메일 변경 (2026-11-25, 도메인은 설정값) |
 | 400 | INVALID_MAP_URL | 네이버 지도 URL만 입력할 수 있습니다. | 식당 등록 |
 | 400 | NOT_A_RESTAURANT | 음식점·카페만 등록할 수 있습니다. | 식당 등록 (2026-11-24) |
 | 400 | RESTAURANT_OUT_OF_RANGE | 회사에서 4km 안의 식당만 등록할 수 있습니다. | 식당 등록 (2026-11-24, 거리는 설정값) |
@@ -2589,8 +2718,9 @@ API별 오류 표를 모은 것이다. message는 API마다 조금씩 다를 수
 | 404 | REVIEW_NOT_FOUND | 리뷰를 찾을 수 없습니다. | 리뷰 삭제 |
 | 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 식사팟 API 전체 |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | 식사팟 API 전체 |
-| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | 회원가입 |
+| 409 | LOGIN_ID_ALREADY_EXISTS | 이미 사용 중인 아이디입니다. | (2026-11-25부터 쓰지 않음, 내부 아이디 자동 생성) |
 | 409 | NICKNAME_ALREADY_EXISTS | 이미 사용 중인 닉네임입니다. | 회원가입 |
+| 409 | EMAIL_ALREADY_EXISTS | 이미 등록된 이메일입니다. | 회원가입, 이메일 변경 |
 | 409 | RESTAURANT_ALREADY_EXISTS | 이미 등록된 식당입니다. | 식당 등록 |
 | 409 | ALREADY_INTERESTED | 이미 관심 등록한 식당입니다. | 관심 등록 |
 | 409 | ALREADY_JOINED | 이미 참여 중인 식사팟입니다. | 참여하기 |

@@ -118,7 +118,7 @@ class PartyServiceTest {
         List<PartyChat> chats = partyChatRepository.findAllAfter(partyId, 0L);
         assertThat(chats).hasSize(1);
         assertThat(chats.get(0).isSystem()).isTrue();
-        assertThat(chats.get(0).getContent()).isEqualTo(user01.getNickname() + "님이 식사팟을 만들었습니다");
+        assertThat(chats.get(0).getContent()).isEqualTo(user01.getNickname() + "님이 식사팟을 만들었어요");
     }
 
     @Test
@@ -203,7 +203,7 @@ class PartyServiceTest {
         partyHostService.updateSchedule(partyId,
                 new PartyScheduleUpdateRequest(LocalTime.of(12, 30), "정문", "늦으면 채팅"), user01.getMemberId(), NINE_AM);
         // 방장 user01은 일정을 정하면 자동 확정
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         em.flush();
         em.clear();
 

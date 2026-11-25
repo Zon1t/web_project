@@ -1,5 +1,6 @@
 package com.sseukbap.auth.service;
 
+import com.sseukbap.auth.dto.CheckEmailResponse;
 import com.sseukbap.auth.dto.CheckIdResponse;
 import com.sseukbap.auth.dto.CheckNicknameResponse;
 import com.sseukbap.auth.dto.LoginRequest;
@@ -20,18 +21,28 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+/**
+ * 회원가입·로그인·중복 확인 (C)
+ *
+ * 2026-11-25 T3: 아이디와 회사 이메일을 따로 둔다
+ * - 가입할 때 아이디와 회사 이메일(auth.allowed-email-domains, 기본 samsung.com)을 모두 받는다
+ * - 로그인은 아이디 또는 이메일로. 이메일이 없는 기존 회원은 응답 emailRequired = true (계정 설정에서 등록 안내)
+ * - 닉네임 2~12자
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthService {
 
-    private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[A-Za-z0-9]{4,20}$");
     private static final int NICKNAME_MIN = 2;
-    private static final int NICKNAME_MAX = 10;
+    private static final int NICKNAME_MAX = 12;
+    private static final String NICKNAME_MESSAGE = "닉네임은 2~12자로 입력해 주세요.";
+    private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-z0-9]{4,20}$");
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final CompanyEmailPolicy companyEmailPolicy;
 
     /**
      * 닉네임으로 쓸 수 없는 값인지: 탈퇴한 회원 표시('탈퇴한회원…')로 시작하면 안 된다. (2026-11-24)
@@ -44,8 +55,7 @@ public class AuthService {
     }
 
     /**
-     * 아이디를 앞뒤 공백 제거 + 소문자로 통일한다. (2026-11-24)
-     * 가입·로그인·중복 확인이 모두 이 값으로 비교한다.
+     * 아이디(또는 로그인 입력값)를 앞뒤 공백 제거 + 소문자로 통일한다. (2026-11-24)
      */
     public static String normalizeLoginId(String loginId) {
         return (loginId == null) ? null : loginId.trim().toLowerCase(Locale.ROOT);
@@ -63,12 +73,18 @@ public class AuthService {
         return new CheckIdResponse(normalized, available);
     }
 
+    /** 이메일 중복 확인 (2026-11-25 T3). 형식·회사 도메인도 함께 본다 */
+    public CheckEmailResponse checkEmail(String email) {
+        String normalized = companyEmailPolicy.normalizeAndValidate(email);
+        return new CheckEmailResponse(normalized, !memberRepository.existsByEmail(normalized));
+    }
+
     /** 닉네임 중복 확인 (앞뒤 공백 제거 후 비교, 대소문자 구분) */
     public CheckNicknameResponse checkNickname(String nickname) {
         // 1. 앞뒤 공백 제거 후 길이 검증
         String trimmed = (nickname == null) ? null : nickname.trim();
         if (trimmed == null || trimmed.length() < NICKNAME_MIN || trimmed.length() > NICKNAME_MAX) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "닉네임은 2~10자로 입력해 주세요.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, NICKNAME_MESSAGE);
         }
         validateNicknameNotReserved(trimmed);
         // 2~3. 같은 닉네임이 없으면 사용 가능
@@ -76,14 +92,14 @@ public class AuthService {
         return new CheckNicknameResponse(trimmed, available);
     }
 
-    /** 회원가입 (자동 로그인 없음) */
+    /** 회원가입 (자동 로그인 없음). 2026-11-25 T3: 아이디 + 회사 이메일 필수 */
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        // 1. 필수값·형식·길이 검증은 SignupRequest의 @Valid에서 처리됨
+        // 1. 필수값·아이디 형식·길이 검증은 SignupRequest의 @Valid에서 처리됨 (아이디는 소문자로 통일됨)
+        //    이메일은 형식·회사 도메인 확인 후 소문자로
+        String email = companyEmailPolicy.normalizeAndValidate(request.email());
 
-        //    (아이디는 SignupRequest에서 이미 소문자로 통일됨)
-
-        // 2. 비밀번호 규칙 (8~20자, 영문+숫자, 공백 불가, 아이디와 다르게) — 2026-11-24
+        // 2. 비밀번호 규칙 (8~20자, 영문+숫자, 공백 불가, 아이디와 다르게)
         PasswordPolicy.validate(request.password(), request.loginId());
 
         // 3. 비밀번호 확인
@@ -91,22 +107,16 @@ public class AuthService {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        // 4~5. 화면의 중복 확인과 관계없이 서버에서 다시 검사 (아이디는 대소문자 무시)
+        // 4. 화면의 중복 확인과 관계없이 서버에서 다시 검사 (아이디는 대소문자 무시)
         if (memberRepository.existsByLoginIdIgnoreCase(request.loginId())) {
             throw new BusinessException(ErrorCode.LOGIN_ID_ALREADY_EXISTS);
+        }
+        if (memberRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
         validateNicknameNotReserved(request.nickname());
         if (memberRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
-        }
-
-        // 5-1. 회사 이메일 (선택): 있으면 형식·중복 확인 후 소문자로 저장 (2026-11-24)
-        String email = null;
-        if (request.email() != null && !request.email().isBlank()) {
-            email = EmailPolicy.normalizeAndValidate(request.email());
-            if (memberRepository.existsByEmail(email)) {
-                throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
-            }
         }
 
         // 5. 비밀번호 암호화
@@ -126,29 +136,32 @@ public class AuthService {
     }
 
     /**
-     * 로그인: 아이디·비밀번호 확인. 세션 처리는 Controller에서 한다.
-     * 아이디가 없든, 탈퇴했든, 비밀번호가 틀리든 같은 오류(LOGIN_FAILED)로 응답한다.
-     * 같은 아이디로 5번 연속 실패하면 5분 동안 429 TOO_MANY_LOGIN_ATTEMPTS (2026-11-24, C2)
+     * 로그인: 아이디(또는 이메일)·비밀번호 확인. 세션 처리는 Controller에서 한다. (2026-11-25 T3)
+     * - '@'가 있으면 이메일로, 없으면 아이디로 찾는다.
+     * - 이메일이 없는 기존 회원은 응답 emailRequired = true
+     * 없든, 탈퇴했든, 비밀번호가 틀리든 같은 오류(LOGIN_FAILED)로 응답한다.
+     * 같은 입력값으로 5번 연속 실패하면 5분 동안 429 TOO_MANY_LOGIN_ATTEMPTS (2026-11-24, C2)
      */
     public MemberInfoResponse login(LoginRequest request) {
-        // 1. 필수값 검증은 LoginRequest의 @Valid에서 처리됨
-        String loginId = normalizeLoginId(request.loginId());
+        // 1. 필수값 검증은 LoginRequest의 @Valid에서 처리됨. 앞뒤 공백 제거 + 소문자
+        String input = normalizeLoginId(request.loginId());
 
         // 2. 잠겨 있으면 비밀번호를 보지 않고 거절
-        loginAttemptLimiter.checkNotLocked(loginId);
+        loginAttemptLimiter.checkNotLocked(input);
 
-        // 3. 아이디로 회원 조회 (대소문자 무시). 없거나 탈퇴한 회원이면 실패
-        Member member = memberRepository.findByLoginIdForLogin(loginId)
-                .filter(m -> !m.isWithdrawn())
-                .orElse(null);
+        // 3. 회원 조회. 없거나 탈퇴한 회원이면 실패
+        Optional<Member> found = input.contains("@")
+                ? memberRepository.findByEmail(input)
+                : memberRepository.findByLoginIdForLogin(input);
+        Member member = found.filter(m -> !m.isWithdrawn()).orElse(null);
 
         // 4. 입력 비밀번호와 저장된 암호화 비밀번호 비교
         if (member == null || !passwordEncoder.matches(request.password(), member.getPassword())) {
-            loginAttemptLimiter.recordFailure(loginId);
+            loginAttemptLimiter.recordFailure(input);
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-        loginAttemptLimiter.reset(loginId);
+        loginAttemptLimiter.reset(input);
         return MemberInfoResponse.from(member);
     }
 

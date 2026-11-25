@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -26,14 +25,13 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "sseukbap.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PartyScheduler {
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private final PartyBatchService partyBatchService;
 
     /** 식사 완료 처리: 5분마다 (00, 05, 10 ... 분) */
     @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")
     public void finishParties() {
-        LocalDateTime now = LocalDateTime.now(KOREA);
+        LocalDateTime now = PartyTimePolicy.now();
         List<Long> targetIds = partyBatchService.findFinishTargetIds(now);
 
         int finished = 0;
@@ -55,7 +53,7 @@ public class PartyScheduler {
     /** 대화 기록 삭제: 매일 0시 */
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void deleteOldChats() {
-        int deleted = partyBatchService.deleteOldChats(LocalDate.now(KOREA));
+        int deleted = partyBatchService.deleteOldChats(PartyTimePolicy.today());
         log.info("대화 기록 삭제: {}건", deleted);
     }
 }

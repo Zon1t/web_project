@@ -15,7 +15,7 @@
  *      형식이 틀리면 서버 확인을 부르지 않는다. (기준은 서버 MapUrlParser와 같다. 최종 판단은 여전히 서버)
  *   8. (2026-11-25 T2) 주소로 받는 값
  *      ?name=검색어          → 식당 이름 칸을 미리 채운다 (식사팟 만들기에서 검색했는데 없던 이름)
- *      ?returnTo=party-create → 등록 후 /party-create.html?restaurantId={새 ID}&restore=1&registered=1 로 돌아간다.
+ *      ?returnTo=party-create → 등록 후 /party-create.html?restaurantId={새 ID}&restore=1 로 돌아간다.
  *                               취소·뒤로는 /party-create.html?restore=1. 허용 목록(RETURN_TARGETS)에 없는 값은 무시한다.
  *                               안내 상자를 따로 두지 않고 뒤로 링크·설명 문장·등록 버튼 글자만 바꿔 흐름을 보여 준다.
  */
@@ -46,21 +46,21 @@
     cancelLink: document.getElementById('cancel-link'),
   };
 
-  // 등록 후 돌아갈 수 있는 화면. 주소에 아무 값이나 넣어 다른 사이트로 보내지 못하게 정해 둔 것만 받는다.
+  // 등록 후 돌아갈 수 있는 화면 (returnTo 허용 목록). 주소에 아무 값이나 넣어 다른 사이트로 보내지 못하게 정해 둔 것만 받는다.
+  // party-create: 식당이 고정되고(restaurantId) 입력하던 값이 되살아난다(restore=1, party-create.js restoreDraft)
   const RETURN_TARGETS = {
     'party-create': {
       backLabel: '식사팟 만들기',
       desc: '식사팟을 만들 식당이 아직 없어서 먼저 등록해요.',
       submitLabel: '등록하고 이어서 만들기',
-      // registered=1: 돌아간 화면에서 '식당을 등록했어요' 알림을 한 번 띄운다
       afterRegister: (restaurantId) =>
-        '/party-create.html?restaurantId=' + encodeURIComponent(restaurantId) + '&restore=1&registered=1',
-      onCancel: '/party-create.html?restore=1',
+        '/party-create.html?restaurantId=' + encodeURIComponent(restaurantId) + '&restore=1',
+      onCancel: '/party-create.html?restore=1', // 등록을 그만둬도 입력하던 값은 되살린다
     },
   };
-  const entryParams = new URLSearchParams(location.search);
-  const returnTarget = Object.prototype.hasOwnProperty.call(RETURN_TARGETS, entryParams.get('returnTo'))
-    ? RETURN_TARGETS[entryParams.get('returnTo')]
+  const params = new URLSearchParams(location.search);
+  const returnTarget = Object.prototype.hasOwnProperty.call(RETURN_TARGETS, params.get('returnTo'))
+    ? RETURN_TARGETS[params.get('returnTo')]
     : null;
   const SUBMIT_LABEL = returnTarget ? returnTarget.submitLabel : '등록하기';
 
@@ -76,17 +76,21 @@
 
   renderCategoryChips();
   bindEvents();
-  applyEntryParams();
+  prefillName();
+  applyReturnTarget();
 
   /* ---------- 주소로 받은 값 (?name, ?returnTo) ---------- */
 
-  function applyEntryParams() {
-    const name = (entryParams.get('name') || '').trim().slice(0, NAME_MAX);
-    if (name) {
-      els.name.value = name;
-      loadSimilarNames(); // 이미 등록된 비슷한 이름이 있는지 바로 보여 준다
-    }
+  /** ?name= 으로 이름 칸을 미리 채운다 (식사팟 만들기에서 검색한 이름) */
+  function prefillName() {
+    const name = (params.get('name') || '').trim().slice(0, NAME_MAX);
+    if (!name || els.name.value) return;
+    els.name.value = name;
+    els.name.dispatchEvent(new Event('input', { bubbles: true })); // 비슷한 이름 보여 주기·글자 수 표시
+  }
 
+  /** ?returnTo= 가 있으면 안내 상자 대신 뒤로 링크·설명 문장·등록 버튼 글자로 흐름을 보여 준다 */
+  function applyReturnTarget() {
     if (!returnTarget) return;
     els.submit.textContent = SUBMIT_LABEL;
     els.cancelLink.href = returnTarget.onCancel;

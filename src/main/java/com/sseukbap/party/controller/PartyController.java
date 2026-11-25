@@ -6,6 +6,7 @@ import com.sseukbap.party.dto.PartyActionPendingResponse;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyInviteCodeResponse;
 import com.sseukbap.party.dto.PartyInviteLinkResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
@@ -79,8 +80,9 @@ public class PartyController {
     /** 식사팟 상세 조회 */
     @GetMapping("/{partyId}")
     public ApiResponse<PartyDetailResponse> getParty(@PathVariable Long partyId,
+                                                     @RequestParam(required = false) String code,
                                                      @LoginMember Long memberId) {
-        return ApiResponse.success(partyService.getParty(partyId, memberId));
+        return ApiResponse.success(partyService.getParty(partyId, memberId, code));
     }
 
     /** 식사팟 삭제 (방장, 소프트 삭제) */
@@ -96,6 +98,13 @@ public class PartyController {
     public ApiResponse<PartyInviteLinkResponse> getInviteLink(@PathVariable Long partyId,
                                                               @LoginMember Long memberId) {
         return ApiResponse.success(partyService.getInviteLink(partyId, memberId));
+    }
+
+    /** 비공개 식사팟 초대 코드 새로 만들기 (방장, 2026-11-25) */
+    @PostMapping("/{partyId}/invite-code")
+    public ApiResponse<PartyInviteCodeResponse> regenerateInviteCode(@PathVariable Long partyId,
+                                                                     @LoginMember Long memberId) {
+        return ApiResponse.success(partyService.regenerateInviteCode(partyId, memberId));
     }
 
     /** 일정 확정·수정 (방장). 수정이면 모든 참여자의 확정이 초기화된다 */

@@ -4,7 +4,8 @@
  * 주소: /party-create.html               → 식당 이름 검색으로 선택
  *       /party-create.html?restaurantId=12 → 그 식당으로 고정 (식당 상세·룰렛에서 진입)
  *       ?date=2026-11-21 을 붙이면 그 날짜를 미리 고른다 (식사팟 목록에서 진입)
- *       ?restaurantId=12&registered=1 → 식당 등록 화면에서 막 등록하고 돌아옴. '○○을 등록했어요' 알림 한 번 (2026-11-25, B)
+ *       ?restaurantId=12&restore=1 → 식당 등록을 마치고 돌아온 경우. 등록 전에 입력한 값을 되살린다 (T2)
+ *       ?restore=1 (restaurantId 없음) → 식당 등록 화면에서 [취소]·[뒤로]로 돌아온 경우. 입력값만 되살리고 알림은 없다
  *
  * 만든 것
  *   - 식당: 고정 또는 이름 검색(입력이 멈추고 300ms 뒤 검색, ↑↓ Enter 선택)
@@ -13,7 +14,11 @@
  *   - 식사 시간: 오늘이면 지난 시간은 빼고 가장 가까운 다음 시간이 기본, 미래 날짜는 끼니 첫 시간이 기본
  *   - 정원 −/+: 2~12명, 기본 4명
  *   - 방 설명(memo): 최대 50자, 글자 수 표시
+ *   - 공개 범위: [비공개: 초대받은 사람만] 체크 (2026-11-25 T4). 체크하면 isPrivate: true로 만든다
  *   - [만들기]: 식당·시간이 있으면 활성. 성공하면 상세(S-12)로 이동
+ *   - 검색 결과가 없으면 [식당 등록하고 이어서 만들기] (2026-11-25 T2)
+ *       입력값을 sessionStorage['sseukbap.partyDraft']에 저장 → 식당 등록(?name=검색어&returnTo=party-create)
+ *       → 등록 화면이 ?restaurantId={새 ID}&restore=1 로 돌려보내면 저장값을 되살리고 바로 지운다 (30분 지난 값은 버림)
  */
 (function () {
   'use strict';
@@ -26,6 +31,9 @@
   const CAPACITY_MAX = 12;
   const SEARCH_DELAY_MS = 300;
   const SEARCH_LIMIT = 5;
+  const DRAFT_KEY = 'sseukbap.partyDraft';
+  const DRAFT_TTL_MS = 30 * 60 * 1000;   // 30분 지난 임시 저장값은 버린다
+  const REGISTER_URL = '/restaurant-register.html';
 
   const form = document.getElementById('party-form');
   const restaurantSelected = document.getElementById('restaurant-selected');
@@ -45,6 +53,7 @@
   const stepButtons = Array.from(document.querySelectorAll('.party-form__step'));
   const memoInput = document.getElementById('memo');
   const memoCount = document.getElementById('memo-count');
+  const privateToggle = document.getElementById('private-toggle');
   const formMessage = document.getElementById('form-message');
   const submitButton = document.getElementById('submit-button');
 
@@ -73,7 +82,11 @@
   memoInput.addEventListener('input', () => { memoCount.textContent = memoInput.value.length; });
   restaurantInput.addEventListener('input', onSearchInput);
   restaurantInput.addEventListener('keydown', onSearchKeydown);
-  restaurantInput.addEventListener('blur', () => setTimeout(closeOptions, 150)); // 목록 클릭이 먼저 처리되도록
+  restaurantInput.addEventListener('blur', (event) => {
+    // Tab으로 [식당 등록하고 이어서 만들기] 버튼에 가는 경우는 목록을 닫지 않는다
+    if (event.relatedTarget && restaurantOptions.contains(event.relatedTarget)) return;
+    setTimeout(closeOptions, 150); // 목록 클릭이 먼저 처리되도록
+  });
   restaurantOptions.addEventListener('mousedown', (event) => event.preventDefault()); // 클릭 중 입력창 포커스 유지
   restaurantOptions.addEventListener('click', onOptionClick);
   restaurantChange.addEventListener('click', clearRestaurant);
@@ -83,27 +96,9 @@
   renderCapacity();
   initDate();
   initRestaurant();
+  restoreDraft();
 
   /* ---------- 식당 ---------- */
-
-  /**
-   * 식당 등록 화면에서 막 등록하고 돌아왔을 때(?registered=1) 알림을 한 번 띄운다. (2026-11-25 T2, B)
-   * 새로고침해도 다시 뜨지 않게 주소에서 registered만 지운다.
-   */
-  function showRegisteredToast(name) {
-    const url = new URL(location.href);
-    if (url.searchParams.get('registered') !== '1') return;
-    ui.toast(name + objectParticle(name) + ' 등록했어요');
-    url.searchParams.delete('registered');
-    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
-  }
-
-  /** 받침이 있으면 '을', 없으면 '를'. 마지막 글자가 한글이 아니면 '을(를)' */
-  function objectParticle(word) {
-    const code = String(word).trim().slice(-1).charCodeAt(0) - 0xac00;
-    if (Number.isNaN(code) || code < 0 || code > 11171) return '을(를)';
-    return code % 28 === 0 ? '를' : '을';
-  }
 
   /** ?restaurantId가 있으면 그 식당으로 고정, 없으면 검색 */
   async function initRestaurant() {
@@ -125,7 +120,6 @@
       state.isFixed = true;
       setRestaurant({ restaurantId: detail.restaurantId, name: detail.name, category: detail.category });
       document.getElementById('cancel-link').href = '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
-      showRegisteredToast(detail.name);
     } catch (err) {
       if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
       showSearch(err.error === 'RESTAURANT_NOT_FOUND'
@@ -201,8 +195,12 @@
 
   function renderOptions() {
     if (state.options.length === 0) {
+      const keyword = restaurantInput.value.trim();
       restaurantOptions.innerHTML =
-        '<li class="party-form__option-empty" role="option" aria-disabled="true">일치하는 식당이 없어요</li>';
+        '<li class="party-form__option-empty" role="option" aria-disabled="true">' +
+        '<span>\'' + esc(keyword) + '\'은(는) 아직 등록되지 않았어요</span>' +
+        '<button type="button" class="btn btn--primary party-form__register" data-action="register">식당 등록하고 이어서 만들기</button>' +
+        '</li>';
     } else {
       restaurantOptions.innerHTML = state.options.map((r, i) => (
         '<li id="restaurant-option-' + i + '" class="party-form__option' + (i === state.activeIndex ? ' is-active' : '') +
@@ -228,8 +226,75 @@
   }
 
   function onOptionClick(event) {
+    if (event.target.closest('[data-action="register"]')) {
+      goRegister();
+      return;
+    }
     const item = event.target.closest('[data-index]');
     if (item) setRestaurant(state.options[Number(item.dataset.index)]);
+  }
+
+  /* ---------- 없는 식당: 등록하고 돌아오기 (T2) ---------- */
+
+  /** 지금 입력값을 임시 저장하고 식당 등록 화면으로 */
+  function goRegister() {
+    const draft = {
+      date: state.partyDate,
+      mealType: state.mealType,
+      time: timeSelect.value || null,
+      capacity: state.capacity,
+      memo: memoInput.value,
+      isPrivate: privateToggle.checked,
+      savedAt: Date.now(),
+    };
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {
+      // 저장을 못 하면 입력값만 잃고 등록은 그대로 진행한다
+    }
+    const name = restaurantInput.value.trim();
+    location.href = REGISTER_URL + '?name=' + encodeURIComponent(name) + '&returnTo=party-create';
+  }
+
+  /** ?restore=1 이면 임시 저장값을 되살리고 지운다. 식당은 ?restaurantId로 고정된다(기존 기능) */
+  function restoreDraft() {
+    if (new URLSearchParams(location.search).get('restore') !== '1') return;
+    let draft = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      return;
+    }
+    if (!draft || typeof draft.savedAt !== 'number' || Date.now() - draft.savedAt > DRAFT_TTL_MS) return;
+
+    // 날짜: 지금도 고를 수 있는 날짜일 때만
+    if (partyApi.isSelectableDate(draft.date) && hasAnyTime(draft.date) && draft.date !== state.partyDate) {
+      state.picker.setValue(draft.date);
+      selectDate(draft.date);
+    }
+    // 끼니·시간: 그 끼니·시간이 아직 남아 있을 때만
+    if ((draft.mealType === 'LUNCH' || draft.mealType === 'DINNER') && availableTimes(draft.mealType).length > 0) {
+      selectMealType(draft.mealType);
+      if (draft.time && availableTimes(draft.mealType).includes(draft.time)) {
+        timeSelect.value = draft.time;
+      }
+    }
+    const capacity = Number(draft.capacity);
+    if (Number.isInteger(capacity) && capacity >= CAPACITY_MIN && capacity <= CAPACITY_MAX) {
+      state.capacity = capacity;
+      renderCapacity();
+    }
+    if (draft.isPrivate === true) privateToggle.checked = true;
+    if (typeof draft.memo === 'string') {
+      memoInput.value = draft.memo.slice(0, Number(memoInput.maxLength) > 0 ? Number(memoInput.maxLength) : 50);
+      memoCount.textContent = memoInput.value.length;
+    }
+    updateSubmit();
+    // 등록을 마치고 온 경우(restaurantId 있음)에만. 등록 화면에서 [취소]로 돌아오면 restore=1만 붙어 온다 (B, 2026-11-25)
+    if (new URLSearchParams(location.search).get('restaurantId')) {
+      ui.toast('식당을 등록했어요. 입력하던 내용을 이어서 만들어 주세요');
+    }
   }
 
   /** ↑↓로 고르고 Enter로 선택, Esc로 닫기 */
@@ -391,6 +456,7 @@
         mealTime: timeSelect.value,
         capacity: state.capacity,
         memo: memoInput.value.trim() || null,
+        isPrivate: privateToggle.checked,
       });
       location.href = partyApi.detailUrl(result.partyId); // 방장이자 첫 참여자로 상세 화면
     } catch (err) {

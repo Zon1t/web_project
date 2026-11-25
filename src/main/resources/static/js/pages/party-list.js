@@ -197,6 +197,7 @@
   function extraBadges(p, left, isOpen) {
     let html = '';
     if (p.joined) html += '<span class="badge party-badge--joined">참여 중</span>';
+    if (p.isPrivate) html += '<span class="badge party-badge--private">' + partyApi.lockIcon(12) + '비공개</span>';
     if (isOpen && left === 1) html += '<span class="badge party-badge--hot">곧 마감</span>';
     if (isOpen && partyApi.isToday(state.date) && p.time) {
       const diff = (new Date(state.date + 'T' + p.time + ':00') - new Date()) / 60000;
@@ -238,7 +239,7 @@
     root.innerHTML = ui.empty({
       illust: 'tray',
       title: esc(when) + ' 모집 중인 ' + label + ' 식사팟이 없어요',
-      desc: '첫 식사팟을 만들어 보세요.' + (isToday ? ' 식사가 끝난 팟은 목록에서 빠져요.' : ''),
+      desc: '첫 식사팟을 만들어 보세요.' + (isToday ? ' 식사가 끝난 식사팟은 목록에서 빠져요.' : ''),
       actionHtml: '<a class="btn btn--primary" href="' + partyApi.createUrl(null, isToday ? null : state.date) + '">식사팟 만들기</a>',
     });
   }

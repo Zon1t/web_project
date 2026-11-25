@@ -29,6 +29,11 @@
       </div>
     </div>
 
+    <!-- 이메일이 없는 기존 회원 안내 (2026-11-25 T3): 로그인 응답 emailRequired면 login.js가 ?emailRequired=1로 보낸다 -->
+    <p id="account-email-required" class="account-alert" role="alert" hidden>
+      회사 이메일이 아직 없어요. 아래에서 @samsung.com 이메일을 등록해 주세요.
+    </p>
+
     <!-- ① 내 정보 + 닉네임 변경 -->
     <section class="account-card" aria-labelledby="account-profile-title">
       <h2 id="account-profile-title" class="account-card__title">내 정보</h2>
@@ -46,7 +51,7 @@
                    placeholder="name@samsung.com" aria-describedby="account-email-message account-email-hint">
             <button id="email-submit" class="btn btn--primary" type="submit">등록</button>
           </div>
-          <p id="account-email-hint" class="field__message">비밀번호를 찾을 때 이 이메일로 인증번호를 보내요.</p>
+          <p id="account-email-hint" class="field__message">비밀번호 찾기에 쓰고, 아이디 대신 로그인할 때도 써요. @samsung.com 주소만 쓸 수 있어요.</p>
           <p id="account-email-message" class="field__message" aria-live="polite"></p>
         </div>
       </form>
@@ -55,8 +60,8 @@
         <div class="field">
           <label class="field__label" for="account-nickname">닉네임</label>
           <div class="account-form__row">
-            <input id="account-nickname" class="input" type="text" maxlength="10" autocomplete="nickname"
-                   placeholder="2~10자" aria-describedby="account-nickname-message">
+            <input id="account-nickname" class="input" type="text" maxlength="12" autocomplete="nickname"
+                   placeholder="2~12자" aria-describedby="account-nickname-message">
             <button id="nickname-submit" class="btn btn--primary" type="submit">변경</button>
           </div>
           <p id="account-nickname-message" class="field__message" aria-live="polite"></p>
@@ -67,7 +72,7 @@
     <!-- ② 비밀번호 변경 -->
     <section class="account-card" aria-labelledby="account-password-title">
       <h2 id="account-password-title" class="account-card__title">비밀번호 변경</h2>
-      <p class="account-card__desc">영문과 숫자를 함께 넣어 8~20자로 정해 주세요. 공백은 쓸 수 없고, 아이디와 같으면 안 돼요.</p>
+      <p class="account-card__desc">영문과 숫자를 함께 넣어 8~20자로 정해 주세요. 공백은 쓸 수 없고, 이메일 앞부분과 같으면 안 돼요.</p>
 
       <form id="password-form" class="account-form" novalidate>
         <div class="field">
@@ -99,7 +104,7 @@
     <section class="account-card account-card--danger" aria-labelledby="account-withdraw-title">
       <h2 id="account-withdraw-title" class="account-card__title">회원 탈퇴</h2>
       <ul class="account-warn">
-        <li>탈퇴하면 되돌릴 수 없고, 같은 아이디로 다시 가입할 수 없어요.</li>
+        <li>탈퇴하면 되돌릴 수 없고, 같은 이메일로 다시 가입할 수 없어요.</li>
         <li>내가 방장인 진행 중 식사팟은 삭제되고, 참여 중인 식사팟에서는 나가요.</li>
         <li>관심 식당은 지워져요. 남긴 리뷰·대화는 '탈퇴한 회원'으로 남아요.</li>
       </ul>

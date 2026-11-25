@@ -63,7 +63,7 @@ class PartyWithdrawalTest {
     @Test
     void 방장인_팟은_DELETED가_되고_시스템_메시지가_남는다() {
         Long partyId = createParty(host, LocalTime.of(12, 0), 4);
-        partyMemberService.joinParty(partyId, guest.getMemberId());
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
 
         PartyWithdrawalResult result = partyService.cleanUpForWithdrawal(host.getMemberId());
         em.flush();
@@ -72,16 +72,16 @@ class PartyWithdrawalTest {
         assertThat(result.deletedPartyCount()).isEqualTo(1);
         assertThat(result.leftPartyCount()).isZero();
         assertThat(statusOf(partyId)).isEqualTo(PartyStatus.DELETED);
-        assertThat(chatsOf(partyId)).contains("방장이 탈퇴해 식사팟이 삭제되었습니다");
+        assertThat(chatsOf(partyId)).contains("방장이 탈퇴해 식사팟이 삭제됐어요");
     }
 
     @Test
     void 참여한_팟은_나가고_FULL이면_일정_유무로_돌아간다_30분_전_제한은_무시() {
         Long partyId = createParty(host, LocalTime.of(12, 0), 2);
-        partyMemberService.joinParty(partyId, guest.getMemberId());          // 2/2 → FULL
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);          // 2/2 → FULL
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "정문", null),
                 host.getMemberId(), NINE_AM);
-        partyMemberService.confirmParty(partyId, guest.getMemberId());       // 확정자 (원래는 30분 전까지만 나갈 수 있음)
+        partyMemberService.confirmParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);       // 확정자 (원래는 30분 전까지만 나갈 수 있음)
         assertThat(statusOf(partyId)).isEqualTo(PartyStatus.FULL);
 
         PartyWithdrawalResult result = partyService.cleanUpForWithdrawal(guest.getMemberId());
@@ -93,13 +93,13 @@ class PartyWithdrawalTest {
         assertThat(statusOf(partyId)).isEqualTo(PartyStatus.SCHEDULED);    // 일정이 있으니 SCHEDULED
         assertThat(partyMemberRepository.countByPartyId(partyId)).isEqualTo(1);
         assertThat(partyMemberRepository.existsByPartyIdAndMemberId(partyId, guest.getMemberId())).isFalse();
-        assertThat(chatsOf(partyId)).contains("탈퇴손님님이 나갔습니다");
+        assertThat(chatsOf(partyId)).contains("탈퇴손님님이 나갔어요");
     }
 
     @Test
     void 일정이_없는_FULL_팟은_RECRUITING으로() {
         Long partyId = createParty(host, LocalTime.of(18, 0), 2);
-        partyMemberService.joinParty(partyId, guest.getMemberId());
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
 
         partyService.cleanUpForWithdrawal(guest.getMemberId());
         em.flush();
@@ -112,10 +112,10 @@ class PartyWithdrawalTest {
     void 끝난_팟과_삭제된_팟은_그대로() {
         // 식사 완료 팟 (손님 확정) → 어제로 옮겨 오늘 점심과 겹치지 않게
         Long finishedId = createParty(host, LocalTime.of(12, 0), 4);
-        partyMemberService.joinParty(finishedId, guest.getMemberId());
+        partyMemberService.joinParty(finishedId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyHostService.updateSchedule(finishedId, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "정문", null),
                 host.getMemberId(), NINE_AM);
-        partyMemberService.confirmParty(finishedId, guest.getMemberId());
+        partyMemberService.confirmParty(finishedId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyBatchService.finishParty(finishedId, TODAY.atTime(23, 59));
         em.flush();
         em.createQuery("update MealParty p set p.partyDate = :date where p.partyId = :id")
@@ -126,7 +126,7 @@ class PartyWithdrawalTest {
 
         // 삭제된 팟
         Long deletedId = createParty(host, LocalTime.of(18, 0), 4);
-        partyMemberService.joinParty(deletedId, guest.getMemberId());
+        partyMemberService.joinParty(deletedId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyService.deleteParty(deletedId, host.getMemberId());
         em.flush();
         em.clear();

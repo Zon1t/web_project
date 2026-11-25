@@ -20,8 +20,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,6 +34,8 @@ import java.util.Optional;
  * 네이버에는 URL·장소 ID로 장소를 조회하는 공식 API가 없어서
  *   - 중복: URL에서 장소 ID를 찾아 만든 표준 URL로 판단 (MapUrlParser)
  *   - 주소·좌표: 식당 이름으로 지역 검색한 후보(최대 5개) 중 사용자가 고른 곳 (NaverLocalSearchClient)
+ *   - 지역 검색은 전국 기준 5개만 줘서 같은 이름의 먼 가게만 나올 수 있다. 그래서 반경 안 후보가 없으면
+ *     "이름 + 회사 지역(restaurant.search-area, 예: 광진구)"으로 한 번 더 검색해 합친다. (2026-11-25)
  *
  * 등록할 수 없는 후보 (2026-11-24)
  *   - 네이버 분류가 음식점 계열이 아님 (PlaceCategoryPolicy)
@@ -41,23 +46,27 @@ import java.util.Optional;
 public class RestaurantRegisterService {
 
     private static final int NAME_MAX = 30;
+    private static final int MAX_CANDIDATES = 8;   // 두 번 검색해 합친 후보 최대 개수
 
     private final RestaurantRepository restaurantRepository;
     private final MemberRepository memberRepository;
     private final MapUrlParser mapUrlParser;
     private final NaverLocalSearchClient naverLocalSearchClient;
     private final double radiusKm;
+    private final String searchArea;
 
     public RestaurantRegisterService(RestaurantRepository restaurantRepository,
                                      MemberRepository memberRepository,
                                      MapUrlParser mapUrlParser,
                                      NaverLocalSearchClient naverLocalSearchClient,
-                                     @Value("${restaurant.register-radius-km:4}") double radiusKm) {
+                                     @Value("${restaurant.register-radius-km:4}") double radiusKm,
+                                     @Value("${restaurant.search-area:}") String searchArea) {
         this.restaurantRepository = restaurantRepository;
         this.memberRepository = memberRepository;
         this.mapUrlParser = mapUrlParser;
         this.naverLocalSearchClient = naverLocalSearchClient;
         this.radiusKm = radiusKm;
+        this.searchArea = (searchArea == null) ? "" : searchArea.trim();
     }
 
     /** 네이버 지도 URL 검증 (등록 화면에서 입력 중 호출). 실패도 200 + reason */
@@ -79,14 +88,14 @@ public class RestaurantRegisterService {
             return MapUrlCheckResponse.fail(Reason.DUPLICATE, radiusKm);
         }
 
-        // 4. 이름으로 지역 검색 (최대 5개)
-        List<NaverPlace> places = naverLocalSearchClient.search(trimmedName);
+        // 4. 이름으로 지역 검색 (반경 안 후보가 없으면 회사 지역을 붙여 한 번 더)
+        Optional<double[]> office = officeLocation();
+        List<NaverPlace> places = searchPlaces(trimmedName, office);
         if (places.isEmpty()) {
             return MapUrlCheckResponse.fail(Reason.NOT_FOUND, radiusKm);
         }
 
         // 5~6. 후보마다 거리·분류·등록 가능 여부
-        Optional<double[]> office = officeLocation();
         List<PlaceCandidateResponse> candidates = places.stream()
                 .map(place -> toCandidate(place, office))
                 .toList();
@@ -112,8 +121,8 @@ public class RestaurantRegisterService {
             throw new BusinessException(ErrorCode.RESTAURANT_ALREADY_EXISTS);
         }
 
-        // 4. 이름으로 다시 검색해 고른 후보(이름·주소가 같은 곳)를 찾는다. 화면이 보낸 좌표는 믿지 않는다
-        NaverPlace place = naverLocalSearchClient.search(name).stream()
+        // 4. 이름으로 다시 검색해(check-map-url과 같은 방식) 고른 후보(이름·주소가 같은 곳)를 찾는다. 화면이 보낸 좌표는 믿지 않는다
+        NaverPlace place = searchPlaces(name, officeLocation()).stream()
                 .filter(p -> Objects.equals(p.name(), request.placeName().trim())
                         && Objects.equals(p.address(), request.placeAddress().trim()))
                 .findFirst()
@@ -161,6 +170,30 @@ public class RestaurantRegisterService {
                 place.name(), place.address(), place.lat(), place.lng(), place.category(),
                 distanceKm, suggested == null ? null : suggested.name(),
                 block == null, block == null ? null : block.name());
+    }
+
+    /**
+     * 이름으로 지역 검색. 등록할 수 있는 후보(음식점 + 반경 안)가 없으면 "이름 + 회사 지역"으로 한 번 더 검색해
+     * 그 결과를 앞에, 처음 결과를 뒤에 합친다 (같은 이름·주소는 한 번만, 최대 MAX_CANDIDATES개). (2026-11-25)
+     * 이름에 이미 회사 지역이 들어 있거나 지역 설정이 비어 있으면 다시 검색하지 않는다.
+     */
+    private List<NaverPlace> searchPlaces(String name, Optional<double[]> office) {
+        List<NaverPlace> first = naverLocalSearchClient.search(name);
+        boolean anyRegistrable = first.stream().anyMatch(p -> toCandidate(p, office).registrable());
+        if (anyRegistrable || searchArea.isEmpty() || name.contains(searchArea)) {
+            return first;
+        }
+
+        List<NaverPlace> nearby = naverLocalSearchClient.search(name + " " + searchArea);
+        Map<String, NaverPlace> merged = new LinkedHashMap<>();
+        for (NaverPlace p : nearby) {
+            merged.putIfAbsent(p.name() + "|" + p.address(), p);
+        }
+        for (NaverPlace p : first) {
+            merged.putIfAbsent(p.name() + "|" + p.address(), p);
+        }
+        List<NaverPlace> result = new ArrayList<>(merged.values());
+        return result.size() > MAX_CANDIDATES ? result.subList(0, MAX_CANDIDATES) : result;
     }
 
     /** 회사 위치 = 구내식당(CAFETERIA) 좌표. 없으면 거리 검사를 하지 않는다 */

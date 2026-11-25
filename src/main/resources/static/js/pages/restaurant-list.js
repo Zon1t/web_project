@@ -11,6 +11,9 @@
  *      서버는 따봉 순으로 주므로 따봉 순은 받은 순서 그대로. 고른 정렬은 브라우저에 기억한다.
  *      식당마다 회사까지 거리를 보여 준다. 좌표가 없는 식당은 맨 아래.
  *   6. (2026-11-24) 카테고리 칩에 마우스를 올리면 음식 예시 툴팁, 고른 카테고리의 예시는 칩 아래 한 줄로.
+ *   7. (2026-11-25) 좁은 화면(900px 이하)에서는 목록과 지도 중 하나만 크게 보여 주고 [지도 보기]/[목록 보기]로 바꾼다.
+ *      JS는 <main data-view>만 바꾸고, 실제로 숨기는 건 CSS(@media)가 한다 → 넓은 화면에서는 값과 상관없이 둘 다 보인다.
+ *      고른 보기는 이번 방문 동안만 기억한다(sessionStorage). 상세 카드를 보고 돌아와도 지도 화면이 유지된다.
  */
 (function () {
   'use strict';
@@ -19,6 +22,11 @@
   const CATEGORY_EXAMPLES = restaurantApi.CATEGORY_EXAMPLES;
   const KEYWORD_MAX = 30;
   const SORT_KEY = 'sseukbap.restaurantList.sort';
+  const VIEW_KEY = 'sseukbap.restaurantList.view';
+  const VIEW_LABELS = {
+    list: { next: 'map', icon: 'map', text: '지도 보기' },    // 지금 목록 → 버튼은 지도로
+    map: { next: 'list', icon: 'list', text: '목록 보기' },   // 지금 지도 → 버튼은 목록으로
+  };
 
   const els = {
     form: document.getElementById('search-form'),
@@ -28,6 +36,8 @@
     summary: document.getElementById('result-summary'),
     sortToggle: document.getElementById('sort-toggle'),
     result: document.getElementById('restaurant-result'),
+    page: document.getElementById('restaurant-page'),
+    viewToggle: document.getElementById('view-toggle'),
   };
 
   // 현재 조회 조건
@@ -55,8 +65,35 @@
   restaurantMap.init(document.getElementById('restaurant-map')); // 지도는 목록과 따로 불러온다
   restaurantMap.onHover(highlightFromMap);                       // 지도 핀에 마우스 → 목록 항목 강조
   restaurantMap.onSelect((id) => openDetail(id));                // 지도 핀 클릭 → 식당 상세 카드
+  setView(readView(), false);
+  els.viewToggle.addEventListener('click', () => setView(VIEW_LABELS[els.page.dataset.view].next, true));
   loadList();
   openDetailFromUrl();
+
+  /* ---------- 좁은 화면: 목록 / 지도 보기 전환 (2026-11-25) ---------- */
+
+  function readView() {
+    try {
+      return sessionStorage.getItem(VIEW_KEY) === 'map' ? 'map' : 'list';
+    } catch (e) {
+      return 'list';
+    }
+  }
+
+  /** view: 'list' | 'map'. byUser면 화면 맨 위로 올리고 고른 값을 기억한다 */
+  function setView(view, byUser) {
+    const label = VIEW_LABELS[view];
+    els.page.dataset.view = view;
+    els.viewToggle.innerHTML = ui.icon(label.icon, 18) + '<span>' + label.text + '</span>';
+    if (view === 'map') restaurantMap.refresh(); // 숨겨져 있던 지도는 칸 크기를 다시 재야 제대로 그려진다
+    if (!byUser) return;
+    window.scrollTo(0, 0);
+    try {
+      sessionStorage.setItem(VIEW_KEY, view);
+    } catch (e) {
+      // 기억하지 못해도 전환은 된다
+    }
+  }
 
   /* ---------- 조건 ---------- */
 

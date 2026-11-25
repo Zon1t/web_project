@@ -40,7 +40,9 @@
           </ol>
         </div>
         <input id="map-url" class="input" type="url" inputmode="url" autocomplete="off" required
-               placeholder="https://naver.me/... 또는 https://map.naver.com/..." aria-describedby="map-url-hint">
+               placeholder="https://naver.me/... 또는 https://map.naver.com/..." aria-describedby="map-url-hint map-url-error">
+        <!-- URL 형식이 틀리면 바로 여기에 안내 (2026-11-25, restaurant-register.js checkUrlFormat) -->
+        <p id="map-url-error" class="field__message field__message--error url-error" role="alert" hidden></p>
       </div>
 
       <!-- 2. 식당 이름 + 이미 등록된 비슷한 이름 -->

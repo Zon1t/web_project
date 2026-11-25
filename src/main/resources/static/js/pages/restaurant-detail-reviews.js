@@ -6,6 +6,7 @@
  *
  * 하는 일
  *   1. 리뷰 작성: 한줄평(필수, 100자) + 태그(선택, 여러 개). 등록 후 목록 1페이지를 다시 불러온다.
+ *      작성 폼은 처음에 접혀 있고 [리뷰 쓰기]를 누르면 펼쳐진다. 리뷰 목록이 먼저 보이도록 (2026-11-25)
  *   2. 리뷰 목록: 최신순 10개씩, [더보기]로 다음 페이지를 아래에 이어 붙인다.
  *   3. 리뷰 삭제: 내 리뷰에만 [삭제]. 확인 창 → 삭제 → 목록 1페이지 다시 불러오기.
  *   작성·삭제가 성공하면 onChange()를 불러 위쪽 리뷰 수·태그 TOP 3도 갱신한다.
@@ -33,8 +34,12 @@
     };
 
     section.innerHTML =
+      '<div class="detail-reviews__head">' +
       '<h2 id="review-title" class="section-title">리뷰<span id="review-count" class="detail-reviews__count"></span></h2>' +
-      renderForm() +
+      '<button id="review-write-toggle" type="button" class="btn btn--primary detail-reviews__write" ' +
+      'aria-expanded="false" aria-controls="review-form-panel">리뷰 쓰기</button>' +
+      '</div>' +
+      '<div id="review-form-panel" class="review-form-panel" hidden>' + renderForm() + '</div>' +
       '<div id="review-list-area" aria-live="polite"></div>';
 
     const els = {
@@ -45,6 +50,9 @@
       formMessage: section.querySelector('#review-form-message'),
       submit: section.querySelector('#review-submit'),
       listArea: section.querySelector('#review-list-area'),
+      formPanel: section.querySelector('#review-form-panel'),
+      writeToggle: section.querySelector('#review-write-toggle'),
+      cancel: section.querySelector('#review-cancel'),
       image: section.querySelector('#review-image'),
       photoName: section.querySelector('#review-photo-name'),
       photoPreview: section.querySelector('#review-photo-preview'),
@@ -61,6 +69,13 @@
     /* ---------- 이벤트 ---------- */
 
     function bindEvents() {
+      // [리뷰 쓰기] / [취소]: 작성 폼 펼치기·접기
+      els.writeToggle.addEventListener('click', () => setFormOpen(els.formPanel.hidden));
+      els.cancel.addEventListener('click', () => setFormOpen(false));
+      section.addEventListener('click', (event) => {
+        if (event.target.closest('[data-action="write-first"]')) setFormOpen(true);
+      });
+
       els.content.addEventListener('input', () => {
         els.length.textContent = els.content.value.length + ' / ' + reviewApi.CONTENT_MAX;
         if (els.content.value.trim()) setFormMessage('');
@@ -124,6 +139,20 @@
 
     /* ---------- 작성 ---------- */
 
+    /** 작성 폼 펼치기·접기. 펼치면 한줄평 칸으로 이동, 접으면 [리뷰 쓰기]로 돌아온다 */
+    function setFormOpen(open) {
+      els.formPanel.hidden = !open;
+      els.writeToggle.hidden = open;
+      els.writeToggle.setAttribute('aria-expanded', String(open));
+      if (open) {
+        els.content.focus();
+        els.formPanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        setFormMessage('');
+        els.writeToggle.focus();
+      }
+    }
+
     async function submitReview() {
       if (state.submitting) return;
 
@@ -143,6 +172,7 @@
         els.form.reset();
         selectImage(null);
         els.length.textContent = '0 / ' + reviewApi.CONTENT_MAX;
+        setFormOpen(false);
         await loadFirstPage();
         onChange();
         showCreatedFeedback();
@@ -258,6 +288,7 @@
           '<div class="state state--empty">' +
           '<p class="state__title">첫 리뷰를 남겨 주세요</p>' +
           '<p class="state__desc">한줄평과 태그로 이 식당을 알려 주세요.</p>' +
+          '<button type="button" class="btn" data-action="write-first">리뷰 쓰기</button>' +
           '</div>';
         return;
       }
@@ -370,7 +401,10 @@
       '<span id="review-length" class="text-muted">0 / ' + reviewApi.CONTENT_MAX + '</span>' +
       '</div>' +
       '</div>' +
+      '<div class="review-form__actions">' +
+      '<button id="review-cancel" type="button" class="btn">취소</button>' +
       '<button id="review-submit" type="submit" class="btn btn--primary review-form__submit">등록</button>' +
+      '</div>' +
       '</form>'
     );
   }

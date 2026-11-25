@@ -18,7 +18,8 @@
   <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
   <header id="app-header" class="app-header" data-layout="wide"></header>
 
-  <main class="restaurant-page">
+  <!-- data-view: 좁은 화면(900px 이하)에서 목록(list)과 지도(map) 중 무엇을 보여 줄지. 넓은 화면은 둘 다 (2026-11-25) -->
+  <main class="restaurant-page" id="restaurant-page" data-view="list">
     <!-- 왼쪽: 검색·필터·목록 -->
     <section class="restaurant-panel" aria-labelledby="page-title">
       <div class="restaurant-panel__head">
@@ -58,6 +59,10 @@
 
   <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
   <footer id="app-footer" class="app-footer"></footer>
+
+  <!-- 좁은 화면에서만 보이는 [지도 보기]/[목록 보기] 전환 버튼 (restaurant-list.js가 글자·아이콘을 바꾼다)
+       main 밖에 둔다: main에 걸린 등장 애니메이션(transform) 때문에 안에 두면 화면 아래에 고정되지 않는다 -->
+  <button id="view-toggle" class="restaurant-view-toggle" type="button" aria-controls="restaurant-page">지도 보기</button>
 
   <!-- 지도 키 (Git 제외 파일). 없으면 지도 자리에 안내만 나오고 목록은 그대로 동작한다 -->
   <script src="/js/config.js"></script>

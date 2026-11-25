@@ -7,6 +7,7 @@
  *   restaurantMap.highlight(12);          // 목록 항목에 마우스를 올리면 핀 강조, null이면 해제
  *   restaurantMap.onHover((id) => { ... }); // 지도 핀에 마우스를 올리면 목록도 강조하도록 (id 또는 null)
  *   restaurantMap.onSelect((id) => { ... }); // 핀을 누르면 (식당 상세 카드 열기). 등록하지 않으면 말풍선
+ *   restaurantMap.refresh();              // 지도 칸이 숨겨졌다 다시 보일 때 크기 다시 맞추기 (좁은 화면 [지도 보기])
  *
  * - 지도 불러오기·핀 모양은 공통 함수 js/components/map-kit.js (2026-11-23 분리)
  * - 지도 키: js/config.js의 window.APP_CONFIG.naverMapKeyId (Git 제외, 견본은 config.example.js)
@@ -67,6 +68,24 @@
     selectCallback = callback;
   }
 
+  /**
+   * 지도 칸 크기가 바뀐 뒤 다시 맞춘다. (2026-11-25)
+   * 좁은 화면에서 숨겨져 있던(display: none) 지도는 크기를 0으로 기억해서, 다시 보일 때 빈칸·깨진 지도가 된다.
+   * 화면이 다시 그려진 다음 프레임에 칸 크기를 다시 재고, 보던 가운데를 그대로 유지한다.
+   */
+  function refresh() {
+    if (!ready) return; // 아직 지도가 없으면 만들 때 보이는 크기로 그려진다
+    global.requestAnimationFrame(() => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (!width || !height) return; // 아직 숨겨져 있음
+      const center = map.getCenter();
+      // autoResize: 지금 칸 크기를 재서 맞춘다. (setSize는 칸에 px 크기를 박아 넣어 넓은 화면에서도 작게 남는다)
+      map.autoResize();
+      map.setCenter(center);
+    });
+  }
+
   function highlight(restaurantId) {
     const id = restaurantId == null ? null : Number(restaurantId);
     if (id === highlightedId) return;
@@ -95,6 +114,13 @@
       pixelOffset: new maps.Point(0, -6),
     });
     maps.Event.addListener(map, 'click', closeInfo); // 빈 곳을 누르면 말풍선 닫기
+
+    // 창 크기가 바뀌면(좁은 화면 ↔ 넓은 화면, 휴대폰 가로·세로) 지도 칸도 다시 맞춘다
+    let resizeTimer = null;
+    global.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(refresh, 150);
+    });
 
     ready = true;
     if (pendingList) {
@@ -211,5 +237,5 @@
       '</div>';
   }
 
-  global.restaurantMap = { init, setRestaurants, highlight, onHover, onSelect };
+  global.restaurantMap = { init, setRestaurants, highlight, onHover, onSelect, refresh };
 })(window);

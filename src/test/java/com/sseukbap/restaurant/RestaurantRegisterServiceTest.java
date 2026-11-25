@@ -25,6 +25,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -95,6 +96,30 @@ class RestaurantRegisterServiceTest {
         assertThat(shop.registrable()).isFalse();
         assertThat(shop.blockReason()).isEqualTo("NOT_A_RESTAURANT");
         assertThat(shop.suggestedCategory()).isNull();
+    }
+
+    @Test
+    void 검증_이름만으로는_먼_곳만_나오면_회사_지역을_붙여_다시_검색한다() {
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of());
+        given(naverLocalSearchClient.search(eq("대쿠이"))).willReturn(List.of(FAR));
+        given(naverLocalSearchClient.search(eq("대쿠이 광진구"))).willReturn(List.of(NEAR));
+
+        MapUrlCheckResponse result = registerService.checkMapUrl(NEW_URL, "대쿠이");
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.candidates()).extracting(PlaceCandidateResponse::name)
+                .containsExactly(NEAR.name(), FAR.name());   // 지역 검색 결과가 앞
+    }
+
+    @Test
+    void 등록도_회사_지역을_붙여_다시_검색한_후보로_할_수_있다() {
+        given(naverLocalSearchClient.search(anyString())).willReturn(List.of());
+        given(naverLocalSearchClient.search(eq("대쿠이"))).willReturn(List.of(FAR));
+        given(naverLocalSearchClient.search(eq("대쿠이 광진구"))).willReturn(List.of(NEAR));
+
+        Long id = registerService.registerRestaurant(request(NEW_URL, "대쿠이", "JAPANESE", NEAR), user01).restaurantId();
+
+        assertThat(restaurantRepository.findById(id).orElseThrow().getAddress()).isEqualTo(NEAR.address());
     }
 
     @Test

@@ -1138,7 +1138,9 @@ null
 1. url, name 필수값·길이를 검증한다.
 2. url 형식을 검사한다. naver.me 또는 map.naver.com 링크에서 장소 ID를 찾을 수 없으면 INVALID_FORMAT. (naver.me 단축 링크는 연결된 주소를 따라가 장소 ID를 찾는다)
 3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 DUPLICATE.
-4. 네이버 지역 검색(NAVER API HUB)으로 name을 검색한다(최대 5개). 결과가 없으면 NOT_FOUND.
+4. 네이버 지역 검색(NAVER API HUB)으로 name을 검색한다(최대 5개).
+   - 등록 가능한 후보(아래 5번)가 없으면 `name + " " + 회사 지역`(설정 `restaurant.search-area`, 기본 `광진구`)으로 한 번 더 검색해, 그 결과를 앞에 두고 처음 결과와 합친다 (같은 이름·주소는 한 번, 최대 8개). name에 이미 회사 지역이 있으면 다시 검색하지 않는다. (2026-11-25)
+   - 두 번 다 결과가 없으면 NOT_FOUND.
 5. 후보마다 다음을 계산한다. (이름의 HTML 태그 제거, 주소는 도로명 주소, 없으면 지번 주소)
    - `distanceKm`: 회사(RESTAURANT의 CAFETERIA 행 좌표)까지 직선거리, 소수 둘째 자리. 회사 좌표가 없으면 null(거리 검사 안 함)
    - `naverCategory`: 네이버 분류 원문 (예: `음식점>한식`, `카페,디저트>베이커리`)
@@ -1297,7 +1299,7 @@ null
 1. 필수값·길이·카테고리 값을 검증한다. (`CAFETERIA`면 중단)
 2. mapUrl 형식을 검사하고 장소 ID를 찾는다. 찾을 수 없으면 중단한다.
 3. 장소 ID로 만든 표준 URL(`https://map.naver.com/p/entry/place/{장소ID}`)과 같은 map_url의 RESTAURANT가 있으면 중단한다.
-4. 네이버 지역 검색으로 name을 다시 검색해(최대 5개) placeName·placeAddress가 같은 후보를 찾는다. 없으면 중단한다. (화면이 보낸 좌표를 믿지 않고 서버가 다시 찾는다)
+4. 네이버 지역 검색으로 name을 다시 검색해(check-map-url 4번과 같은 방식, 회사 지역을 붙인 재검색 포함) placeName·placeAddress가 같은 후보를 찾는다. 없으면 중단한다. (화면이 보낸 좌표를 믿지 않고 서버가 다시 찾는다)
 5. 그 후보가 음식점 계열이 아니면 중단, 회사에서 반경 밖이면 중단한다. (check-map-url의 blockReason과 같은 규칙)
 6. 후보의 address, lat, lng와 요청값으로 RESTAURANT를 저장한다. (map_url = 표준 URL, member_id = 로그인 회원)
 7. 생성된 restaurantId를 반환한다. FE는 식당 상세로 이동한다.

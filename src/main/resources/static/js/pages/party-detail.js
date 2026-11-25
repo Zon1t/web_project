@@ -236,11 +236,11 @@
       }
       // 방장은 대화창 아래 버튼 줄에 초대 링크가 있다
       if (isJoinable && d.myRole !== 'HOST') {
-        buttons.push(button('invite', '초대 링크 복사'));
+        buttons.push(button('invite', '초대 링크 복사', '', false, TIPS[d.isPrivate ? 'invite-private' : 'invite']));
       }
       if (d.isPrivate && isJoinable) {
         hints.push(d.myRole === 'HOST'
-          ? '비공개 식사팟이에요. 목록에 보이지 않으니 [초대 링크]로 밥친구를 불러 주세요.'
+          ? '비공개 식사팟이에요. 목록에 보이지 않으니 [초대 링크 복사]로 밥친구를 불러 주세요.'
           : '비공개 식사팟이에요. 초대 링크를 받은 사람만 들어올 수 있어요.');
       }
       body = renderTodo(d) + row(buttons.join('')) + hints.map(hint).join('');
@@ -259,7 +259,7 @@
     if (!d.schedule && d.myRole === 'HOST') {
       return '<div class="party-todo">' + ui.icon('calendar', 18) +
         '<p><b>일정을 정해 주세요.</b><br>최종 시간과 만날 장소를 정하면 밥친구들에게 참석 확정을 요청해요.</p>' +
-        button('open-schedule', '일정 정하기', 'btn--primary') + '</div>';
+        button('open-schedule', '일정 정하기', 'btn--primary', false, TIPS['open-schedule']) + '</div>';
     }
     if (!d.schedule) {
       return '<div class="party-todo party-todo--wait">' + ui.icon('clock', 18) +
@@ -282,12 +282,16 @@
 
   function renderMembers(d) {
     const items = d.members.map((m) => {
-      const name = esc(m.nickname) + (m.host ? ' <span class="badge">방장</span>' : '');
+      // 이름·아바타를 누르면 프로필 카드 (profile-card.js), 사람마다 다른 색 (2026-11-25)
+      const color = profileCard.colorClass(m.memberId);
+      const name = '<button type="button" class="pc-name" data-profile-id="' + esc(m.memberId) + '">' + esc(m.nickname) + '</button>' +
+        (m.host ? ' <span class="badge">방장</span>' : '');
       const stateText = m.confirmed
         ? '<span class="party-members__state is-confirmed">' + ui.icon('check', 12) + ' 참석 확정</span>'
         : '<span class="party-members__state">확인 전</span>';
       return '<li class="party-members__item">' +
-        '<span class="member-avatar' + (m.confirmed ? ' is-confirmed' : '') + '" aria-hidden="true">' + esc(initialOf(m.nickname)) + '</span>' +
+        '<button type="button" class="member-avatar ' + color + (m.confirmed ? ' is-confirmed' : '') + '" data-profile-id="' + esc(m.memberId) + '"' +
+        ' aria-label="' + esc(m.nickname) + ' 프로필 보기">' + esc(initialOf(m.nickname)) + '</button>' +
         '<span class="party-members__name">' + name + '</span>' + stateText + '</li>';
     });
     return (
@@ -305,6 +309,17 @@
     return String(name || '?').trim().charAt(0) || '?';
   }
 
+  /** 방장 버튼 설명 (마우스를 올리거나 키보드로 고르면 툴팁, ui.js data-tip, 2026-11-25) */
+  const TIPS = {
+    'open-schedule': '최종 시간과 만날 장소를 정해요. 정하면 밥친구들에게 참석 확정을 요청해요.',
+    'edit-schedule': '시간·장소를 바꿔요. 바꾸면 밥친구들의 참석 확정이 초기화되어 다시 받아야 해요.',
+    close: '새 밥친구를 더 받지 않아요. 지금 참여자와 대화는 그대로이고, 언제든 다시 열 수 있어요.',
+    reopen: '모집을 다시 열어서 새 밥친구를 받아요.',
+    invite: '초대 문구와 링크를 클립보드에 복사해요. 메신저에 붙여 넣어 보내 주세요.',
+    'invite-private': '초대 문구와 링크를 클립보드에 복사해요. 비공개 식사팟은 이 링크로만 들어올 수 있어요.',
+    delete: '식사팟을 없애요. 밥친구들도 더 이상 볼 수 없어요.',
+  };
+
   /** 방장 메뉴: 대화 입력창 위 버튼 줄. 방장에게만, 식사 완료 전까지 */
   function renderHostBar(d) {
     if (d.myRole !== 'HOST' || d.status === 'FINISHED') {
@@ -315,18 +330,21 @@
     const isJoinable = d.status === 'RECRUITING' || d.status === 'SCHEDULED';
     hostBar.innerHTML =
       '<span class="party-host-bar__label">방장</span>' +
-      button('open-schedule', d.schedule ? '일정 수정' : '일정 정하기', d.schedule ? '' : 'btn--primary') +
-      (d.status === 'CLOSED' ? button('reopen', '모집 재개') : button('close', '모집 마감')) +
-      (isJoinable ? button('invite', '초대 링크') : '') +
-      (d.isPrivate ? button('regenerate-code', '링크 새로 만들기') : '') +
-      button('delete', '식사팟 삭제', 'btn--danger');
+      button('open-schedule', d.schedule ? '일정 수정' : '일정 정하기', d.schedule ? '' : 'btn--primary', false,
+        TIPS[d.schedule ? 'edit-schedule' : 'open-schedule']) +
+      (d.status === 'CLOSED'
+        ? button('reopen', '모집 재개', '', false, TIPS.reopen)
+        : button('close', '모집 마감', '', false, TIPS.close)) +
+      (isJoinable ? button('invite', '초대 링크 복사', '', false, TIPS[d.isPrivate ? 'invite-private' : 'invite']) : '') +
+      button('delete', '식사팟 삭제', 'btn--danger', false, TIPS.delete);
     hostBar.hidden = false;
   }
 
-  function button(action, label, extraClass, disabled) {
+  function button(action, label, extraClass, disabled, tip) {
     return (
       '<button type="button" class="btn ' + (extraClass || '') + '"' +
       (action ? ' data-action="' + action + '"' : '') +
+      (tip ? ' data-tip="' + esc(tip) + '"' : '') +
       (disabled ? ' disabled' : '') + '>' + label + '</button>'
     );
   }
@@ -409,9 +427,6 @@
         break;
       case 'invite':
         copyInviteLink();
-        break;
-      case 'regenerate-code':
-        regenerateInviteCode();
         break;
       case 'open-schedule':
         openScheduleDialog();
@@ -540,39 +555,15 @@
     try {
       const link = await partyApi.getInviteLink(partyId);
       const text = link.text + '\n' + location.origin + link.path;
-      try {
-        await navigator.clipboard.writeText(text);
+      // 누르면 바로 클립보드로 (창을 띄우지 않는다, 2026-11-25). 막힌 환경이면 숨은 입력칸으로 한 번 더 시도
+      if (await profileCard.copyText(text)) {
         ui.toast('초대 링크를 복사했어요. 메신저에 붙여 넣어 보내 주세요.', { type: 'success' });
-      } catch (copyErr) {
-        // 클립보드를 쓸 수 없는 브라우저: 직접 복사할 수 있게 보여 준다
-        window.prompt('아래 내용을 복사해 주세요.', text);
-      }
-    } catch (err) {
-      if (err.statusCode === 401) return;
-      setFeedback('error', err.message);
-    }
-  }
-
-  /** 비공개 식사팟: 초대 링크 새로 만들기 (방장). 예전 링크로는 더 이상 들어올 수 없다 (2026-11-25 T4) */
-  async function regenerateInviteCode() {
-    const ok = await ui.confirm({
-      title: '초대 링크를 새로 만들까요?',
-      message: '지금까지 보낸 링크로는 더 이상 들어올 수 없어요. 이미 참여한 밥친구는 그대로예요.',
-      confirmText: '새로 만들기',
-    });
-    if (!ok) return;
-    try {
-      await partyApi.regenerateInviteCode(partyId);
-      const d = state.detail;
-      if (d && (d.status === 'RECRUITING' || d.status === 'SCHEDULED')) {
-        await copyInviteLink();   // 새 링크를 바로 복사해 준다
       } else {
-        ui.toast('새 초대 링크를 만들었어요. 모집을 다시 열면 [초대 링크]로 복사할 수 있어요.', { type: 'success' });
+        ui.toast('복사하지 못했어요. 브라우저의 클립보드 권한을 확인해 주세요.', { type: 'error' });
       }
     } catch (err) {
       if (err.statusCode === 401) return;
       setFeedback('error', err.message);
-      if (err.error === 'PARTY_DELETED') showDeleted();
     }
   }
 
@@ -732,14 +723,32 @@
     const time = esc(String(c.createdAt).substring(11, 16));
     return (
       '<div class="chat-msg' + (c.mine ? ' chat-msg--mine' : '') + '">' +
-      (c.mine ? '' : '<span class="member-avatar member-avatar--sm chat-msg__avatar" aria-hidden="true">' + esc(initialOf(c.nickname)) + '</span>') +
+      (c.mine ? '' : chatAvatar(c)) +
       '<div class="chat-msg__main">' +
-      (c.mine ? '' : '<span class="chat-msg__name">' + esc(c.nickname) + '</span>') +
+      (c.mine ? '' : chatName(c)) +
       '<div class="chat-msg__line"><p class="chat-msg__bubble">' + esc(c.content) + '</p>' +
       '<span class="chat-msg__time">' + time + '</span></div>' +
       '</div>' +
       '</div>'
     );
+  }
+
+  /** 대화 상대 아바타·이름: 사람마다 다른 색, 누르면 프로필 카드 (2026-11-25) */
+  function chatAvatar(c) {
+    const color = profileCard.colorClass(c.memberId != null ? c.memberId : c.nickname);
+    if (c.memberId == null) {
+      return '<span class="member-avatar member-avatar--sm chat-msg__avatar ' + color + '" aria-hidden="true">' + esc(initialOf(c.nickname)) + '</span>';
+    }
+    return '<button type="button" class="member-avatar member-avatar--sm chat-msg__avatar ' + color + '" data-profile-id="' + esc(c.memberId) + '"' +
+      ' aria-label="' + esc(c.nickname) + ' 프로필 보기">' + esc(initialOf(c.nickname)) + '</button>';
+  }
+
+  function chatName(c) {
+    const color = profileCard.colorClass(c.memberId != null ? c.memberId : c.nickname);
+    if (c.memberId == null) {
+      return '<span class="chat-msg__name pc-text ' + color + '">' + esc(c.nickname) + '</span>';
+    }
+    return '<button type="button" class="chat-msg__name pc-name pc-text ' + color + '" data-profile-id="' + esc(c.memberId) + '">' + esc(c.nickname) + '</button>';
   }
 
   function setReadOnly(readOnly) {

@@ -166,7 +166,7 @@ class RestaurantRegisterServiceTest {
                 .restaurantId();
 
         Restaurant saved = restaurantRepository.findById(restaurantId).orElseThrow();
-        assertThat(saved.getName()).isEqualTo("대쿠이");                 // 사용자가 입력한 이름 (공백 제거)
+        assertThat(saved.getName()).isEqualTo("대쿠이 세종대점");        // 검색어가 아니라 네이버 공식 이름 (2026-11-25)
         assertThat(saved.getCategory()).isEqualTo(RestaurantCategory.JAPANESE);
         assertThat(saved.getMapUrl()).isEqualTo(NEW_STANDARD_URL);
         assertThat(saved.getAddress()).isEqualTo(NEAR.address());       // 첫 결과(FAR)가 아니라 고른 후보
@@ -225,6 +225,14 @@ class RestaurantRegisterServiceTest {
         assertError(() -> registerService.registerRestaurant(
                         request("https://map.kakao.com/123", "대쿠이", "KOREAN", NEAR), user01),
                 ErrorCode.INVALID_MAP_URL, null);
+    }
+
+    @Test
+    void 공식_이름이_30자를_넘으면_30자로_자르고_비어_있으면_입력한_이름을_쓴다() {
+        String longName = "가".repeat(35);
+        assertThat(RestaurantRegisterService.officialName("  " + longName + "  ", "대쿠이")).hasSize(30);
+        assertThat(RestaurantRegisterService.officialName("  ", "대쿠이")).isEqualTo("대쿠이");
+        assertThat(RestaurantRegisterService.officialName(null, "대쿠이")).isEqualTo("대쿠이");
     }
 
     // ===== 도우미 =====

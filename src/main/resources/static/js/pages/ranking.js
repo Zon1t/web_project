@@ -73,7 +73,15 @@
         return;
       }
 
-      // 1위도 따봉이 0개: 트로피·시상대가 어색하므로 안내 문구 + 목록만 (주로 카페)
+      // 카페·베이커리: 따봉 없이 리뷰 많은 순 → 먼저 등록된 순, 따봉 숫자·막대·시상대 없음 (2026-11-25)
+      if (category === 'CAFE') {
+        bannerEl.hidden = true;
+        body.innerHTML = cafeNoticeHtml() + listHtml(items, 0, true);
+        fillTags(items, seq);
+        return;
+      }
+
+      // 1위도 따봉이 0개: 트로피·시상대가 어색하므로 안내 문구 + 목록만
       if (items[0].thumbsCount30d === 0) {
         bannerEl.hidden = true;
         body.innerHTML = noThumbsNoticeHtml() + listHtml(items, 0);
@@ -82,6 +90,7 @@
       }
 
       renderBanner(items[0]);
+      partyApi.guardCreateButtons(bannerEl);   // 지금 끼니에 이미 참여 중이면 막는다 (2026-11-25)
       body.innerHTML = podiumHtml(items.slice(0, PODIUM)) + listHtml(items.slice(PODIUM), items[0].thumbsCount30d);
       fillTags(items, seq);
     } catch (err) {
@@ -101,8 +110,13 @@
       periodEl.textContent = '최근 30일(' + result.from + ' ~ ' + result.to + ') 따봉 수 기준 · 같으면 리뷰가 많은 순이에요.';
       return result.rankings;
     }
-    const list = await restaurantApi.getList({ category });
-    periodEl.textContent = CATEGORY_LABELS[category] + ' 식당 중 최근 30일 따봉 수 기준 · 같으면 리뷰가 많은 순이에요.';
+    let list = await restaurantApi.getList({ category });
+    if (category === 'CAFE') {
+      periodEl.textContent = CATEGORY_LABELS[category] + '는 따봉 없이 리뷰가 많은 순 · 같으면 먼저 등록된 순이에요.';
+      list = list.slice().sort((a, b) => (b.reviewCount - a.reviewCount) || (a.restaurantId - b.restaurantId));
+    } else {
+      periodEl.textContent = CATEGORY_LABELS[category] + ' 식당 중 최근 30일 따봉 수 기준 · 같으면 리뷰가 많은 순이에요.';
+    }
     return list
       .slice(0, RANKING_LIMIT)
       .map((r, i) => ({
@@ -124,6 +138,16 @@
       return '<button type="button" class="chip' + (selected ? ' is-selected' : '') + '" data-category="' + (value || '') +
         '" aria-pressed="' + selected + '">' + esc(label) + '</button>';
     }).join('');
+  }
+
+  /** 카페·베이커리 안내 (따봉 대신 리뷰 순, 2026-11-25) */
+  function cafeNoticeHtml() {
+    return (
+      '<div class="rk-notice">' + ui.icon('chat', 20) +
+      '<div><p class="rk-notice__title">카페·베이커리는 리뷰가 많은 순이에요</p>' +
+      '<p class="rk-notice__desc">따봉은 함께 식사한 식당에 남기는 거라 카페는 따봉 없이 리뷰 수로 보여 드려요.</p></div>' +
+      '</div>'
+    );
   }
 
   /** 따봉이 아직 없는 범위의 안내 (배너 대신) */
@@ -155,7 +179,7 @@
       '<span class="rk-dot" aria-hidden="true">·</span><span>리뷰 ' + top.reviewCount + '</span></p>' +
       '<p class="rk-tags rk-banner__tags" data-tags-for="' + top.restaurantId + '"></p>' +
       '<div class="rk-banner__actions">' +
-      '<a class="btn btn--primary" href="' + partyApi.createUrl(top.restaurantId) + '">' + ui.icon('plus', 18) + '이 식당으로 식사팟 만들기</a>' +
+      '<a class="btn btn--primary" data-create-party href="' + partyApi.createUrl(top.restaurantId) + '">' + ui.icon('plus', 18) + '이 식당으로 식사팟 만들기</a>' +
       '<a class="btn" href="' + DETAIL_URL + encodeURIComponent(top.restaurantId) + '">식당 보기</a>' +
       '</div>' +
       '</div>' +
@@ -197,12 +221,13 @@
 
   /* ---------- 4위부터 리스트 ---------- */
 
-  function listHtml(rest, topThumbs) {
+  function listHtml(rest, topThumbs, noThumbs) {
     if (!rest.length) return '';
-    return '<ol class="rk-list" aria-label="4위부터">' + rest.map((item, i) => rowHtml(item, topThumbs, i)).join('') + '</ol>';
+    return '<ol class="rk-list" aria-label="4위부터">' + rest.map((item, i) => rowHtml(item, topThumbs, i, noThumbs)).join('') + '</ol>';
   }
 
-  function rowHtml(item, topThumbs, i) {
+  /** noThumbs: 따봉 숫자·막대를 그리지 않는다 (카페·베이커리) */
+  function rowHtml(item, topThumbs, i, noThumbs) {
     const ratio = topThumbs ? Math.max(6, Math.round((item.thumbsCount30d / topThumbs) * 100)) : 0;
     const bar = item.thumbsCount30d > 0
       ? '<span class="rk-bar" aria-hidden="true"><span style="width:' + ratio + '%"></span></span>'
@@ -217,10 +242,11 @@
       '<span class="rk-row__sub">' + esc(CATEGORY_LABELS[item.category] || item.category) + ' · 리뷰 ' + item.reviewCount + '</span>' +
       '<span class="rk-tags" data-tags-for="' + item.restaurantId + '"></span>' +
       '</span>' +
-      '<span class="rk-row__score">' +
-      '<span class="rk-thumbs">' + ui.icon('thumbs', 16) + item.thumbsCount30d + '</span>' +
-      bar +
-      '</span>' +
+      (noThumbs ? '' :
+        '<span class="rk-row__score">' +
+        '<span class="rk-thumbs">' + ui.icon('thumbs', 16) + item.thumbsCount30d + '</span>' +
+        bar +
+        '</span>') +
       '</a>' +
       '</li>'
     );

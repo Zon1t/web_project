@@ -551,9 +551,7 @@
 }
 
 .member-avatar.is-confirmed {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);   /* 색은 사람마다 다르고(profile-card.css), 참석 확정은 테두리로 */
 }
 
 .member-avatar--sm {
@@ -637,6 +635,20 @@
 }
 
 .chat-msg__avatar {
-  background: var(--color-bg);
   box-shadow: 0 0 0 1px var(--color-border-light);
+}
+
+/* 뒤로 가기 (2026-11-25) */
+.party-back {
+  margin-bottom: var(--space-2);
+}
+
+/* 참여자 이름 버튼 (누르면 프로필 카드) */
+.party-members__name .pc-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.chat-msg__name.pc-name {
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
 }

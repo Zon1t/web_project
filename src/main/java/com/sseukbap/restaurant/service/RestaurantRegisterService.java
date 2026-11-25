@@ -138,10 +138,11 @@ public class RestaurantRegisterService {
                     "회사에서 " + formatKm(radiusKm) + "km 안의 식당만 등록할 수 있습니다.");
         }
 
-        // 6. 저장. 같은 장소를 동시에 등록하면 DB의 MAP_URL 중복 방지 규칙(UK)이 막아 준다 → 409
+        // 6. 저장. 이름은 사용자가 친 검색어가 아니라 네이버가 준 공식 이름으로 (2026-11-25, 30자 넘으면 자름)
+        //    같은 장소를 동시에 등록하면 DB의 MAP_URL 중복 방지 규칙(UK)이 막아 준다 → 409
         Member member = memberRepository.getReferenceById(memberId); // 로그인 회원 (SELECT 없이 참조만)
         Restaurant restaurant = Restaurant.create(
-                name, category, standardUrl, place.address(), place.lat(), place.lng(), member);
+                officialName(place.name(), name), category, standardUrl, place.address(), place.lat(), place.lng(), member);
         try {
             restaurantRepository.saveAndFlush(restaurant);
         } catch (DataIntegrityViolationException e) {
@@ -150,6 +151,15 @@ public class RestaurantRegisterService {
 
         // 7. 생성된 restaurantId
         return new RestaurantRegisterResponse(restaurant.getRestaurantId());
+    }
+
+    /** 네이버 공식 이름 (앞뒤 공백 제거, 30자까지). 비어 있으면 사용자가 입력한 이름 */
+    public static String officialName(String placeName, String fallback) {
+        String official = placeName == null ? "" : placeName.trim();
+        if (official.isEmpty()) {
+            return fallback;
+        }
+        return official.length() > NAME_MAX ? official.substring(0, NAME_MAX).trim() : official;
     }
 
     /** 검색 결과 1곳 → 후보 (거리, 추천 카테고리, 등록 가능 여부). 음식점이 아닌 이유를 거리보다 먼저 본다 */

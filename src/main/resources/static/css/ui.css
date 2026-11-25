@@ -671,3 +671,38 @@ html.is-embed body {
   display: inline-flex;
   transform: rotate(180deg);   /* 오른쪽 화살표를 뒤집어 '‹' 로 */
 }
+
+/* ===================== 툴팁 (data-tip, ui.js, 2026-11-25) ===================== */
+.ui-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.ui-tip.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-tip { transition: none; }
+}
+
+/* 막힌 [식사팟 만들기] (party.js setCreateBlocked, 2026-11-25) */
+.is-create-blocked,
+.is-create-blocked:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}

@@ -168,7 +168,7 @@
 | 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 끝났어요' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (59개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API 추가)
+### 전체 API 목록 (60개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API·프로필 카드 API 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -187,6 +187,7 @@
 | C | GET | `/api/users/me/parties` | 참여한 식사팟 목록 조회 |
 | C | GET | `/api/users/me/restaurants` | 등록한 식당 목록 조회 |
 | C | GET | `/api/users/me/interests` | 관심 식당 목록 조회 |
+| C | GET | `/api/members/{memberId}/profile` | 회원 프로필 카드 (11/25 추가) |
 | C | PATCH | `/api/users/me/password` | 비밀번호 변경 (11/24 추가) |
 | C | PATCH | `/api/users/me/nickname` | 닉네임 변경 (11/24 추가) |
 | C | PATCH | `/api/users/me/email` | 회사 이메일 등록·변경 (11/24 추가) |
@@ -948,6 +949,40 @@ null
 **오류**: 공통 오류(401, 500) 외 없음
 
 ---
+
+### GET /api/members/{memberId}/profile — 회원 프로필 카드
+
+> 2026-11-25 추가
+
+**요구사항**: 식사팟 참여자 목록·대화방에서 이름이나 아바타를 누르면 그 회원의 프로필 카드를 띄운다. 사내 서비스라 로그인한 회원끼리 회사 이메일을 보여 준다. 로그인이 필요하다.
+
+**Request — Path**: memberId (number)
+
+**시스템 처리**
+1. memberId로 MEMBER를 조회한다. 없거나 탈퇴한 회원이면 404로 중단한다.
+2. 닉네임·아이디·회사 이메일·근무지·가입일을 반환한다.
+
+**Response 200 (data)**
+```json
+{
+  "memberId": 5,
+  "nickname": "슥사인",
+  "loginId": "chef01",
+  "email": "chef01@samsung.com",
+  "workplace": "멀티캠퍼스 세종대",
+  "joinedAt": "2026-11-17"
+}
+```
+- email: 등록 전이면 null
+- workplace: 지금은 한 곳뿐 (회원가입 화면의 근무지와 같음)
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 404 | NOT_FOUND | 회원을 찾을 수 없습니다. | 없는 memberId, 탈퇴한 회원 |
+
+---
 ## 3. cafeteria — 구내식당 (C)
 
 ### GET /api/cafeteria/menus/today — 오늘의 구내식당 메뉴 조회
@@ -1321,6 +1356,8 @@ null
 ### POST /api/restaurants/register — 식당 등록
 
 > 2026-11-19 변경: `CAFETERIA` 카테고리 등록 불가(구내식당은 초기 데이터로만 제공), 장소는 식당 이름으로 검색, map_url은 장소 ID로 만든 표준 URL로 저장
+>
+> 2026-11-25 변경: 식당 이름은 사용자가 입력한 검색어가 아니라 **고른 후보의 네이버 공식 이름**(placeName, 30자까지)으로 저장한다. `name`은 다시 검색할 때만 쓴다.
 >
 > 2026-11-24 변경: 사용자가 고른 후보를 `placeName`·`placeAddress`로 보낸다(첫 결과 자동 선택 폐지). 음식점·카페가 아니거나 회사에서 반경 밖이면 등록 불가
 
@@ -2041,6 +2078,7 @@ null
     {
       "chatId": 105,
       "type": "TEXT",
+      "memberId": 5,
       "nickname": "슥사인",
       "content": "확정했어요",
       "mine": true,
@@ -2049,6 +2087,7 @@ null
   ]
 }
 ```
+- memberId: 보낸 회원 (시스템 메시지는 null). 화면이 프로필 카드·사람별 색 구분에 쓴다 (11/25 추가)
 - 새 메시지가 없으면 chats는 빈 배열
 - 다음 날 0시에 대화 기록이 삭제된 뒤에는 빈 배열 + readOnly true
 

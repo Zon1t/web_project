@@ -223,3 +223,23 @@
     flex: 1;
   }
 }
+
+/* 찾는 식당이 없나요? [식당 등록하기] (2026-11-25) */
+.party-form__register-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.party-form__register-hint[hidden] {
+  display: none;
+}
+
+.party-form__register-link {
+  padding: 0 var(--space-1);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

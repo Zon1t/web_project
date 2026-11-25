@@ -182,7 +182,9 @@
       (showMap ? '<div id="detail-mini-map-slot"></div>' : '') +
       // 숫자 타일
       '<div class="detail-stats">' +
-      '<div class="detail-stat detail-stat--thumbs"><span class="detail-stat__label">' + ui.icon('thumbs', 16) + '따봉 (최근 30일)</span><strong>' + d.thumbsCount30d + '</strong></div>' +
+      // 카페·베이커리는 따봉 칸을 빼고 관심·리뷰만 (2026-11-25)
+      (d.category === 'CAFE' ? '' :
+        '<div class="detail-stat detail-stat--thumbs"><span class="detail-stat__label">' + ui.icon('thumbs', 16) + '따봉 (최근 30일)</span><strong>' + d.thumbsCount30d + '</strong></div>') +
       '<div class="detail-stat"><span class="detail-stat__label">관심</span><strong id="interest-count">' + d.interestCount + '</strong></div>' +
       '<div class="detail-stat"><span class="detail-stat__label">리뷰</span><strong>' + d.reviewCount + '</strong></div>' +
       '</div>' +
@@ -196,13 +198,14 @@
       '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path>' +
       '</svg>관심</button>' +
       // 식사팟 생성(S-08, A 담당): restaurantId를 넘기면 이 식당으로 고정된다
-      '<a class="btn btn--primary" href="/party-create.html?restaurantId=' + encodeURIComponent(d.restaurantId) + '">' +
+      '<a class="btn btn--primary" data-create-party href="/party-create.html?restaurantId=' + encodeURIComponent(d.restaurantId) + '">' +
       '이 식당으로 식사팟 만들기</a>' +
       '</div>' +
       '<p id="interest-message" class="field__message field__message--error detail-interest-message" role="alert"></p>';
 
     if (showMap) renderMiniMap(d, keptMap);
     renderInterest();
+    partyApi.guardCreateButtons(root);   // 지금 끼니에 이미 참여 중이면 [식사팟 만들기]를 막는다 (2026-11-25)
   }
 
   /** 많이 선택된 태그 TOP 3: 막대그래프 (가장 많은 태그 = 100%) */

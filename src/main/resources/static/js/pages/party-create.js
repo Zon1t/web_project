@@ -4,6 +4,7 @@
  * 주소: /party-create.html               → 식당 이름 검색으로 선택
  *       /party-create.html?restaurantId=12 → 그 식당으로 고정 (식당 상세·룰렛에서 진입)
  *       ?date=2026-11-21 을 붙이면 그 날짜를 미리 고른다 (식사팟 목록에서 진입)
+ *       ?restaurantId=12&registered=1 → 식당 등록 화면에서 막 등록하고 돌아옴. '○○을 등록했어요' 알림 한 번 (2026-11-25, B)
  *
  * 만든 것
  *   - 식당: 고정 또는 이름 검색(입력이 멈추고 300ms 뒤 검색, ↑↓ Enter 선택)
@@ -85,6 +86,25 @@
 
   /* ---------- 식당 ---------- */
 
+  /**
+   * 식당 등록 화면에서 막 등록하고 돌아왔을 때(?registered=1) 알림을 한 번 띄운다. (2026-11-25 T2, B)
+   * 새로고침해도 다시 뜨지 않게 주소에서 registered만 지운다.
+   */
+  function showRegisteredToast(name) {
+    const url = new URL(location.href);
+    if (url.searchParams.get('registered') !== '1') return;
+    ui.toast(name + objectParticle(name) + ' 등록했어요');
+    url.searchParams.delete('registered');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+  }
+
+  /** 받침이 있으면 '을', 없으면 '를'. 마지막 글자가 한글이 아니면 '을(를)' */
+  function objectParticle(word) {
+    const code = String(word).trim().slice(-1).charCodeAt(0) - 0xac00;
+    if (Number.isNaN(code) || code < 0 || code > 11171) return '을(를)';
+    return code % 28 === 0 ? '를' : '을';
+  }
+
   /** ?restaurantId가 있으면 그 식당으로 고정, 없으면 검색 */
   async function initRestaurant() {
     const restaurantId = new URLSearchParams(location.search).get('restaurantId');
@@ -105,6 +125,7 @@
       state.isFixed = true;
       setRestaurant({ restaurantId: detail.restaurantId, name: detail.name, category: detail.category });
       document.getElementById('cancel-link').href = '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
+      showRegisteredToast(detail.name);
     } catch (err) {
       if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
       showSearch(err.error === 'RESTAURANT_NOT_FOUND'

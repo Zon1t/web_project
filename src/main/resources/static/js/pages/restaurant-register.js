@@ -13,6 +13,11 @@
  *   6. 등록하면 식당 상세로 이동한다.
  *   7. (2026-11-25) URL 형식은 화면에서 바로 확인한다. 붙여 넣거나 칸을 벗어나는 즉시 URL 칸 아래에 안내하고,
  *      형식이 틀리면 서버 확인을 부르지 않는다. (기준은 서버 MapUrlParser와 같다. 최종 판단은 여전히 서버)
+ *   8. (2026-11-25 T2) 주소로 받는 값
+ *      ?name=검색어          → 식당 이름 칸을 미리 채운다 (식사팟 만들기에서 검색했는데 없던 이름)
+ *      ?returnTo=party-create → 등록 후 /party-create.html?restaurantId={새 ID}&restore=1&registered=1 로 돌아간다.
+ *                               취소·뒤로는 /party-create.html?restore=1. 허용 목록(RETURN_TARGETS)에 없는 값은 무시한다.
+ *                               안내 상자를 따로 두지 않고 뒤로 링크·설명 문장·등록 버튼 글자만 바꿔 흐름을 보여 준다.
  */
 (function () {
   'use strict';
@@ -35,7 +40,29 @@
     categoryHint: document.getElementById('category-hint'),
     formMessage: document.getElementById('form-message'),
     submit: document.getElementById('submit-button'),
+    pageDesc: document.getElementById('page-desc'),
+    backLink: document.getElementById('back-link'),
+    backLabel: document.getElementById('back-label'),
+    cancelLink: document.getElementById('cancel-link'),
   };
+
+  // 등록 후 돌아갈 수 있는 화면. 주소에 아무 값이나 넣어 다른 사이트로 보내지 못하게 정해 둔 것만 받는다.
+  const RETURN_TARGETS = {
+    'party-create': {
+      backLabel: '식사팟 만들기',
+      desc: '식사팟을 만들 식당이 아직 없어서 먼저 등록해요.',
+      submitLabel: '등록하고 이어서 만들기',
+      // registered=1: 돌아간 화면에서 '식당을 등록했어요' 알림을 한 번 띄운다
+      afterRegister: (restaurantId) =>
+        '/party-create.html?restaurantId=' + encodeURIComponent(restaurantId) + '&restore=1&registered=1',
+      onCancel: '/party-create.html?restore=1',
+    },
+  };
+  const entryParams = new URLSearchParams(location.search);
+  const returnTarget = Object.prototype.hasOwnProperty.call(RETURN_TARGETS, entryParams.get('returnTo'))
+    ? RETURN_TARGETS[entryParams.get('returnTo')]
+    : null;
+  const SUBMIT_LABEL = returnTarget ? returnTarget.submitLabel : '등록하기';
 
   // 마지막 확인 결과. 확인한 url·name과 지금 입력값이 같아야 유효하다.
   let lastCheck = null; // { url, name, valid, radiusKm, candidates }
@@ -49,6 +76,25 @@
 
   renderCategoryChips();
   bindEvents();
+  applyEntryParams();
+
+  /* ---------- 주소로 받은 값 (?name, ?returnTo) ---------- */
+
+  function applyEntryParams() {
+    const name = (entryParams.get('name') || '').trim().slice(0, NAME_MAX);
+    if (name) {
+      els.name.value = name;
+      loadSimilarNames(); // 이미 등록된 비슷한 이름이 있는지 바로 보여 준다
+    }
+
+    if (!returnTarget) return;
+    els.submit.textContent = SUBMIT_LABEL;
+    els.cancelLink.href = returnTarget.onCancel;
+    els.backLink.href = returnTarget.onCancel;
+    els.backLink.removeAttribute('data-ui-back'); // 브라우저 뒤로 대신 항상 정한 화면으로 (입력해 둔 값 되살리기)
+    els.backLabel.textContent = returnTarget.backLabel;
+    els.pageDesc.textContent = returnTarget.desc;
+  }
 
   /* ---------- 카테고리 칩 ---------- */
 
@@ -424,12 +470,14 @@
       const { restaurantId } = await restaurantApi.register({
         mapUrl: url, name, category, placeName: place.name, placeAddress: place.address,
       });
-      location.href = '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
+      location.href = returnTarget
+        ? returnTarget.afterRegister(restaurantId)
+        : '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
     } catch (err) {
       if (err.statusCode === 401) return;
       setFormMessage(err.message);
       submitting = false;
-      els.submit.textContent = '등록하기';
+      els.submit.textContent = SUBMIT_LABEL;
       updateSubmitButton();
     }
   }

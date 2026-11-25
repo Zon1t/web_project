@@ -1,7 +1,7 @@
 package com.sseukbap.member.service;
 
 import com.sseukbap.auth.service.AuthService;
-import com.sseukbap.auth.service.EmailPolicy;
+import com.sseukbap.auth.service.CompanyEmailPolicy;
 import com.sseukbap.auth.service.PasswordPolicy;
 import com.sseukbap.common.exception.BusinessException;
 import com.sseukbap.common.exception.ErrorCode;
@@ -40,6 +40,7 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
     private final PartyService partyService;               // 탈퇴 시 식사팟 정리 (A2)
     private final InterestRepository interestRepository;   // 탈퇴 시 관심 삭제
+    private final CompanyEmailPolicy companyEmailPolicy;   // 회사 도메인만 (2026-11-25 T3)
 
     /**
      * 비밀번호 변경. 바꾼 뒤에도 지금 로그인(세션)은 그대로 유지한다.
@@ -99,12 +100,13 @@ public class AccountService {
 
     /**
      * 회사 이메일 등록·변경. 소문자로 저장하고, 다른 회원이 쓰는 이메일이면 409.
+     * 2026-11-25 T3: 이메일이 로그인 아이디가 되어 회사 도메인(@samsung.com)만 허용. 바꾸면 다음 로그인부터 새 이메일로.
      * 지금 이메일과 같으면 바꾸지 않고 그대로 돌려준다.
      */
     @Transactional
     public EmailChangeResponse changeEmail(Long memberId, EmailChangeRequest request) {
         Member member = findMember(memberId);
-        String email = EmailPolicy.normalizeAndValidate(request.email());
+        String email = companyEmailPolicy.normalizeAndValidate(request.email());
 
         if (email.equals(member.getEmail())) {
             return new EmailChangeResponse(email);
@@ -125,7 +127,7 @@ public class AccountService {
     /**
      * 회원 탈퇴 (C2). 세션 무효화는 Controller에서 한다.
      * 1) 비밀번호 확인 → 2) 식사팟 정리(방장 팟 삭제, 참여 팟 나가기 — A의 PartyService) → 3) 관심 삭제
-     * → 4) 회원: STATUS=WITHDRAWN, 탈퇴 일시, 닉네임 '탈퇴한회원'+번호, 이메일 삭제
+     * → 4) 회원: STATUS=WITHDRAWN, 탈퇴 일시, 닉네임 '탈퇴한회원'+번호 (이메일은 남겨 재가입을 막는다, 2026-11-25 T3)
      * 리뷰·대화·등록한 식당·끝난 식사팟 기록은 남긴다. 하나라도 실패하면 모두 되돌린다(같은 트랜잭션).
      */
     @Transactional

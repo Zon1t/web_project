@@ -2,11 +2,12 @@
  * password-reset.js — 비밀번호 찾기 화면 (C, 2026-11-24)
  *
  * 한 화면에서 차례로 진행한다.
- * 1) 아이디 + 회사 이메일 → [인증번호 받기] (POST /api/auth/password-reset/request)
- *    서버는 아이디·이메일이 틀려도 같은 응답을 준다 → 화면도 항상 "보냈어요"로 안내한다
+ * 1) 회사 이메일 → [인증번호 받기] (POST /api/auth/password-reset/request)
+ *    서버는 가입하지 않은 이메일이어도 같은 응답을 준다 → 화면도 항상 "보냈어요"로 안내한다
+ *    (2026-11-25 T3: 회사 이메일만 받는다)
  * 2) 인증번호 6자리 → [인증번호 확인] (POST /api/auth/password-reset/verify) → 맞으면 새 비밀번호 칸이 열린다
  * 3) 새 비밀번호 → [비밀번호 바꾸기] (POST /api/auth/password-reset/confirm) → 로그인 화면으로
- * - 번호를 받은 뒤 아이디·이메일을 고치면 처음부터 다시 (번호를 다시 받아야 함)
+ * - 번호를 받은 뒤 이메일을 고치면 처음부터 다시 (번호를 다시 받아야 함)
  * - 남은 시간(5분)을 보여 주고, 끝나면 [다시 받기] 안내
  * - 실제 메일은 보내지 않는다. 인증번호는 서버 콘솔에 찍힌다 (LogMailSender)
  * - 아이디 찾기 탭은 없앴다 (2026-11-24)
@@ -21,7 +22,6 @@
   const notice = document.getElementById('reset-notice');
   const form = document.getElementById('reset-form');
 
-  const loginId = field('reset-id');
   const email = field('reset-email');
   const requestButton = document.getElementById('request-submit');
 
@@ -35,19 +35,19 @@
   const confirm = field('reset-new-password-confirm');
   const confirmSubmit = document.getElementById('confirm-submit');
 
-  let sentTo = null;       // 번호를 보낸 { loginId, email }
+  let sentTo = null;       // 번호를 보낸 이메일 (소문자)
   let verified = false;    // 인증번호 확인을 통과했는지
   let timer = null;
   let expiresAt = 0;
 
-  loginId.input.focus();
+  email.input.focus();
 
   /* ---------- Enter 키: 지금 커서가 있는 단계의 버튼을 누른 것처럼 ---------- */
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const active = document.activeElement;
-    if (active === loginId.input || active === email.input) {
+    if (active === email.input) {
       requestCode();
     } else if (active === code.input) {
       verifyCode();
@@ -58,17 +58,13 @@
 
   /* ---------- 1) 인증번호 받기 ---------- */
 
-  loginId.input.addEventListener('input', () => {
-    const lower = loginId.input.value.toLowerCase();   // 아이디는 소문자로 (서버도 대소문자 무시)
-    if (lower !== loginId.input.value) {
-      const caret = loginId.input.selectionStart;
-      loginId.input.value = lower;
-      loginId.input.setSelectionRange(caret, caret);
-    }
-    clearMessage(loginId);
-    resetIfChanged();
-  });
   email.input.addEventListener('input', () => {
+    const lower = email.input.value.toLowerCase();   // 이메일은 소문자로 (서버도 대소문자 무시)
+    if (lower !== email.input.value) {
+      const caret = email.input.selectionStart;
+      email.input.value = lower;
+      email.input.setSelectionRange(caret, caret);
+    }
     clearMessage(email);
     resetIfChanged();
   });
@@ -77,27 +73,17 @@
 
   async function requestCode() {
     hideNotice();
-    const id = loginId.input.value.trim();
     const mail = email.input.value.trim();
-
-    let ok = true;
-    if (!id) {
-      setMessage(loginId, '아이디를 입력해 주세요.', 'error');
-      ok = false;
-    }
     if (!EMAIL_PATTERN.test(mail)) {
       setMessage(email, mail ? '이메일 형식을 확인해 주세요.' : '이메일을 입력해 주세요.', 'error');
-      ok = false;
-    }
-    if (!ok) {
-      (id ? email : loginId).input.focus();
+      email.input.focus();
       return;
     }
 
     requestButton.disabled = true;
     try {
-      const result = await authApi.requestPasswordReset(id, mail);
-      sentTo = { loginId: id, email: mail };
+      const result = await authApi.requestPasswordReset(mail);
+      sentTo = mail;
       showCodeStep(result.email, result.expiresInSeconds);
     } catch (err) {
       showNotice(err.message, 'error');
@@ -111,17 +97,17 @@
     codeStep.hidden = false;
     requestButton.textContent = '인증번호 다시 받기';
     requestButton.classList.remove('btn--primary');
-    showNotice(sentEmail + '으로 인증번호를 보냈어요. 메일이 오지 않으면 아이디와 등록한 이메일이 맞는지 확인해 주세요.', 'info');
+    showNotice(sentEmail + '으로 인증번호를 보냈어요. 메일이 오지 않으면 가입한 이메일이 맞는지 확인해 주세요.', 'info');
     code.input.value = '';
     clearMessage(code);
     startTimer(seconds);
     code.input.focus();
   }
 
-  /** 번호를 받은 뒤 아이디·이메일을 고치면 처음 상태로 */
+  /** 번호를 받은 뒤 이메일을 고치면 처음 상태로 */
   function resetIfChanged() {
     if (!sentTo) return;
-    if (loginId.input.value.trim() === sentTo.loginId && email.input.value.trim() === sentTo.email) return;
+    if (email.input.value.trim() === sentTo) return;
     sentTo = null;
     setVerified(false);
     stopTimer();
@@ -151,7 +137,7 @@
 
     verifyButton.disabled = true;
     try {
-      await authApi.verifyPasswordReset(sentTo.loginId, code.input.value);
+      await authApi.verifyPasswordReset(sentTo, code.input.value);
       setVerified(true);
       setMessage(code, '인증되었어요. 새 비밀번호를 정해 주세요.', 'success');
       next.input.focus();
@@ -221,7 +207,7 @@
     [next, confirm].forEach(clearMessage);
 
     let firstError = null;
-    const ruleError = passwordField.ruleError(next.input.value, sentTo.loginId);
+    const ruleError = passwordField.ruleError(next.input.value, null);   // 아이디와 같은지는 서버가 본다
     if (ruleError) {
       setMessage(next, ruleError, 'error');
       firstError = next;
@@ -238,14 +224,14 @@
     confirmSubmit.disabled = true;
     try {
       await authApi.confirmPasswordReset({
-        loginId: sentTo.loginId,
+        email: sentTo,
         code: code.input.value,
         newPassword: next.input.value,
         newPasswordConfirm: confirm.input.value,
       });
       stopTimer();
       try {
-        sessionStorage.setItem(RESET_DONE_KEY, sentTo.loginId);   // 로그인 화면에서 완료 안내
+        sessionStorage.setItem(RESET_DONE_KEY, sentTo);   // 로그인 화면에서 완료 안내 + 이메일 채우기
       } catch (e) {
         // 저장소를 못 써도 변경은 끝났다
       }

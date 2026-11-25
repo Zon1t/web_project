@@ -34,7 +34,7 @@
       load: () => mypageApi.getParties(),
       itemHtml: partyHtml,
       emptyTitle: '참여한 식사팟이 없어요',
-      emptyDesc: '식사팟에 참여해서 함께 밥 먹어요.',
+      emptyDesc: '식사팟에 참여해 밥친구와 함께 먹어 보세요.',
       illust: 'tray',
       emptyAction: '<a class="btn btn--primary" href="/party-list.html">식사팟 찾기</a>',
       countKey: 'partyCount',

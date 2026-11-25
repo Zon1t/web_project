@@ -2,12 +2,13 @@
  * account.js — 계정 설정 화면 (C, 2026-11-24)
  *
  * - 내 정보: 아이디·근무지 표시, 닉네임 변경 (PATCH /api/users/me/nickname)
- *   · 앞뒤 공백 제거 후 2~10자, 다른 회원이 쓰는 닉네임이면 서버가 409
+ *   · 앞뒤 공백 제거 후 2~12자, 다른 회원이 쓰는 닉네임이면 서버가 409
  *   · 바꾸면 헤더 닉네임도 바로 바뀐다 ('sseukbap:nickname-changed' 신호 → app-header.js)
  * - 비밀번호 변경 (PATCH /api/users/me/password)
  *   · 화면에서 먼저 규칙 검사(password-field.js의 ruleError), 최종 판단은 서버
  *   · 바꾼 뒤에도 로그인은 그대로 유지된다
- * - 회사 이메일 등록·변경 (PATCH /api/users/me/email) — 비밀번호 찾기에 쓴다 (2026-11-24)
+ * - 회사 이메일 등록·변경 (PATCH /api/users/me/email) — 2026-11-25 T3: @samsung.com만, 로그인에도 쓸 수 있음
+ *   · 이메일이 없는 기존 회원(emailRequired)이면 맨 위에 등록 안내를 띄우고 이메일 칸으로 보낸다
  * - 회원 탈퇴 (POST /api/users/me/withdraw, C2 2026-11-24)
  *   · 비밀번호 확인 + '되돌릴 수 없어요' 확인 창 → 성공하면 세션이 끊기고 랜딩 화면으로
  */
@@ -15,11 +16,12 @@
   'use strict';
 
   const NICKNAME_MIN = 2;
-  const NICKNAME_MAX = 10;
+  const NICKNAME_MAX = 12;
   const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const LANDING_URL = '/landing.html';
 
   const loginIdEl = document.getElementById('account-login-id');
+  const emailRequiredEl = document.getElementById('account-email-required');
 
   const nicknameForm = document.getElementById('nickname-form');
   const nicknameSubmit = document.getElementById('nickname-submit');
@@ -46,13 +48,22 @@
   async function init() {
     try {
       me = await authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
-      loginIdEl.textContent = me.loginId;
+      showLoginAccount();
       nickname.input.value = me.nickname;
       email.input.value = me.email || '';
       emailSubmit.textContent = me.email ? '변경' : '등록';
+      if (me.emailRequired) {
+        emailRequiredEl.hidden = false;
+        email.input.focus();
+      }
     } catch (err) {
       if (err.statusCode !== 401) ui.toast(err.message, { type: 'error' });
     }
+  }
+
+  /** 아이디 표시 */
+  function showLoginAccount() {
+    loginIdEl.textContent = me.loginId;
   }
 
   /* ---------- 닉네임 ---------- */
@@ -64,7 +75,7 @@
     const value = nickname.input.value.trim();
 
     if (value.length < NICKNAME_MIN || value.length > NICKNAME_MAX) {
-      setMessage(nickname, '닉네임은 2~10자로 입력해 주세요.', 'error');
+      setMessage(nickname, '닉네임은 2~12자로 입력해 주세요.', 'error');
       nickname.input.focus();
       return;
     }
@@ -111,10 +122,15 @@
     emailSubmit.disabled = true;
     try {
       const result = await accountApi.changeEmail(value);
-      if (me) me.email = result.email;
+      if (me) {
+        me.email = result.email;
+        me.emailRequired = false;
+        showLoginAccount();
+      }
+      emailRequiredEl.hidden = true;
       email.input.value = result.email;
       emailSubmit.textContent = '변경';
-      setMessage(email, '이메일을 저장했어요.', 'success');
+      setMessage(email, '이메일을 저장했어요. 이 이메일로도 로그인할 수 있어요.', 'success');
       ui.toast('회사 이메일을 저장했어요');
     } catch (err) {
       if (err.statusCode === 401) return;
@@ -184,7 +200,9 @@
       setMessage(current, '현재 비밀번호를 입력해 주세요.', 'error');
       firstError = firstError || current;
     }
-    const ruleError = passwordField.ruleError(next.input.value, me && me.loginId);
+    // 아이디와 다르게
+    const account = me && me.loginId;
+    const ruleError = passwordField.ruleError(next.input.value, account);
     if (ruleError) {
       setMessage(next, ruleError, 'error');
       firstError = firstError || next;

@@ -134,10 +134,16 @@ class AccountServiceTest {
         }
     }
 
+    @Test
+    void 회사_도메인이_아니면_INVALID_EMAIL_DOMAIN() {
+        assertError(() -> accountService.changeEmail(me.getMemberId(), new EmailChangeRequest("me" + me.getMemberId() + "@gmail.com")),
+                ErrorCode.INVALID_EMAIL_DOMAIN);
+    }
+
     // ===== 회원 탈퇴 (C2, 2026-11-24) =====
 
     @Test
-    void 탈퇴하면_상태_닉네임_이메일이_바뀌고_관심이_지워진다() {
+    void 탈퇴하면_상태_닉네임이_바뀌고_관심이_지워지며_이메일은_남는다() {
         accountService.changeEmail(me.getMemberId(), new EmailChangeRequest("bye" + me.getMemberId() + "@samsung.com"));
         Restaurant restaurant = data.restaurant("탈퇴관심" + TestData.uniqueNumber(), RestaurantCategory.KOREAN);
         interestRepository.saveAndFlush(Interest.create(restaurant, me));
@@ -149,7 +155,7 @@ class AccountServiceTest {
         assertThat(saved.getStatus()).isEqualTo(MemberStatus.WITHDRAWN);
         assertThat(saved.getWithdrawnAt()).isNotNull();
         assertThat(saved.getNickname()).isEqualTo("탈퇴한회원" + me.getMemberId());
-        assertThat(saved.getEmail()).isNull();
+        assertThat(saved.getEmail()).isEqualTo("bye" + me.getMemberId() + "@samsung.com");   // 같은 이메일로 재가입 방지 (2026-11-25 T3)
         assertThat(interestRepository.existsByRestaurant_RestaurantIdAndMember_MemberId(
                 restaurant.getRestaurantId(), me.getMemberId())).isFalse();
         // 원래 닉네임은 다른 사람이 쓸 수 있다

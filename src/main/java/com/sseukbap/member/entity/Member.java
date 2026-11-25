@@ -94,13 +94,13 @@ public class Member {
     /**
      * 회원 탈퇴 (C2). 행은 지우지 않고 상태만 바꾼다. (리뷰·대화·등록한 식당은 남김)
      * - 닉네임은 '탈퇴한회원' + 회원번호로 바꿔 원래 닉네임을 다른 사람이 쓸 수 있게 한다. (UK 때문에 번호를 붙임)
-     * - 이메일·재설정 토큰은 지운다. 아이디는 그대로 두어 다시 가입에 쓸 수 없다.
+     * - 재설정 토큰은 지운다. 아이디·이메일은 그대로 두어 같은 이메일로 다시 가입할 수 없다.
+     *   (2026-11-25 T3: 이메일이 아이디가 되어 이메일도 남긴다. 탈퇴 회원은 로그인·비밀번호 찾기에서 걸러진다)
      */
     public void withdraw(LocalDateTime now) {
         this.status = MemberStatus.WITHDRAWN;
         this.withdrawnAt = now;
         this.nickname = WITHDRAWN_NICKNAME_PREFIX + memberId;
-        this.email = null;
         this.resetTokenHash = null;
         this.resetTokenExpiresAt = null;
     }

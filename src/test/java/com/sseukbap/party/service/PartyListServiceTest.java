@@ -109,7 +109,7 @@ class PartyListServiceTest {
         join(sushi, user05);
         partyHostService.updateSchedule(sushi, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "본관 1층 로비", null),
                 user03.getMemberId(), NINE_AM);   // 방장 user03은 일정을 정하면 자동 확정
-        partyMemberService.confirmParty(sushi, user04.getMemberId());
+        partyMemberService.confirmParty(sushi, user04.getMemberId(), PartyTestSupport.MORNING);
 
         pasta = create(user04, MealType.DINNER, "17:30", 6);
         join(pasta, user03);
@@ -304,7 +304,7 @@ class PartyListServiceTest {
     }
 
     private void join(Long partyId, Member member) {
-        partyMemberService.joinParty(partyId, member.getMemberId());
+        partyMemberService.joinParty(partyId, member.getMemberId(), PartyTestSupport.MORNING);
     }
 
     private void setStatus(Long partyId, PartyStatus status) {

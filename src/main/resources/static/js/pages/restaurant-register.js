@@ -11,6 +11,9 @@
  *   4. 카테고리 칩: 마우스를 올리거나 키보드로 옮기면 음식 예시 툴팁, 고른 칩의 예시는 아래 한 줄로 (터치 화면용)
  *   5. 확인 결과가 정상이고, 그 뒤로 URL·이름을 바꾸지 않았고, 후보와 카테고리를 골랐을 때만 [등록하기]가 눌린다.
  *   6. 등록하면 식당 상세로 이동한다.
+ *      (2026-11-25 T2, A 작업) ?name=검색어 → 이름 칸을 미리 채운다.
+ *      ?returnTo=party-create → 등록 후 식사팟 만들기로 돌아간다 (party-create.html?restaurantId={새 ID}&restore=1)
+ *      returnTo는 허용 목록에 있는 값만 쓴다. (외부 주소로 이동하지 않게)
  */
 (function () {
   'use strict';
@@ -21,6 +24,12 @@
   const LABELS = restaurantApi.CATEGORY_LABELS;
   const EXAMPLES = restaurantApi.CATEGORY_EXAMPLES;
   const CATEGORY_HINT_DEFAULT = '후보를 고르면 네이버 분류로 카테고리를 미리 골라 둬요.';
+  // 등록 후 돌아갈 수 있는 화면 (returnTo 허용 목록)
+  const RETURN_TARGETS = {
+    'party-create': (restaurantId) => '/party-create.html?restaurantId=' + encodeURIComponent(restaurantId) + '&restore=1',
+  };
+  const params = new URLSearchParams(location.search);
+  const returnTo = Object.prototype.hasOwnProperty.call(RETURN_TARGETS, params.get('returnTo')) ? params.get('returnTo') : null;
 
   const els = {
     form: document.getElementById('register-form'),
@@ -46,6 +55,15 @@
 
   renderCategoryChips();
   bindEvents();
+  prefillName();
+
+  /** ?name= 으로 이름 칸을 미리 채운다 (식사팟 만들기에서 검색한 이름) */
+  function prefillName() {
+    const name = (params.get('name') || '').trim().slice(0, NAME_MAX);
+    if (!name || els.name.value) return;
+    els.name.value = name;
+    els.name.dispatchEvent(new Event('input', { bubbles: true })); // 비슷한 이름 보여 주기·글자 수 표시
+  }
 
   /* ---------- 카테고리 칩 ---------- */
 
@@ -334,7 +352,9 @@
       const { restaurantId } = await restaurantApi.register({
         mapUrl: url, name, category, placeName: place.name, placeAddress: place.address,
       });
-      location.href = '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
+      location.href = returnTo
+        ? RETURN_TARGETS[returnTo](restaurantId)
+        : '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
     } catch (err) {
       if (err.statusCode === 401) return;
       setFormMessage(err.message);

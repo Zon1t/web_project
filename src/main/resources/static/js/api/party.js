@@ -10,6 +10,7 @@
  *
  * 화면 주소 규칙 (B·C와 맞춤)
  *   목록 /party-list.html · 생성 /party-create.html?restaurantId=12 · 상세 /party-detail.html?partyId=31
+ *   비공개 식사팟 초대 링크: /party-detail.html?partyId=31&code=초대코드 (2026-11-25 T4)
  */
 (function (global) {
   'use strict';
@@ -64,6 +65,11 @@
     /** 화면 주소 */
     detailUrl(partyId) {
       return '/party-detail.html?partyId=' + enc(partyId);
+    },
+    /** 비공개 식사팟 자물쇠 아이콘 (SVG 문자열, 색은 currentColor) */
+    lockIcon(size) {
+      const s = size || 14;
+      return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" aria-hidden="true" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     },
     /** 만들기 화면. restaurantId(식당 고정)·date(날짜 미리 선택)는 둘 다 선택 */
     createUrl(restaurantId, date) {
@@ -177,8 +183,9 @@
      *   capacity, memberCount, confirmedCount, status, memo, schedule, cancelDeadline, members, myRole, myConfirmed}
      * 오류: 404 PARTY_NOT_FOUND·PARTY_DELETED
      */
-    getDetail(partyId) {
-      return api.get('/parties/' + enc(partyId));
+    getDetail(partyId, inviteCode) {
+      // 비공개 식사팟은 초대 링크의 code를 함께 보낸다. 없거나 틀리면 404 PARTY_NOT_FOUND (11/25)
+      return api.get('/parties/' + enc(partyId), { code: inviteCode || undefined });
     },
 
     /** 식사팟 삭제 (방장) — DELETE /api/parties/{partyId} */
@@ -191,11 +198,19 @@
       return api.get('/parties/' + enc(partyId) + '/invite-link');
     },
 
+    /** 비공개 식사팟 초대 코드 새로 만들기 (방장) — POST /api/parties/{partyId}/invite-code → {path} (11/25) */
+    regenerateInviteCode(partyId) {
+      return api.post('/parties/' + enc(partyId) + '/invite-code');
+    },
+
     /* ---------- 참여 ---------- */
 
     /** 참여하기(1차) — POST /api/parties/{partyId}/members → {partyId, memberCount, status} */
-    join(partyId) {
-      return api.post('/parties/' + enc(partyId) + '/members');
+    join(partyId, inviteCode) {
+      // 비공개 식사팟은 초대 코드를 Body로 보낸다 (11/25). 공개 식사팟은 Body 없음
+      return inviteCode
+        ? api.post('/parties/' + enc(partyId) + '/members', { inviteCode })
+        : api.post('/parties/' + enc(partyId) + '/members');
     },
 
     /** 나가기 — DELETE /api/parties/{partyId}/members/me → {partyDeleted} (방장이면 팟 삭제) */

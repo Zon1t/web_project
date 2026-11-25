@@ -6,6 +6,7 @@ import com.sseukbap.member.entity.Member;
 import com.sseukbap.member.repository.MemberRepository;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.repository.MealPartyRepository;
+import com.sseukbap.party.repository.PartyMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ public class PartyFinder {
 
     private final MealPartyRepository mealPartyRepository;
     private final MemberRepository memberRepository;
+    private final PartyMemberRepository partyMemberRepository;
 
     /** 일반 조회 (상세 등 읽기 전용) */
     public MealParty getParty(Long partyId) {
@@ -41,10 +43,41 @@ public class PartyFinder {
         return party;
     }
 
+    /**
+     * 비공개 식사팟 확인을 포함한 조회 (상세 조회용, 2026-11-25 T4)
+     * 비공개 + 참여자 아님 + 코드 틀림이면 404 PARTY_NOT_FOUND로 존재를 숨긴다. 삭제 여부보다 먼저 본다.
+     */
+    public MealParty getVisibleParty(Long partyId, Long memberId, String inviteCode) {
+        MealParty party = mealPartyRepository.findById(partyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARTY_NOT_FOUND));
+        validateVisible(party, memberId, inviteCode);
+        validateNotDeleted(party);
+        return party;
+    }
+
+    /** 위와 같지만 행 잠금 조회 (참여하기용) */
+    public MealParty getVisiblePartyForUpdate(Long partyId, Long memberId, String inviteCode) {
+        MealParty party = mealPartyRepository.findByIdForUpdate(partyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARTY_NOT_FOUND));
+        validateVisible(party, memberId, inviteCode);
+        validateNotDeleted(party);
+        return party;
+    }
+
     /** 로그인 회원. 세션의 회원이 DB에 없으면(탈퇴 등) 로그인부터 다시 하도록 401 */
     public Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    }
+
+    /** 비공개 식사팟은 참여자이거나 초대 코드가 맞아야 볼 수 있다 */
+    private void validateVisible(MealParty party, Long memberId, String inviteCode) {
+        if (!party.isPrivateParty() || party.matchesInviteCode(inviteCode)) {
+            return;
+        }
+        if (memberId == null || !partyMemberRepository.existsByPartyIdAndMemberId(party.getPartyId(), memberId)) {
+            throw new BusinessException(ErrorCode.PARTY_NOT_FOUND);
+        }
     }
 
     private void validateNotDeleted(MealParty party) {

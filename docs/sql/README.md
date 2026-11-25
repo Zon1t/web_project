@@ -19,9 +19,11 @@ Oracle XE 11g 기준. 테이블은 JPA가 만들지 않으므로(`ddl-auto: none
 | 8 | `08_account_admin.sql` | 회원 상태·이메일·역할, 식당·리뷰 숨김, 제안 상태 컬럼 + 관리자(user05) 지정 | **모든 DB** (04 다음에. 새 코드로 서버 띄우기 전에 필수) |
 | - | `08_account_admin_rollback.sql` | 08_account_admin 되돌리기 (컬럼 삭제) | 되돌릴 때만 |
 | 9 | `09_cafeteria_backup_menu.sql` | 구내식당 예비 메뉴 (오늘·내일 점심·저녁, 비어 있을 때만) | 크롤링 실패 시에만 |
+| 11 | `11_private_party.sql` | 비공개 식사팟 컬럼 (MEAL_PARTY.PRIVATE_YN, INVITE_CODE) | **기존 DB만** (새로 만들면 01에 포함. 새 코드로 서버 띄우기 전에 필수) |
+| - | `11_private_party_rollback.sql` | 11_private_party 되돌리기 (컬럼 삭제) | 되돌릴 때만 |
 | ★ | `demo_reset.sql` | 위 00 → 05, 08 두 개를 한 번에 실행 (전체 초기화) | **발표 당일 아침·리허설 직후** |
 
-> 이미 쓰던 DB에 최신 변경만 반영할 때: `07` → `06` → `08_cafe_data` → `08_account_admin` 순서로 실행하면 된다. 모두 여러 번 실행해도 결과가 같다.
+> 이미 쓰던 DB에 최신 변경만 반영할 때: `07` → `06` → `08_cafe_data` → `08_account_admin` → `11_private_party` 순서로 실행하면 된다. 모두 여러 번 실행해도 결과가 같다.
 
 ## SQL Developer에서 실행하는 법
 

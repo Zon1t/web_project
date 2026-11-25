@@ -44,7 +44,7 @@ public class PartyThumbsService {
      * 대상이 없으면 null (FE는 배너 숨김). [다음에]로 하루 숨기기는 FE 브라우저 저장소에서 처리한다.
      */
     public PartyThumbsPendingResponse getThumbsPending(Long memberId) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = PartyTimePolicy.today();
 
         // 1. 조건에 맞는 팟 조회
         // 2. 정렬: 식사 날짜 최신 → 기준 시간 늦은 순 → partyId 큰 순
@@ -89,7 +89,7 @@ public class PartyThumbsService {
 
         // 6. 그 식당의 최근 30일 따봉 수 (B의 식당 목록·상세와 같은 집계)
         Long restaurantId = party.getRestaurant().getRestaurantId();
-        LocalDate today = LocalDate.now();
+        LocalDate today = PartyTimePolicy.today();
         long thumbsCount30d = restaurantRepository.countThumbsUp(
                 restaurantId, today.minusDays(THUMBS_PERIOD_DAYS - 1), today.plusDays(1));
 

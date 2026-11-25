@@ -37,7 +37,7 @@
       (p.memo ? '<p class="pj-summary__desc">“' + esc(p.memo) + '”</p>' : '') +
       '</div>' +
       '<ol class="pj-steps">' +
-      '<li class="is-now"><b>지금</b> 팟에 참여하고 대화방에 들어가요</li>' +
+      '<li class="is-now"><b>지금</b> 식사팟에 참여하고 대화방에 들어가요</li>' +
       '<li><b>다음</b> 방장이 시간·장소를 정해요</li>' +
       '<li><b>마지막</b> 갈 수 있으면 <b>참석 확정</b>을 눌러요</li>' +
       '</ol>'
@@ -95,7 +95,7 @@
       title: '같은 시간대에는 식사팟 하나만 참여할 수 있어요',
       html:
         '<div class="pj-notice">' + ui.icon('people', 20) + '<div>' + body +
-        '<p class="pj-notice__desc">다른 팟에 들어가려면 지금 팟에서 먼저 나와 주세요.</p></div></div>',
+        '<p class="pj-notice__desc">다른 식사팟에 들어가려면 지금 식사팟에서 먼저 나와 주세요.</p></div></div>',
       confirmText: '내 식사팟 보기',
       cancelText: opts.cancelText || '닫기',
     });

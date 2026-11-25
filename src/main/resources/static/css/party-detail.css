@@ -86,6 +86,16 @@
   gap: var(--space-2);
 }
 
+/* 비공개 식사팟 뱃지 (자물쇠 + '비공개', 2026-11-25) */
+.party-badge--private {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
 /* 진행 3단계는 .my-progress 모양을 그대로 쓰고, 제목 아래에서는 위쪽 여백만 준다 */
 .party-flow {
   margin: var(--space-1) 0 0;

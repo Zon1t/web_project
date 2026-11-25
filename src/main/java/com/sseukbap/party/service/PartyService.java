@@ -9,6 +9,7 @@ import com.sseukbap.party.dto.PartyActionPendingResponse.PartyAction;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyInviteCodeResponse;
 import com.sseukbap.party.dto.PartyInviteLinkResponse;
 import com.sseukbap.party.dto.PartyListItemResponse;
 import com.sseukbap.party.dto.PartyListResponse;
@@ -63,7 +64,7 @@ public class PartyService {
     /** 식사팟 생성. 방장이 첫 참여자가 되고 상태는 RECRUITING */
     @Transactional
     public PartyCreateResponse createParty(PartyCreateRequest request, Long memberId) {
-        return createParty(request, memberId, LocalDateTime.now());
+        return createParty(request, memberId, PartyTimePolicy.now());
     }
 
     /**
@@ -104,17 +105,24 @@ public class PartyService {
         // 6~8. 팟 저장 → 방장을 참여자로 저장(확정 N) → 시스템 메시지 (하나의 트랜잭션)
         MealParty party = mealPartyRepository.save(MealParty.create(
                 restaurant, host, partyDate, request.mealType(), request.mealTime(),
-                request.capacity(), request.memo()));
+                request.capacity(), request.memo(), request.privateParty()));
         partyMemberRepository.save(PartyMember.create(party, host));
-        partyChatRepository.save(PartyChat.createSystem(party, host.getNickname() + "님이 식사팟을 만들었습니다"));
+        partyChatRepository.save(PartyChat.createSystem(party, host.getNickname() + "님이 식사팟을 만들었어요"));
 
         return new PartyCreateResponse(party.getPartyId());
     }
 
-    /** 식사팟 상세. 미참여자도 조회할 수 있다. */
+    /** 식사팟 상세. 미참여자도 조회할 수 있다. (공개 식사팟, 초대 코드 없이) */
     public PartyDetailResponse getParty(Long partyId, Long memberId) {
-        // 1. 팟 조회 (없으면 PARTY_NOT_FOUND, 삭제됐으면 PARTY_DELETED)
-        MealParty party = partyFinder.getParty(partyId);
+        return getParty(partyId, memberId, null);
+    }
+
+    /**
+     * 식사팟 상세. 비공개 식사팟은 참여자이거나 초대 코드(inviteCode)가 맞아야 볼 수 있다. (2026-11-25 T4)
+     */
+    public PartyDetailResponse getParty(Long partyId, Long memberId, String inviteCode) {
+        // 1. 팟 조회 (없거나 비공개인데 코드가 틀리면 PARTY_NOT_FOUND, 삭제됐으면 PARTY_DELETED)
+        MealParty party = partyFinder.getVisibleParty(partyId, memberId, inviteCode);
 
         // 2. 참여자 목록 (참여 순, 회원 정보 포함)
         List<PartyMember> members = partyMemberRepository.findAllWithMemberByPartyId(partyId);
@@ -164,12 +172,46 @@ public class PartyService {
         }
 
         // 4. 문구 + 상세 화면 경로. 오늘이 아닌 팟은 날짜도 넣는다 (예: 11월 21일 홍반점 점심 식사)
-        String when = party.getPartyDate().equals(LocalDate.now())
+        String when = party.getPartyDate().equals(PartyTimePolicy.today())
                 ? ""
                 : party.getPartyDate().getMonthValue() + "월 " + party.getPartyDate().getDayOfMonth() + "일 ";
         String text = me.getMember().getNickname() + "님이 " + when + party.getRestaurant().getName() + " "
                 + toKorean(party.getMealType()) + " 식사에 초대하셨습니다~";
-        return new PartyInviteLinkResponse(text, PARTY_DETAIL_PATH + partyId);
+        return new PartyInviteLinkResponse(text, detailPath(party));
+    }
+
+    /**
+     * 비공개 식사팟 초대 코드 새로 만들기 (방장, 2026-11-25 T4). 예전 초대 링크는 404가 된다.
+     */
+    @Transactional
+    public PartyInviteCodeResponse regenerateInviteCode(Long partyId, Long memberId) {
+        // 1. 행 잠금 조회. 없거나 DELETED면 중단
+        MealParty party = partyFinder.getPartyForUpdate(partyId);
+
+        // 2. 방장 확인
+        if (!party.isHost(memberId)) {
+            throw new BusinessException(ErrorCode.NOT_HOST, "방장만 초대 링크를 새로 만들 수 있습니다.");
+        }
+
+        // 3. 식사 완료
+        if (party.isFinished()) {
+            throw new BusinessException(ErrorCode.PARTY_FINISHED);
+        }
+
+        // 4. 비공개 식사팟만
+        if (!party.isPrivateParty()) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS, "비공개 식사팟만 초대 링크를 새로 만들 수 있습니다.");
+        }
+
+        // 5. 새 코드 저장 (커밋 시 UPDATE)
+        party.regenerateInviteCode();
+        return new PartyInviteCodeResponse(detailPath(party));
+    }
+
+    /** 상세 화면 경로. 비공개 식사팟은 초대 코드를 붙인다 (Base64 URL 문자라 따로 인코딩하지 않아도 된다) */
+    private static String detailPath(MealParty party) {
+        String path = PARTY_DETAIL_PATH + party.getPartyId();
+        return party.isPrivateParty() ? path + "&code=" + party.getInviteCode() : path;
     }
 
     /** 끼니 한글 이름 (MealType은 common 담당이라 여기서 변환) */
@@ -186,7 +228,7 @@ public class PartyService {
     public PartyListResponse getPartyList(String date, String mealType, String status, String excludeJoined,
                                           String limit, Long memberId) {
         // 1. 파라미터 검증 (date가 없으면 오늘, 오늘 ~ 14일 후만)
-        LocalDate partyDate = parseListDate(date, LocalDate.now());
+        LocalDate partyDate = parseListDate(date, PartyTimePolicy.today());
         MealType mealTypeFilter = parseMealType(mealType);
         PartyStatus statusFilter = parseListStatus(status);
         boolean isExcludeJoined = parseBoolean(excludeJoined);
@@ -199,7 +241,9 @@ public class PartyService {
         Set<Long> joinedPartyIds = getJoinedPartyIds(memberId, partyDate);
 
         // 3. 정렬: 기준 시간 → partyId
+        //    비공개 식사팟은 내가 참여한 것만 보인다 (2026-11-25 T4)
         List<MealParty> filtered = dayParties.stream()
+                .filter(p -> !p.isPrivateParty() || joinedPartyIds.contains(p.getPartyId()))
                 .filter(p -> statusFilter == null || p.getStatus() == statusFilter)
                 .filter(p -> !isExcludeJoined || !joinedPartyIds.contains(p.getPartyId()))
                 .sorted(Comparator.comparing(MealParty::getBaseTime).thenComparing(MealParty::getPartyId))
@@ -233,7 +277,7 @@ public class PartyService {
      */
     public List<PartyMyTodayResponse> getMyTodayPartyList(Long memberId) {
         // 1. 오늘 ~ 14일 후 + DELETED 제외 + 내가 참여한 팟 (11/20 변경: 오늘만 → 오늘~14일 후)
-        LocalDate today = LocalDate.now();
+        LocalDate today = PartyTimePolicy.today();
         List<PartyMember> myParties = partyMemberRepository.findAllByMemberIdAndPartyDateBetween(
                 memberId, today, today.plusDays(PartyTimePolicy.MAX_DAYS_AHEAD), EnumSet.of(PartyStatus.DELETED));
 
@@ -268,7 +312,7 @@ public class PartyService {
      * 조건이 풀리면(일정 확정·참석 확정·삭제·식사 완료) 목록에서 저절로 빠진다. 읽음 표시는 저장하지 않는다.
      */
     public List<PartyActionPendingResponse> getActionPendingList(Long memberId) {
-        return getActionPendingList(memberId, LocalDateTime.now());
+        return getActionPendingList(memberId, PartyTimePolicy.now());
     }
 
     /** 현재 시각을 밖에서 받는 버전 (테스트용) */
@@ -307,7 +351,7 @@ public class PartyService {
      * 탈퇴하는 회원의 식사팟 정리. 회원 정보(닉네임 등)를 바꾸기 전에, 같은 트랜잭션 안에서 호출한다.
      * - 대상: 진행 중(RECRUITING·SCHEDULED·FULL·CLOSED) 팟만. FINISHED·DELETED는 그대로 둔다(이력·따봉 유지).
      * - 방장인 팟 → DELETED + 시스템 메시지 (방장 나가기와 같은 처리)
-     * - 참여자인 팟 → 나가기 (30분 전 제한은 무시) + "○○님이 나갔습니다". FULL이었다면 SCHEDULED/RECRUITING
+     * - 참여자인 팟 → 나가기 (30분 전 제한은 무시) + "○○님이 나갔어요". FULL이었다면 SCHEDULED/RECRUITING
      * - 팟마다 행 잠금(SELECT ... FOR UPDATE). 교착을 막으려고 partyId 오름차순으로 잠근다.
      *
      * @return 정리 결과 (삭제한 팟 수, 나간 팟 수)
@@ -326,7 +370,7 @@ public class PartyService {
 
             if (party.isHost(memberId)) {
                 party.delete();
-                partyChatRepository.save(PartyChat.createSystem(party, "방장이 탈퇴해 식사팟이 삭제되었습니다"));
+                partyChatRepository.save(PartyChat.createSystem(party, "방장이 탈퇴해 식사팟이 삭제됐어요"));
                 deletedCount++;
                 continue;
             }
@@ -339,7 +383,7 @@ public class PartyService {
             partyMemberRepository.delete(partyMember);
             party.leave(memberCountAfter);
             partyChatRepository.save(PartyChat.createSystem(
-                    party, partyMember.getMember().getNickname() + "님이 나갔습니다"));
+                    party, partyMember.getMember().getNickname() + "님이 나갔어요"));
             leftCount++;
         }
         return new PartyWithdrawalResult(deletedCount, leftCount);

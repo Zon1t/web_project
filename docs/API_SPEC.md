@@ -163,10 +163,10 @@
 
 | 작업 | 주기 | 내용 |
 | --- | --- | --- |
-| 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 완료되었습니다' 생성 |
+| 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 끝났어요' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (58개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가)
+### 전체 API 목록 (59개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -213,6 +213,7 @@
 | A | GET | `/api/parties/{partyId}/chats` | 대화 메시지 조회 (폴링) |
 | A | POST | `/api/parties/{partyId}/chats` | 대화 메시지 전송 |
 | A | GET | `/api/parties/{partyId}/invite-link` | 식사팟 초대 링크 조회 |
+| A | POST | `/api/parties/{partyId}/invite-code` | 비공개 식사팟 초대 코드 새로 만들기 (방장, 11/25 추가) |
 | A | POST | `/api/parties/{partyId}/members` | 식사팟 참여하기 (1차) |
 | A | DELETE | `/api/parties/{partyId}/members/me` | 식사팟 나가기 |
 | A | POST | `/api/parties/{partyId}/members/me/confirm` | 참여 확정 (2차) |
@@ -1598,6 +1599,22 @@ null
 
 > 공통: 모든 식사팟 API는 팟이 없으면 404 `PARTY_NOT_FOUND`, status가 DELETED면 404 `PARTY_DELETED`('삭제된 식사팟입니다.')로 응답한다. 목록류는 DELETED를 제외한다.
 
+### 비공개 식사팟 공통 규칙 (2026-11-25 추가)
+
+- 만들 때 `isPrivate: true`로 만들면 비공개 식사팟이다. 서버가 추측할 수 없는 초대 코드(`inviteCode`, 22자)를 만든다. 공개 식사팟은 코드가 없다.
+- 비공개 식사팟은 **참여자에게만** 목록·메인('오늘의 식사팟', '내 식사')에 보인다. 참여자가 아니면 어디에도 나오지 않는다.
+- 참여자가 아닌 사람은 초대 코드가 맞아야 상세 조회·참여하기를 할 수 있다. 코드가 없거나 틀리면 **404 PARTY_NOT_FOUND**로 존재를 숨긴다. (삭제된 팟이어도 같다)
+- 초대 링크(`invite-link`)의 path에 `&code=초대코드`가 붙는다. 방장이 코드를 새로 만들면 예전 링크는 더 이상 쓸 수 없다.
+- 한 끼에 팟 하나·정원·행 잠금·대화·따봉·랭킹 규칙은 공개 식사팟과 같다.
+- 만든 뒤에 공개/비공개를 바꾸는 기능은 없다.
+
+| 컬럼 (MEAL_PARTY) | 설명 |
+| --- | --- |
+| PRIVATE_YN | 'Y'면 비공개. 기본 'N' |
+| INVITE_CODE | 비공개 식사팟 초대 코드 (UK). 공개 식사팟은 NULL |
+
+---
+
 ### POST /api/parties/create — 식사팟 생성
 
 **요구사항**: 오늘부터 14일 후까지의 식사팟을 만든다. 날짜를 보내지 않으면 오늘 팟이다. 생성자는 방장(HOST)이자 첫 참여자로 등록되고, 상태는 RECRUITING이다. FE는 성공 후 식사팟 상세로 이동한다. 식당 상세에서 들어온 경우 restaurantId는 화면에서 고정된 값을 보낸다.
@@ -1614,7 +1631,8 @@ null
   "mealType": "LUNCH",
   "mealTime": "12:00",
   "capacity": 4,
-  "memo": "같이 국밥 드실 분!"
+  "memo": "같이 국밥 드실 분!",
+  "isPrivate": false
 }
 ```
 
@@ -1626,6 +1644,7 @@ null
 | mealTime | string | O | HH:mm. LUNCH 11:00~13:30, DINNER 17:00~19:30, 30분 단위. 오늘 팟이면 현재 시각 이후 |
 | capacity | number | O | 2~12 (방장 포함) |
 | memo | string | X | 최대 50자 |
+| isPrivate | boolean | X | true면 비공개 식사팟 (11/25 추가). 없으면 false |
 
 **시스템 처리**
 1. 필수값·형식·범위를 검증한다. partyDate가 없으면 오늘로 한다.
@@ -1634,9 +1653,9 @@ null
 4. partyDate + mealTime이 현재 시각보다 이후인지 확인한다. (미래 날짜는 항상 통과)
    4-1. 로그인 회원이 같은 partyDate·같은 mealType의 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 이미 PARTY_MEMBER로 있으면 중단한다.
 5. RESTAURANT가 있는지 확인한다.
-6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING)
+6. MEAL_PARTY를 저장한다. (party_date = partyDate, host_id = 로그인 회원, status = RECRUITING, private_yn = isPrivate, 비공개면 invite_code 생성)
 7. PARTY_MEMBER에 방장을 저장한다. (confirmed_yn = N)
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 식사팟을 만들었어요'를 저장한다.
 9. 6~8을 하나의 트랜잭션으로 처리한다.
 
 **Response 200 (data)**
@@ -1675,7 +1694,7 @@ null
 
 **시스템 처리**
 1. 파라미터 값을 검증한다.
-2. party_date = date(없으면 오늘), status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다.
+2. party_date = date(없으면 오늘), status NOT IN (FINISHED, DELETED) 조건에 요청 조건을 더해 MEAL_PARTY를 조회한다. 비공개 식사팟은 로그인 회원이 참여자인 것만 남긴다. (11/25)
 3. 정렬: 기준 시간(confirmed_time, 없으면 meal_time) 오름차순 → party_id 오름차순.
 4. 팟별 참여 인원 수와 내 참여 여부를 계산한다.
 5. 끼니별 개수(lunchCount, dinnerCount)는 mealType·limit과 무관하게 같은 status·excludeJoined 조건으로 센다. (탭 숫자 표시용)
@@ -1698,12 +1717,14 @@ null
       "capacity": 4,
       "status": "RECRUITING",
       "memo": "같이 국밥 드실 분!",
-      "joined": false
+      "joined": false,
+      "isPrivate": false
     }
   ]
 }
 ```
 - time: 확정 시간이 있으면 확정 시간, 없으면 예정 시간
+- isPrivate: 비공개 식사팟이면 true (참여자에게만 보이므로 true면 joined도 true)
 - FE 버튼: joined=true → [상세 보기] / joined=false이고 RECRUITING·SCHEDULED → [참여하기] / joined=false이고 FULL·CLOSED → [마감] 비활성
 
 **오류**
@@ -1741,7 +1762,8 @@ null
     "memberCount": 5,
     "confirmedCount": 3,
     "myConfirmed": false,
-    "meetPlace": "1층 로비"
+    "meetPlace": "1층 로비",
+    "isPrivate": false
   }
 ]
 ```
@@ -1838,8 +1860,16 @@ null
 
 **Request — Path**: partyId (number)
 
+**Request — Query** (11/25 추가)
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| code | string | X | 비공개 식사팟 초대 코드. 초대 링크에 붙어 있다 |
+
 **시스템 처리**
-1. partyId로 MEAL_PARTY를 조회한다. 없으면 PARTY_NOT_FOUND, status가 DELETED면 PARTY_DELETED로 중단한다.
+1. partyId로 MEAL_PARTY를 조회한다. 없으면 PARTY_NOT_FOUND로 중단한다.
+   1-1. 비공개 식사팟이고 로그인 회원이 참여자가 아니며 code가 초대 코드와 다르면 PARTY_NOT_FOUND로 중단한다. (존재 숨김, 11/25)
+   1-2. status가 DELETED면 PARTY_DELETED로 중단한다.
 2. 식당 정보, 참여자 목록(닉네임, 방장 여부, 확정 여부)을 조회한다.
 3. 로그인 회원의 역할(HOST, MEMBER, NONE)과 확정 여부를 계산한다.
 4. 확정 취소 가능 시각(기준 시간 - 30분)을 계산한다.
@@ -1871,10 +1901,12 @@ null
     { "memberId": 5, "nickname": "슥사인", "host": false, "confirmed": false }
   ],
   "myRole": "MEMBER",
-  "myConfirmed": false
+  "myConfirmed": false,
+  "isPrivate": false
 }
 ```
 - schedule: 방장이 일정을 확정하지 않았으면 null
+- isPrivate: 비공개 식사팟이면 true (11/25 추가). 초대 코드는 응답에 넣지 않는다 (초대 링크 API로 받는다)
 - cancelDeadline: 기준 시간 30분 전. 이후에는 확정 취소·확정자 나가기 불가
 
 | 조건 | 표시 버튼 |
@@ -1891,7 +1923,7 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId, 비공개 식사팟에 코드 없음·틀림 (참여자 제외) |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED (초대 링크로 진입한 경우 포함) |
 
 ---
@@ -1953,7 +1985,7 @@ null
       "chatId": 104,
       "type": "SYSTEM",
       "nickname": null,
-      "content": "방장이 일정을 확정했습니다 · 12:00 · 1층 로비",
+      "content": "방장이 일정을 확정했어요 · 12:00 · 1층 로비",
       "mine": false,
       "createdAt": "2026-11-17T11:10:00"
     },
@@ -2037,6 +2069,7 @@ null
 2. 로그인 회원이 참여자인지 확인한다.
 3. status가 RECRUITING·SCHEDULED가 아니면 중단한다. (마감·완료된 팟은 초대 불가)
 4. 문구 '[닉네임]님이 [식당명] [점심/저녁] 식사에 초대하셨습니다~'와 상세 화면 경로를 만든다. 오늘이 아닌 팟은 식당명 앞에 날짜를 넣는다: '[닉네임]님이 11월 21일 [식당명] 점심 식사에 초대하셨습니다~' (2026-11-20 추가)
+5. 비공개 식사팟이면 경로 끝에 `&code=초대코드`를 붙인다. (11/25 추가)
 
 **Response 200 (data)**
 ```json
@@ -2046,6 +2079,7 @@ null
 }
 ```
 - path: FE 화면 경로 규칙이 정해지면 그에 맞춰 수정
+- 비공개 식사팟: `"/party-detail.html?partyId=31&code=Xk3v9QpL0aZ7mN2bC4dE5f"`
 
 **오류**
 
@@ -2058,24 +2092,69 @@ null
 
 ---
 
+### POST /api/parties/{partyId}/invite-code — 비공개 식사팟 초대 코드 새로 만들기 (방장)
+
+> 2026-11-25 추가
+
+**요구사항**: 비공개 식사팟의 초대 코드를 새로 만든다. 예전 초대 링크는 더 이상 쓸 수 없다. (이미 참여한 사람은 그대로 참여자)
+
+**Request — Path**: partyId (number) / Body 없음
+
+**시스템 처리**
+1. MEAL_PARTY를 행 잠금 조회한다. 없으면 PARTY_NOT_FOUND, DELETED면 PARTY_DELETED로 중단한다.
+2. 로그인 회원이 방장인지 확인한다.
+3. FINISHED면 중단한다.
+4. 비공개 식사팟이 아니면 중단한다.
+5. 새 초대 코드를 저장하고 새 경로를 반환한다.
+
+**Response 200 (data)**
+```json
+{
+  "path": "/party-detail.html?partyId=31&code=Xk3v9QpL0aZ7mN2bC4dE5f"
+}
+```
+
+**오류**
+
+| HTTP | error | message | 발생 조건 |
+| --- | --- | --- | --- |
+| 403 | NOT_HOST | 방장만 초대 링크를 새로 만들 수 있습니다. | 방장이 아님 |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | INVALID_STATUS | 비공개 식사팟만 초대 링크를 새로 만들 수 있습니다. | 공개 식사팟 |
+
+---
+
 ### POST /api/parties/{partyId}/members — 식사팟 참여하기 (1차)
 
 **요구사항**: 수락 절차 없이 식사팟에 참여한다(1차 참여). RECRUITING·SCHEDULED 상태이고 정원 미만일 때만 가능하다. 동시에 여러 명이 마지막 자리에 참여해도 정원을 넘지 않아야 한다. 정원에 도달하면 자동 마감(FULL)한다. 같은 날짜·같은 끼니에는 팟 하나만 참여할 수 있다(참여 확정 전이어도).
 
 > 2026-11-23 변경: 한 끼에 팟 하나 — 같은 날짜·같은 끼니의 다른 팟(DELETED 제외)에 이미 들어가 있으면 참여 불가 (409 `ALREADY_JOINED_SAME_MEAL`). 초대 링크로 들어와도 같다.
 
-**Request — Path**: partyId (number) / Body 없음
+**Request — Path**: partyId (number)
+
+**Request — Body** (선택, 11/25 추가. 공개 식사팟은 Body 없이 보내도 된다)
+```json
+{
+  "inviteCode": "Xk3v9QpL0aZ7mN2bC4dE5f"
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| inviteCode | string | X | 비공개 식사팟이면 필요. 초대 링크의 code 값 |
 
 **시스템 처리**
 1. 트랜잭션을 시작하고 MEAL_PARTY 행을 잠금 조회한다. (SELECT ... FOR UPDATE)
-2. 팟이 없거나 DELETED면 중단한다.
-3. status가 FINISHED면 중단한다.
+2. 팟이 없으면 중단한다. 비공개 식사팟이고 참여자가 아니며 inviteCode가 다르면 PARTY_NOT_FOUND로 중단한다. (11/25) 그다음 DELETED면 중단한다.
+3. status가 FINISHED이거나 기준 시간(confirmed_time, 없으면 meal_time)이 지났으면 중단한다. (11/25: 스케줄러가 FINISHED로 바꾸기 전 최대 5분 틈 방지)
 4. 이미 PARTY_MEMBER에 있으면 중단한다.
    4-1. 같은 party_date·같은 meal_type의 다른 팟(DELETED 제외, 확정 여부·FINISHED 무관)에 PARTY_MEMBER로 있으면 중단한다.
 5. status가 FULL·CLOSED이거나 현재 인원 ≥ capacity면 중단한다.
 6. PARTY_MEMBER를 저장한다. (confirmed_yn = N)
 7. 참여 후 인원이 capacity와 같으면 status = FULL로 변경한다.
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여했습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여했어요'를 저장한다.
 9. 커밋한다. FE는 식사팟 상세로 이동(또는 상세 재조회)한다.
 
 **Response 200 (data)**
@@ -2091,12 +2170,12 @@ null
 
 | HTTP | error | message | 발생 조건 |
 | --- | --- | --- | --- |
-| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
+| 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId, 비공개 식사팟에 코드 없음·틀림 |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | DELETED |
 | 409 | ALREADY_JOINED | 이미 참여 중인 식사팟입니다. | 중복 참여 |
 | 409 | ALREADY_JOINED_SAME_MEAL | 같은 시간대에 이미 참여 중인 식사팟이 있습니다. | 같은 날짜·끼니의 다른 팟에 이미 참여 중 |
 | 409 | PARTY_FULL | 이미 마감된 식사팟입니다. | FULL, CLOSED, 정원 도달 |
-| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED, 기준 시간 지남 |
 
 ---
 
@@ -2114,7 +2193,7 @@ null
 5. 참여 확정자이고 현재 시각이 기준 시간 30분 전 이후면 중단한다.
 6. PARTY_MEMBER를 삭제한다.
 7. status = FULL이고 인원이 capacity 미만이 되면, 일정이 있으면 SCHEDULED, 없으면 RECRUITING으로 변경한다. (CLOSED는 유지)
-8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 나갔습니다'를 저장한다.
+8. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 나갔어요'를 저장한다.
 9. 커밋한다. FE는 식사팟 목록으로 이동한다.
 
 **Response 200 (data)**
@@ -2144,12 +2223,12 @@ null
 
 **시스템 처리**
 1. MEAL_PARTY를 조회한다. 없거나 DELETED면 중단한다.
-2. status가 FINISHED면 중단한다.
+2. status가 FINISHED이거나 기준 시간이 지났으면 중단한다. (11/25)
 3. 로그인 회원이 참여자인지 확인한다.
 4. 일정(confirmed_time)이 없으면 중단한다.
 5. 이미 확정했으면 중단한다.
 6. PARTY_MEMBER.confirmed_yn을 Y로 변경한다.
-7. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여를 확정했습니다'를 저장한다.
+7. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참석을 확정했어요'를 저장한다.
 8. 확정 인원 수를 반환한다.
 
 **Response 200 (data)**
@@ -2169,7 +2248,7 @@ null
 | 409 | NOT_JOINED | 참여하지 않은 식사팟입니다. | 참여자가 아님 |
 | 409 | SCHEDULE_NOT_SET | 방장이 아직 일정을 확정하지 않았습니다. | 일정 없음 |
 | 409 | ALREADY_CONFIRMED | 이미 참여를 확정했습니다. | 중복 확정 |
-| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+| 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED, 기준 시간 지남 |
 
 ---
 
@@ -2185,7 +2264,7 @@ null
 3. 로그인 회원이 참여자이고 확정 상태인지 확인한다.
 4. 현재 시각이 confirmed_time 30분 전 이후면 중단한다.
 5. PARTY_MEMBER.confirmed_yn을 N으로 변경한다.
-6. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참여 확정을 취소했습니다'를 저장한다.
+6. PARTY_CHAT에 시스템 메시지 '[닉네임]님이 참석 확정을 취소했어요'를 저장한다.
 7. 확정 인원 수를 반환한다.
 
 **Response 200 (data)**
@@ -2242,7 +2321,7 @@ null
 7. confirmed_time, meet_place, confirm_memo를 저장한다.
 8. status가 RECRUITING이면 SCHEDULED로 변경한다. (SCHEDULED·FULL·CLOSED는 유지)
 8-1. 방장의 PARTY_MEMBER.confirmed_yn을 Y로 변경한다. (방장 자동 참석 확정, 6번 초기화 뒤에 처리)
-9. PARTY_CHAT에 시스템 메시지를 저장한다. 최초: '방장이 일정을 확정했습니다 · 12:00 · 1층 로비' / 수정: '방장이 일정을 변경했습니다 · 12:30 · 정문. 참여 확정을 다시 해 주세요'
+9. PARTY_CHAT에 시스템 메시지를 저장한다. 최초: '방장이 일정을 확정했어요 · 12:00 · 1층 로비' / 수정: '방장이 일정을 바꿨어요 · 12:30 · 정문. 참석 확정을 다시 해 주세요'
 10. 커밋한다.
 
 **Response 200 (data)**
@@ -2291,7 +2370,7 @@ null
 4. status가 FINISHED면 중단한다.
 5. CLOSE: status가 RECRUITING·SCHEDULED·FULL이어야 한다. status = CLOSED.
 6. REOPEN: status가 CLOSED여야 한다. 인원 = capacity면 FULL, 아니면 일정이 있으면 SCHEDULED, 없으면 RECRUITING.
-7. PARTY_CHAT에 시스템 메시지 '방장이 모집을 마감했습니다' 또는 '방장이 모집을 다시 열었습니다'를 저장한다.
+7. PARTY_CHAT에 시스템 메시지 '방장이 모집을 마감했어요' 또는 '방장이 모집을 다시 열었어요'를 저장한다.
 8. 커밋한다.
 
 **Response 200 (data)**

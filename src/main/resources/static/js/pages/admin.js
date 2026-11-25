@@ -15,6 +15,8 @@
   const CATEGORY_LABELS = restaurantApi.CATEGORY_LABELS;
   const EDITABLE_CATEGORIES = ['KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'CAFE', 'ETC'];
   const TABS = ['restaurants', 'suggestions', 'reviews', 'cafeteria'];
+  /** 식당 상세 주소. 상세 화면은 ?id=를 읽는다 (restaurant-detail.js, 다른 화면과 같은 형식) */
+  const DETAIL_URL = '/restaurant-detail.html?id=';
 
   const tabsEl = document.getElementById('admin-tabs');
   const panel = document.getElementById('admin-panel');
@@ -125,7 +127,7 @@
     return '<li class="admin-item' + (r.hidden ? ' is-hidden' : '') + '" data-id="' + r.restaurantId + '">' +
       '<div class="admin-item__main">' +
       '<p class="admin-item__title">' +
-      (r.hidden ? esc(r.name) : '<a href="/restaurant-detail.html?restaurantId=' + r.restaurantId + '">' + esc(r.name) + '</a>') +
+      (r.hidden ? esc(r.name) : '<a href="' + DETAIL_URL + r.restaurantId + '">' + esc(r.name) + '</a>') +
       (r.hidden ? ' <span class="badge admin-badge admin-badge--hidden">숨김</span>' : '') +
       (r.outOfRange ? ' <span class="badge admin-badge admin-badge--warn">' + state.restaurants.radiusKm + 'km 밖</span>' : '') +
       '</p>' +
@@ -221,7 +223,7 @@
     const done = item.status === 'DONE';
     return '<li class="admin-item' + (done ? ' is-done' : '') + '" data-id="' + item.suggestionId + '">' +
       '<div class="admin-item__main">' +
-      '<p class="admin-item__title"><a href="/restaurant-detail.html?restaurantId=' + item.restaurantId + '">' +
+      '<p class="admin-item__title"><a href="' + DETAIL_URL + item.restaurantId + '">' +
       esc(item.restaurantName) + '</a>' +
       (done ? ' <span class="badge admin-badge admin-badge--done">처리 완료</span>' : '') + '</p>' +
       '<p class="admin-item__content">' + esc(item.content) + '</p>' +

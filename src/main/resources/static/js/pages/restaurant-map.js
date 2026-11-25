@@ -181,8 +181,15 @@
   function tipHtml(restaurant) {
     return '<div class="map-pin__tip" role="tooltip">' +
       '<span class="map-pin__tip-name">' + esc(restaurant.name) + '</span>' +
-      '<span class="map-pin__tip-meta">' + esc(categoryLabel(restaurant)) + ' · 따봉 ' + Number(restaurant.thumbsCount30d || 0) + '</span>' +
+      '<span class="map-pin__tip-meta">' + esc(categoryLabel(restaurant)) + scoreText(restaurant) + '</span>' +
       '</div>';
+  }
+
+  /** ' · 따봉 3' (카페·베이커리는 따봉 대신 리뷰 수, 2026-11-25) */
+  function scoreText(restaurant) {
+    return restaurant.category === 'CAFE'
+      ? ' · 리뷰 ' + Number(restaurant.reviewCount || 0)
+      : ' · 따봉 ' + Number(restaurant.thumbsCount30d || 0);
   }
 
   function categoryLabel(restaurant) {
@@ -205,7 +212,7 @@
     infoWindow.setContent(
       '<div class="map-info">' +
       '<p class="map-info__name">' + esc(restaurant.name) + '</p>' +
-      '<p class="map-info__meta">' + esc(categoryText) + ' · 따봉 ' + restaurant.thumbsCount30d + '</p>' +
+      '<p class="map-info__meta">' + esc(categoryText) + scoreText(restaurant) + '</p>' +
       '<a class="map-info__link" href="/restaurant-detail.html?id=' + encodeURIComponent(restaurant.restaurantId) + '">상세 보기</a>' +
       '</div>'
     );

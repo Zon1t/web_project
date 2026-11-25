@@ -5,7 +5,6 @@
  *       /party-create.html?restaurantId=12 → 그 식당으로 고정 (식당 상세·룰렛에서 진입)
  *       ?date=2026-11-21 을 붙이면 그 날짜를 미리 고른다 (식사팟 목록에서 진입)
  *       ?restaurantId=12&restore=1 → 식당 등록을 마치고 돌아온 경우. 등록 전에 입력한 값을 되살린다 (T2)
- *       ?restore=1 (restaurantId 없음) → 식당 등록 화면에서 [취소]·[뒤로]로 돌아온 경우. 입력값만 되살리고 알림은 없다
  *
  * 만든 것
  *   - 식당: 고정 또는 이름 검색(입력이 멈추고 300ms 뒤 검색, ↑↓ Enter 선택)
@@ -44,6 +43,7 @@
   const restaurantInput = document.getElementById('restaurant-input');
   const restaurantOptions = document.getElementById('restaurant-options');
   const restaurantMessage = document.getElementById('restaurant-message');
+  const registerHint = document.getElementById('register-hint');
   const datePickerEl = document.getElementById('date-picker');
   const dateMessage = document.getElementById('date-message');
   const mealButtons = Array.from(document.querySelectorAll('.party-form__toggle-btn'));
@@ -73,6 +73,8 @@
     activeIndex: -1,       // 키보드로 고른 검색 결과 위치
     submitting: false,
     picker: null,          // 날짜 달력 (date-picker.js)
+    mealTaken: false,      // 고른 날짜·끼니에 이미 참여 중인 팟이 있는지 (2026-11-25)
+    takenSeq: 0,
   };
 
   /* ---------- 시작 ---------- */
@@ -90,6 +92,7 @@
   restaurantOptions.addEventListener('mousedown', (event) => event.preventDefault()); // 클릭 중 입력창 포커스 유지
   restaurantOptions.addEventListener('click', onOptionClick);
   restaurantChange.addEventListener('click', clearRestaurant);
+  document.getElementById('register-link').addEventListener('click', goRegister);
   timeSelect.addEventListener('change', updateSubmit);
   form.addEventListener('submit', onSubmit);
 
@@ -136,6 +139,7 @@
     restaurantChange.hidden = state.isFixed; // 식당 상세에서 온 경우는 바꿀 수 없다
     restaurantSelected.hidden = false;
     restaurantSearch.hidden = true;
+    registerHint.hidden = true;
     setMessage(restaurantMessage, '', RESTAURANT_HINT);
     closeOptions();
     updateSubmit();
@@ -153,6 +157,7 @@
     state.isFixed = false;
     restaurantSelected.hidden = true;
     restaurantSearch.hidden = false;
+    registerHint.hidden = false;
     setMessage(restaurantMessage, errorText, RESTAURANT_HINT);
   }
 
@@ -291,10 +296,7 @@
       memoCount.textContent = memoInput.value.length;
     }
     updateSubmit();
-    // 등록을 마치고 온 경우(restaurantId 있음)에만. 등록 화면에서 [취소]로 돌아오면 restore=1만 붙어 온다 (B, 2026-11-25)
-    if (new URLSearchParams(location.search).get('restaurantId')) {
-      ui.toast('식당을 등록했어요. 입력하던 내용을 이어서 만들어 주세요');
-    }
+    ui.toast('식당을 등록했어요. 입력하던 내용을 이어서 만들어 주세요');
   }
 
   /** ↑↓로 고르고 Enter로 선택, Esc로 닫기 */
@@ -402,6 +404,32 @@
     timeSelect.disabled = times.length === 0;
     setMessage(timeMessage, '', TIME_HINT);
     updateSubmit();
+    checkMealTaken();
+  }
+
+  /**
+   * 고른 날짜·끼니에 이미 참여 중인 식사팟이 있으면 [만들기]를 막는다 (2026-11-25)
+   * 서버도 같은 경우 409 ALREADY_JOINED_SAME_MEAL로 막지만, 누르기 전에 알려 준다.
+   */
+  async function checkMealTaken() {
+    const seq = ++state.takenSeq;
+    const date = state.partyDate;
+    const mealType = state.mealType;
+    state.mealTaken = false;
+    try {
+      const result = await partyApi.getList({ date, mealType });
+      if (seq !== state.takenSeq) return;
+      const mine = result.parties.find((p) => p.joined);
+      state.mealTaken = !!mine;
+      if (mine) {
+        setMessage(timeMessage,
+          '이미 ' + partyApi.shortDateLabel(date) + ' ' + partyApi.MEAL_TYPE_LABELS[mealType] + ' 식사팟(' + mine.restaurantName +
+          ')에 참여 중이에요. 다른 날짜나 끼니를 골라 주세요.', TIME_HINT);
+      }
+    } catch (err) {
+      // 확인을 못 해도 만들기는 서버가 다시 검사한다
+    }
+    if (seq === state.takenSeq) updateSubmit();
   }
 
   /**
@@ -438,7 +466,7 @@
 
   /** 식당과 시간이 있어야 [만들기] 활성 */
   function updateSubmit() {
-    submitButton.disabled = state.submitting || !state.restaurant || !timeSelect.value;
+    submitButton.disabled = state.submitting || state.mealTaken || !state.restaurant || !timeSelect.value;
   }
 
   async function onSubmit(event) {

@@ -370,6 +370,51 @@
       history.back();
     }
   });
+  // 툴팁 (2026-11-25): <button data-tip="설명">…</button> 에 마우스를 올리거나 키보드로 포커스하면 잠깐 설명을 띄운다.
+  // body에 붙이는 고정 위치 상자라 overflow로 잘리는 줄(방장 메뉴 등) 안에서도 보인다.
+  let tipEl = null;
+  let tipTarget = null;
+  function showTip(target) {
+    const text = target.getAttribute('data-tip');
+    if (!text) return;
+    if (!tipEl) {
+      tipEl = document.createElement('div');
+      tipEl.className = 'ui-tip';
+      tipEl.id = 'ui-tip';
+      tipEl.setAttribute('role', 'tooltip');
+      document.body.appendChild(tipEl);
+    }
+    tipTarget = target;
+    tipEl.textContent = text;
+    target.setAttribute('aria-describedby', 'ui-tip');
+    tipEl.classList.add('is-visible');
+    const r = target.getBoundingClientRect();
+    const w = tipEl.offsetWidth;
+    const h = tipEl.offsetHeight;
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    const above = r.top - h - 8;
+    tipEl.style.left = left + 'px';
+    tipEl.style.top = (above >= 8 ? above : r.bottom + 8) + 'px';
+  }
+  function hideTip() {
+    if (tipTarget) tipTarget.removeAttribute('aria-describedby');
+    tipTarget = null;
+    if (tipEl) tipEl.classList.remove('is-visible');
+  }
+  document.addEventListener('mouseover', (event) => {
+    const target = event.target.closest('[data-tip]');
+    if (target && target !== tipTarget) showTip(target);
+    else if (!target && tipTarget) hideTip();
+  });
+  document.addEventListener('focusin', (event) => {
+    const target = event.target.closest('[data-tip]');
+    if (target) showTip(target);
+  });
+  document.addEventListener('focusout', hideTip);
+  document.addEventListener('click', hideTip, true);
+  window.addEventListener('scroll', hideTip, true);
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideTip(); });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hydrate);
   else hydrate();
 })(window);

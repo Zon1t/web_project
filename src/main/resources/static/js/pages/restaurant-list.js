@@ -373,9 +373,10 @@
       '<span class="restaurant-item__meta">' + esc(meta) + '</span>' +
       '</span>' +
       '<span class="restaurant-item__stats">' +
-      utils.thumbsUpIcon() +
-      '<span class="sr-only">최근 30일 따봉</span>' + r.thumbsCount30d +
-      ' · 리뷰 ' + r.reviewCount +
+      // 카페·베이커리는 따봉을 보여 주지 않는다 (식사 따봉이라 카페와 맞지 않음, 2026-11-25)
+      (r.category === 'CAFE'
+        ? '리뷰 ' + r.reviewCount
+        : utils.thumbsUpIcon() + '<span class="sr-only">최근 30일 따봉</span>' + r.thumbsCount30d + ' · 리뷰 ' + r.reviewCount) +
       '</span>' +
       '</a>' +
       '</li>'

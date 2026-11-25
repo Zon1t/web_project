@@ -151,7 +151,27 @@
   function renderList(parties) {
     // 한 끼에 팟 하나 (11/23): 이 날짜·끼니에 이미 들어간 팟이 있으면 다른 팟의 [참여하기]를 막는다
     state.joinedThisMeal = parties.some((p) => p.joined);
-    root.innerHTML = '<ul class="party-cards">' + parties.map(renderCard).join('') + '</ul>';
+    updateCreateLink();
+    // 참여 가능 → 참여 중 → 참여 불가 순 (같은 그룹 안에서는 서버 순서 = 시간 빠른 순, 2026-11-25)
+    const sorted = parties
+      .map((p, i) => ({ p, i, group: cardGroup(p) }))
+      .sort((a, b) => a.group - b.group || a.i - b.i)
+      .map((r) => r.p);
+    root.innerHTML = '<ul class="party-cards">' + sorted.map(renderCard).join('') + '</ul>';
+  }
+
+  /** 정렬 그룹: 0 참여 가능 / 1 참여 중 / 2 참여 불가 (정원·모집 마감, 같은 끼니에 이미 참여 중) */
+  function cardGroup(p) {
+    if (p.joined) return 1;
+    const isOpen = p.status === 'RECRUITING' || p.status === 'SCHEDULED';
+    return isOpen && !state.joinedThisMeal ? 0 : 2;
+  }
+
+  /** 이 날짜·끼니에 이미 참여 중이면 [식사팟 만들기]를 막는다 (한 끼에 팟 하나, 2026-11-25) */
+  function updateCreateLink() {
+    partyApi.setCreateBlocked(createLink, state.joinedThisMeal
+      ? '이미 ' + partyApi.shortDateLabel(state.date) + ' ' + MEAL_TYPE_LABELS[state.mealType] + ' 식사팟에 참여 중이라 새로 만들 수 없어요.'
+      : null);
   }
 
   /** 카드: 아바타·식당·시간 / 방 설명 / 자리 막대·뱃지 / 버튼 */
@@ -233,6 +253,8 @@
   }
 
   function showEmpty() {
+    state.joinedThisMeal = false;
+    updateCreateLink();
     const label = MEAL_TYPE_LABELS[state.mealType];
     const isToday = partyApi.isToday(state.date);
     const when = isToday ? '오늘' : partyApi.relativeDateLabel(state.date);

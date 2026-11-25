@@ -272,5 +272,73 @@
     thumbs(partyId) {
       return api.post('/parties/' + enc(partyId) + '/thumbs');
     },
+
+    /* ---------- [식사팟 만들기] 버튼 막기 (2026-11-25) ---------- */
+
+    /**
+     * 지금 끼니: 오늘 점심(13:30 전) → 오늘 저녁(19:30 전) → 내일 점심
+     * @returns {{date: string, mealType: 'LUNCH'|'DINNER'}}
+     */
+    currentMealSlot(now) {
+      const d = now || new Date();
+      const minutes = d.getHours() * 60 + d.getMinutes();
+      const today = toIsoDate(d);
+      if (minutes < 13 * 60 + 30) return { date: today, mealType: 'LUNCH' };
+      if (minutes < 19 * 60 + 30) return { date: today, mealType: 'DINNER' };
+      return { date: this.addDays(today, 1), mealType: 'LUNCH' };
+    },
+
+    /** 지금 끼니에 내가 참여 중인 식사팟 (없으면 null) */
+    async getCurrentMealParty() {
+      const slot = this.currentMealSlot();
+      const mine = await this.getMyToday();
+      return (mine || []).find((p) => p.partyDate === slot.date && p.mealType === slot.mealType) || null;
+    },
+
+    /**
+     * 만들기 버튼을 막는다: 흐리게 + 누르면 이유 안내 + 마우스를 올리면 툴팁(ui.js data-tip)
+     * reason이 없으면 다시 풀어 준다.
+     */
+    setCreateBlocked(el, reason) {
+      if (!el) return;
+      el.classList.toggle('is-create-blocked', !!reason);
+      if (reason) {
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('data-tip', reason);
+        el.dataset.blockedReason = reason;
+      } else {
+        el.removeAttribute('aria-disabled');
+        el.removeAttribute('data-tip');
+        delete el.dataset.blockedReason;
+      }
+    },
+
+    /**
+     * data-create-party 가 붙은 [식사팟 만들기] 버튼을 지금 끼니 기준으로 막는다.
+     * 지금 끼니에 이미 참여 중인 식사팟이 있으면 막는다. (같은 끼니에는 팟 하나, 서버도 409로 막음)
+     */
+    async guardCreateButtons(root) {
+      const buttons = Array.from((root || document).querySelectorAll('[data-create-party]'));
+      if (buttons.length === 0) return;
+      try {
+        const party = await this.getCurrentMealParty();
+        const reason = party
+          ? '이미 ' + this.shortDateLabel(party.partyDate) + ' ' + this.MEAL_TYPE_LABELS[party.mealType] + ' 식사팟(' +
+            party.restaurantName + ')에 참여 중이라 새로 만들 수 없어요.'
+          : null;
+        buttons.forEach((el) => this.setCreateBlocked(el, reason));
+      } catch (err) {
+        // 확인을 못 하면 그대로 둔다 (만들기 화면과 서버가 다시 막는다)
+      }
+    },
   };
+
+  // 막힌 [식사팟 만들기]를 누르면 이동하지 않고 이유를 알려 준다
+  document.addEventListener('click', (event) => {
+    const el = event.target.closest('.is-create-blocked');
+    if (!el) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (global.ui && global.ui.toast) global.ui.toast(el.dataset.blockedReason || '지금은 식사팟을 만들 수 없어요.', { type: 'error' });
+  }, true);
 })(window);

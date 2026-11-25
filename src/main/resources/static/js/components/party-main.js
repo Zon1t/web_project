@@ -211,9 +211,9 @@
    *   - 목록 API 결과 전체(FINISHED·DELETED는 서버가 이미 뺌)를 세 그룹으로 정렬, 그룹 안에서는 시간 빠른 순
    *       ① 참여 가능 ② 참여 중 ③ 참여 불가 (정원 마감·모집 마감·같은 끼니에 이미 참여 중)
    *   - 줄: 시간 · 식당(상세 링크) · 인원 · 버튼
-   *       참여 가능 → [참여] (참여 전 확인 창) / 참여 중 → [식사팟 보기] / 참여 불가 → 흐리게 + 이유 글 + [참여] 비활성
+   *       참여 가능 → [참여] (누르면 그 식사팟 상세로 이동, 2026-11-25) / 참여 중 → [식사팟 보기] / 참여 불가 → 흐리게 + 이유 글 + [참여] 비활성
    *   - 최대 4줄. 더 있으면 [전체 보기 (N)] → 식사팟 목록(오늘·그 끼니 탭)
-   *   - 아래: '원하는 시간이나 식당이 없나요?' + [식사팟 만들기]
+   *   - 아래: '원하는 시간이나 식당이 없나요?' + [식사팟 만들기] (그 끼니에 이미 참여 중이면 막음, 2026-11-25)
    * 참여하면 document에 'sseukbap:party-joined' (detail.source = 'today-parties')를 보낸다.
    */
   const TODAY_LUNCH_END = '14:00';
@@ -284,7 +284,10 @@
       '<p class="pm-today__message" role="alert">' + esc(message || '') + '</p>' +
       '<div class="pm-create">' +
       (ofMeal.length ? '<p class="pm-create__title">원하는 시간이나 식당이 없나요?</p>' : '') +
-      '<a class="btn btn--primary pm-create__btn" href="' + partyApi.createUrl(null, partyApi.today()) + '">' +
+      '<a class="btn btn--primary pm-create__btn' + (joinedThisMeal ? ' is-create-blocked' : '') + '" href="' + partyApi.createUrl(null, partyApi.today()) + '"' +
+      (joinedThisMeal
+        ? ' aria-disabled="true" data-tip="' + esc(createBlockedReason(label)) + '" data-blocked-reason="' + esc(createBlockedReason(label)) + '"'
+        : '') + '>' +
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>' +
       '식사팟 만들기</a>' +
       '</div>' +
@@ -328,6 +331,11 @@
     return today.parties.filter((p) => p.mealType === meal).length;
   }
 
+  /** 같은 끼니에 이미 참여 중이라 만들 수 없는 이유 (한 끼에 팟 하나, 2026-11-25) */
+  function createBlockedReason(label) {
+    return '이미 오늘 ' + label + ' 식사팟에 참여 중이라 새로 만들 수 없어요.';
+  }
+
   /** 정렬 그룹: 참여 가능 → 참여 중 → 참여 불가 */
   const GROUP = { JOINABLE: 0, JOINED: 1, BLOCKED: 2 };
 
@@ -349,6 +357,9 @@
     let action;
     if (group === GROUP.JOINED) {
       action = '<a class="btn btn--primary pm-row__join" href="' + partyApi.detailUrl(p.partyId) + '">식사팟 보기</a>';
+    } else if (!reason) {
+      // [참여]를 누르면 바로 참여하지 않고 상세로 가서 방 설명·밥친구를 보고 참여한다 (2026-11-25)
+      action = '<a class="btn pm-row__join" href="' + partyApi.detailUrl(p.partyId) + '">참여</a>';
     } else {
       action = '<button type="button" class="btn pm-row__join" data-action="join" data-party-id="' + p.partyId + '"' +
         (reason ? ' disabled aria-label="참여 (' + esc(reason) + ')"' : '') + '>참여</button>';

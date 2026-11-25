@@ -23,7 +23,8 @@ public record PartyMyTodayResponse(
         int memberCount,
         int confirmedCount,
         boolean myConfirmed,
-        String meetPlace         // 일정 미확정이면 null
+        String meetPlace,        // 일정 미확정이면 null
+        boolean isPrivate        // 비공개 식사팟인지 (11/25)
 ) {
 
     public static PartyMyTodayResponse of(MealParty party, int memberCount, int confirmedCount, boolean myConfirmed) {
@@ -37,7 +38,8 @@ public record PartyMyTodayResponse(
                 memberCount,
                 confirmedCount,
                 myConfirmed,
-                party.getMeetPlace()
+                party.getMeetPlace(),
+                party.isPrivateParty()
         );
     }
 }

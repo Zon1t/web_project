@@ -24,7 +24,8 @@ public record PartyListItemResponse(
         int capacity,
         PartyStatus status,
         String memo,
-        boolean joined           // 로그인 회원이 참여 중인지
+        boolean joined,          // 로그인 회원이 참여 중인지
+        boolean isPrivate        // 비공개 식사팟인지 (참여자에게만 보이므로 true면 joined도 true)
 ) {
 
     public static PartyListItemResponse of(MealParty party, int memberCount, boolean joined) {
@@ -39,7 +40,8 @@ public record PartyListItemResponse(
                 party.getCapacity(),
                 party.getStatus(),
                 party.getMemo(),
-                joined
+                joined,
+                party.isPrivateParty()
         );
     }
 }

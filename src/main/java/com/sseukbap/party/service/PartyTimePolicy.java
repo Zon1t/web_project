@@ -5,6 +5,7 @@ import com.sseukbap.common.enums.MealType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 
 /**
  * 식사팟 시간 규칙 모음 (DB·스프링 없이 동작하는 순수 계산)
@@ -18,6 +19,22 @@ import java.time.LocalTime;
  * 규칙 위반 시 예외를 던지지 않고 true/false만 돌려준다. 예외(BusinessException)는 Service에서 던진다.
  */
 public final class PartyTimePolicy {
+
+    /**
+     * 식사팟 시간 기준: 서울 (2026-11-25 T6 P2)
+     * 서버 PC 시간대가 달라도(예: 클라우드 UTC) 날짜·시간 판단이 어긋나지 않게 식사팟 코드는 이 값으로 현재 시각을 구한다.
+     */
+    public static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
+    /** 지금 서울 시각 */
+    public static LocalDateTime now() {
+        return LocalDateTime.now(ZONE);
+    }
+
+    /** 오늘 서울 날짜 */
+    public static LocalDate today() {
+        return LocalDate.now(ZONE);
+    }
 
     /** 시간 선택 단위 (분) */
     public static final int TIME_STEP_MINUTES = 30;

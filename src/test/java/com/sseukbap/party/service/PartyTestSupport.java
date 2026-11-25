@@ -4,6 +4,7 @@ import com.sseukbap.party.entity.PartyStatus;
 import jakarta.persistence.EntityManager;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 식사팟 테스트 공용 도우미
@@ -15,6 +16,12 @@ final class PartyTestSupport {
 
     private PartyTestSupport() {
     }
+
+    /**
+     * 참여하기·참석 확정 테스트에 넘기는 시각: 오늘 09:00 (2026-11-25 T6 P1)
+     * 기준 시간이 지난 팟은 참여·확정이 막히므로, 테스트를 언제 돌려도 같은 결과가 나오게 식사 시간 전 시각으로 고정한다.
+     */
+    static final LocalDateTime MORNING = LocalDate.now(PartyTimePolicy.ZONE).atTime(9, 0);
 
     /**
      * 오늘 ~ 14일 후의 기존 팟을 테스트 트랜잭션 안에서만 DELETED로 숨긴다.

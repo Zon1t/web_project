@@ -63,10 +63,10 @@ class PartyThumbsConcurrencyTest {
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
                         partyDate, MealType.LUNCH, LocalTime.of(12, 0), 4, null),
                 host.getMemberId(), today.atTime(9, 0)).partyId();
-        partyMemberService.joinParty(partyId, guest.getMemberId());
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(LocalTime.of(12, 0), "정문", null),
                 host.getMemberId(), today.atTime(9, 0));
-        partyMemberService.confirmParty(partyId, guest.getMemberId());
+        partyMemberService.confirmParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyBatchService.finishParty(partyId, partyDate.atTime(23, 59));
 
         AtomicInteger success = new AtomicInteger();

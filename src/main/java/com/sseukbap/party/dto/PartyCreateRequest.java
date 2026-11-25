@@ -39,7 +39,9 @@ public record PartyCreateRequest(
         Integer capacity,
 
         @Size(max = 50, message = "입력값을 확인해 주세요.")
-        String memo
+        String memo,
+
+        Boolean isPrivate          // 선택. true면 비공개 식사팟 (11/25 추가). 없으면 false
 ) {
     /** 한마디는 앞뒤 공백을 지우고, 비어 있으면 null로 저장한다. (검증보다 먼저 실행됨) */
     public PartyCreateRequest {
@@ -51,8 +53,19 @@ public record PartyCreateRequest(
         }
     }
 
+    /** 공개 식사팟 (비공개 추가 전에 작성한 코드·테스트가 그대로 동작하도록 둔다) */
+    public PartyCreateRequest(Long restaurantId, LocalDate partyDate, MealType mealType, LocalTime mealTime,
+                              Integer capacity, String memo) {
+        this(restaurantId, partyDate, mealType, mealTime, capacity, memo, null);
+    }
+
     /** 날짜 없이 만드는 경우 (= 오늘 팟). 날짜 추가 전에 작성한 코드·테스트가 그대로 동작하도록 둔다. */
     public PartyCreateRequest(Long restaurantId, MealType mealType, LocalTime mealTime, Integer capacity, String memo) {
-        this(restaurantId, null, mealType, mealTime, capacity, memo);
+        this(restaurantId, null, mealType, mealTime, capacity, memo, null);
+    }
+
+    /** 비공개로 만드는지 (null이면 공개) */
+    public boolean privateParty() {
+        return Boolean.TRUE.equals(isPrivate);
     }
 }

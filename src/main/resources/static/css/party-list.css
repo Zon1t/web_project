@@ -254,6 +254,16 @@
   color: var(--color-bg);
 }
 
+/* 비공개 식사팟 (참여자에게만 보임, 2026-11-25) */
+.party-badge--private {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
 .party-card__foot .btn {
   flex-shrink: 0;
   min-width: 96px;

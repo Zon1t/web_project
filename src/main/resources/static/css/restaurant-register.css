@@ -25,6 +25,16 @@
   border-top: 1px solid var(--color-border-light);
 }
 
+/* URL 형식 안내 (입력칸 바로 아래): 첫 줄은 무엇이 틀렸는지, 다음 줄은 어떻게 고치는지 */
+.url-error {
+  font-size: var(--font-size-sm);
+}
+
+.url-error strong {
+  display: block;
+  font-weight: var(--font-weight-bold);
+}
+
 #form-message:empty,
 .similar-names:empty,
 .check-result:empty {

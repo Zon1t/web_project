@@ -75,6 +75,11 @@
     if (!document.hidden && chat.active) pollChats(); // 탭으로 돌아오면 바로 새 메시지 확인
   });
   window.addEventListener('pagehide', stopChat); // 화면을 떠나면 폴링 중단
+  // 뒤로 가기로 저장해 둔 화면(bfcache)이 그대로 돌아오면, 떠날 때 멈춘 대화가 꺼진 채 남는다.
+  // 상세를 다시 받아 대화창·폴링을 다시 켜고, 떠나 있던 동안 바뀐 일정·인원도 반영한다.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) loadDetail(false);
+  });
 
   // partyId가 숫자가 아니면 서버에 묻지 않고 바로 '없는 식사팟' 화면
   if (!/^[1-9]\d*$/.test(partyId || '')) {

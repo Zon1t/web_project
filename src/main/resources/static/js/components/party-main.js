@@ -197,7 +197,7 @@
       '<span class="pm-card__top"><b class="pm-card__name">' + esc(p.restaurantName) + '</b>' + statusBadge(p.status) + '</span>' +
       '<span class="pm-card__info">' + esc(MEAL_TYPE_LABELS[p.mealType]) + ' ' + esc(p.time) +
       ' · 참석 확정 ' + p.confirmedCount + ' / ' + p.memberCount + '명' +
-      (p.myConfirmed ? ' · <span class="pm-card__mine">내 참여 확정</span>' : '') + '</span>' +
+      (p.myConfirmed ? ' · <span class="pm-card__mine">내 참석 확정</span>' : '') + '</span>' +
       '<span class="pm-card__sub">' + place + ' · 상세 보기 &gt;</span>' +
       '</a></li>'
     );
@@ -206,10 +206,13 @@
   /* ===================== 오늘의 식사팟 ===================== */
 
   /*
-   * 오늘 모집 중인 식사팟 목록 (2026-11-23 개편: 맨 위 카드에 있던 '같이 먹기' 목록을 옮겨 와 항상 보여 준다)
-   *   - [점심 | 저녁] 탭, 처음엔 지금 끼니 (14:00 전 점심, 그 뒤 저녁)
-   *   - 줄: 시간 · 식당 · 인원 · [참여] (참여 전 확인 창 → 참여 후 메인 그대로, 맨 위 '내 식사' 슬롯이 채워짐)
-   *   - 이미 그 끼니에 참여 중이면 [참여] 비활성 (같은 날짜·끼니에는 팟 하나만)
+   * 오늘의 식사팟 목록 (2026-11-23 개편, 2026-11-25 T1: 참여 중·마감 식사팟도 보여 준다)
+   *   - [점심 | 저녁] 탭, 처음엔 지금 끼니 (14:00 전 점심, 그 뒤 저녁). 탭 숫자 = 그 끼니 식사팟 전체 수
+   *   - 목록 API 결과 전체(FINISHED·DELETED는 서버가 이미 뺌)를 세 그룹으로 정렬, 그룹 안에서는 시간 빠른 순
+   *       ① 참여 가능 ② 참여 중 ③ 참여 불가 (정원 마감·모집 마감·같은 끼니에 이미 참여 중)
+   *   - 줄: 시간 · 식당(상세 링크) · 인원 · 버튼
+   *       참여 가능 → [참여] (참여 전 확인 창) / 참여 중 → [식사팟 보기] / 참여 불가 → 흐리게 + 이유 글 + [참여] 비활성
+   *   - 최대 4줄. 더 있으면 [전체 보기 (N)] → 식사팟 목록(오늘·그 끼니 탭)
    *   - 아래: '원하는 시간이나 식당이 없나요?' + [식사팟 만들기]
    * 참여하면 document에 'sseukbap:party-joined' (detail.source = 'today-parties')를 보낸다.
    */
@@ -258,28 +261,29 @@
     const meal = today.meal;
     const ofMeal = today.parties.filter((p) => p.mealType === meal);
     const joinedThisMeal = ofMeal.some((p) => p.joined);
-    const open = ofMeal.filter((p) => !p.joined && JOINABLE.includes(p.status));
-    const shown = open.slice(0, TODAY_PARTY_LIMIT);
+    const sorted = ofMeal
+      .map((p) => ({ p, group: rowGroup(p, joinedThisMeal) }))
+      .sort((a, b) => a.group - b.group || String(a.p.time).localeCompare(String(b.p.time)));
+    const shown = sorted.slice(0, TODAY_PARTY_LIMIT);
+    const joinableCount = sorted.filter((r) => r.group === GROUP.JOINABLE).length;
     const label = MEAL_TYPE_LABELS[meal];
 
     const list = shown.length === 0
-      ? '<p class="pm-list__empty">지금 모집 중인 ' + label + ' 식사팟이 없어요.</p>'
-      : '<ul class="pm-list">' + shown.map((p) => todayRowHtml(p, joinedThisMeal)).join('') + '</ul>';
+      ? '<p class="pm-list__empty">열린 ' + label + ' 식사팟이 없어요. 직접 만들어 밥친구를 모아 보세요</p>'
+      : '<ul class="pm-list">' + shown.map((r) => todayRowHtml(r.p, r.group, joinedThisMeal)).join('') + '</ul>';
 
     const body =
       '<div class="pm-today' + (dir ? ' pm-today--' + dir : '') + '">' +
-      '<p class="pm-today__count"><span>' + label + ' 모집 중 <b>' + open.length + '</b>개</span>' +
-      (open.length > TODAY_PARTY_LIMIT
-        ? '<a class="pm-section__more" href="' + listUrl(meal) + '">전체 보기 &gt;</a>' : '') +
-      '</p>' +
+      (ofMeal.length
+        ? '<p class="pm-today__count"><span>' + label + ' 식사팟 <b>' + ofMeal.length + '</b>개 · 참여 가능 ' + joinableCount + '개</span>' +
+          (ofMeal.length > TODAY_PARTY_LIMIT
+            ? '<a class="pm-section__more" href="' + listUrl(meal) + '">전체 보기 (' + ofMeal.length + ') &gt;</a>' : '') +
+          '</p>'
+        : '') +
       list +
-      (joinedThisMeal && shown.length
-        ? '<p class="pm-today__note">이미 오늘 ' + label + ' 식사팟에 참여 중이라 다른 팟에는 참여할 수 없어요.</p>' : '') +
       '<p class="pm-today__message" role="alert">' + esc(message || '') + '</p>' +
       '<div class="pm-create">' +
-      '<p class="pm-create__title">' + (open.length === 0
-        ? '먼저 만들면 다른 사람이 참여할 수 있어요'
-        : '원하는 시간이나 식당이 없나요?') + '</p>' +
+      (ofMeal.length ? '<p class="pm-create__title">원하는 시간이나 식당이 없나요?</p>' : '') +
       '<a class="btn btn--primary pm-create__btn" href="' + partyApi.createUrl(null, partyApi.today()) + '">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>' +
       '식사팟 만들기</a>' +
@@ -321,21 +325,44 @@
   }
 
   function mealCount(meal) {
-    return today.parties.filter((p) => p.mealType === meal && !p.joined && JOINABLE.includes(p.status)).length;
+    return today.parties.filter((p) => p.mealType === meal).length;
   }
 
-  function todayRowHtml(p, joinedThisMeal) {
-    const full = p.capacity && p.memberCount >= p.capacity;
-    const disabled = full || joinedThisMeal;
+  /** 정렬 그룹: 참여 가능 → 참여 중 → 참여 불가 */
+  const GROUP = { JOINABLE: 0, JOINED: 1, BLOCKED: 2 };
+
+  function rowGroup(p, joinedThisMeal) {
+    if (p.joined) return GROUP.JOINED;
+    return blockedReason(p, joinedThisMeal) ? GROUP.BLOCKED : GROUP.JOINABLE;
+  }
+
+  /** 참여할 수 없는 이유 (없으면 '') */
+  function blockedReason(p, joinedThisMeal) {
+    if (p.status === 'CLOSED') return '모집 마감';
+    if (p.status === 'FULL' || !JOINABLE.includes(p.status) || (p.capacity && p.memberCount >= p.capacity)) return '정원 마감';
+    if (joinedThisMeal) return '이미 ' + MEAL_TYPE_LABELS[p.mealType] + ' 식사팟 참여 중';
+    return '';
+  }
+
+  function todayRowHtml(p, group, joinedThisMeal) {
+    const reason = group === GROUP.BLOCKED ? blockedReason(p, joinedThisMeal) : '';
+    let action;
+    if (group === GROUP.JOINED) {
+      action = '<a class="btn btn--primary pm-row__join" href="' + partyApi.detailUrl(p.partyId) + '">식사팟 보기</a>';
+    } else {
+      action = '<button type="button" class="btn pm-row__join" data-action="join" data-party-id="' + p.partyId + '"' +
+        (reason ? ' disabled aria-label="참여 (' + esc(reason) + ')"' : '') + '>참여</button>';
+    }
     return (
-      '<li class="pm-row">' +
+      '<li class="pm-row' + (group === GROUP.BLOCKED ? ' pm-row--blocked' : '') + (group === GROUP.JOINED ? ' pm-row--joined' : '') + '">' +
       '<span class="pm-row__time">' + esc(p.time) + '</span>' +
       '<a class="pm-row__name" href="' + partyApi.detailUrl(p.partyId) + '">' + esc(p.restaurantName) + '</a>' +
+      (p.isPrivate ? '<span class="pm-row__private" title="비공개 식사팟">' + partyApi.lockIcon(13) + '<span class="sr-only">비공개</span></span>' : '') +
+      (group === GROUP.JOINED ? '<span class="pm-row__tag">참여 중</span>' : '') +
+      (reason ? '<span class="pm-row__reason">' + esc(reason) + '</span>' : '') +
       '<span class="pm-row__meta">' + p.memberCount + ' / ' + p.capacity + '명' +
       (p.status === 'SCHEDULED' ? ' · 일정 확정' : '') + '</span>' +
-      '<button type="button" class="btn pm-row__join" data-action="join" data-party-id="' + p.partyId + '"' +
-      (disabled ? ' disabled' : '') +
-      (joinedThisMeal ? ' title="같은 시간대에 이미 참여 중인 식사팟이 있어요"' : '') + '>참여</button>' +
+      action +
       '</li>'
     );
   }

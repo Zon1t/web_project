@@ -53,15 +53,39 @@ class PartyJoinConcurrencyTest {
     @Test
     void 남은_자리가_2개일_때_4명이_동시에_참여하면_2명만_성공한다() throws Exception {
         // 정원 3 = 방장(user01) + 빈자리 2
+        int[] result = joinAtOnce(3, List.of("user02", "user03", "user04", "user05"));
+
+        assertThat(result[0]).isEqualTo(2);
+        assertThat(result[1]).isEqualTo(2);
+        assertThat(partyMemberRepository.countByPartyId(partyId)).isEqualTo(3);
+        assertThat(mealPartyRepository.findById(partyId).orElseThrow().getStatus()).isEqualTo(PartyStatus.FULL);
+    }
+
+    @Test
+    void 마지막_1자리에_2명이_동시에_참여하면_1명만_성공한다() throws Exception {
+        // 정원 2 = 방장(user01) + 빈자리 1 (2026-11-25 T6 P2)
+        int[] result = joinAtOnce(2, List.of("user02", "user03"));
+
+        assertThat(result[0]).isEqualTo(1);
+        assertThat(result[1]).isEqualTo(1);
+        assertThat(partyMemberRepository.countByPartyId(partyId)).isEqualTo(2);
+        assertThat(mealPartyRepository.findById(partyId).orElseThrow().getStatus()).isEqualTo(PartyStatus.FULL);
+    }
+
+    /**
+     * user01이 정원 capacity인 팟을 만들고, joinerLoginIds가 한꺼번에 참여한다.
+     * @return {성공 수, PARTY_FULL 수}
+     */
+    private int[] joinAtOnce(int capacity, List<String> joinerLoginIds) throws Exception {
         Member host = memberRepository.findByLoginId("user01").orElseThrow();
         // 트랜잭션 없이 커밋되는 테스트라 더미 팟을 숨길 수 없다. 더미 팟이 없는 14일 후 날짜로 만든다. ('한 끼에 팟 하나' 규칙)
         LocalDate partyDate = LocalDate.now().plusDays(PartyTimePolicy.MAX_DAYS_AHEAD);
         partyId = partyService.createParty(
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
-                        partyDate, MealType.LUNCH, LocalTime.of(12, 0), 3, null),
+                        partyDate, MealType.LUNCH, LocalTime.of(12, 0), capacity, null),
                 host.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();
 
-        List<Long> joinerIds = List.of("user02", "user03", "user04", "user05").stream()
+        List<Long> joinerIds = joinerLoginIds.stream()
                 .map(id -> memberRepository.findByLoginId(id).orElseThrow().getMemberId())
                 .toList();
 
@@ -75,7 +99,7 @@ class PartyJoinConcurrencyTest {
             futures.add(executor.submit(() -> {
                 start.await();
                 try {
-                    partyMemberService.joinParty(partyId, memberId);
+                    partyMemberService.joinParty(partyId, memberId, PartyTestSupport.MORNING);
                     success.incrementAndGet();
                 } catch (BusinessException e) {
                     if (e.getErrorCode() == ErrorCode.PARTY_FULL) {
@@ -92,11 +116,7 @@ class PartyJoinConcurrencyTest {
             future.get(30, TimeUnit.SECONDS);   // 스레드 안에서 예상 밖 예외가 나면 여기서 테스트 실패
         }
         executor.shutdown();
-
-        assertThat(success.get()).isEqualTo(2);
-        assertThat(full.get()).isEqualTo(2);
-        assertThat(partyMemberRepository.countByPartyId(partyId)).isEqualTo(3);
-        assertThat(mealPartyRepository.findById(partyId).orElseThrow().getStatus()).isEqualTo(PartyStatus.FULL);
+        return new int[] {success.get(), full.get()};
     }
 
     /** 커밋된 테스트 데이터 정리: 대화 → 참여자 → 팟 순서 (FK 때문) */

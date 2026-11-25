@@ -181,7 +181,7 @@ class PartyFutureDateTest {
     void 내일_팟도_참여하고_일정을_확정할_수_있다() {
         Long partyId = create(TOMORROW, MealType.LUNCH, "12:00", LATE_NIGHT);
 
-        partyMemberService.joinParty(partyId, guest.getMemberId());
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
         // 오늘 밤이라도 내일 11:30 일정은 '지금 이후'라 가능
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(LocalTime.of(11, 30), "정문", null),
                 host.getMemberId(), LATE_NIGHT);

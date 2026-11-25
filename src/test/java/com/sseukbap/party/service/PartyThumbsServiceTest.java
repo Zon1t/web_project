@@ -198,11 +198,11 @@ class PartyThumbsServiceTest {
      */
     private Long finishedParty(LocalTime mealTime, int daysAgo, boolean guestConfirmed) {
         Long partyId = createParty(mealTime);
-        partyMemberService.joinParty(partyId, guest.getMemberId());
+        partyMemberService.joinParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
         partyHostService.updateSchedule(partyId, new PartyScheduleUpdateRequest(mealTime, "정문", null),
                 host.getMemberId(), NINE_AM);   // 방장은 일정을 정하면 자동 확정
         if (guestConfirmed) {
-            partyMemberService.confirmParty(partyId, guest.getMemberId());
+            partyMemberService.confirmParty(partyId, guest.getMemberId(), PartyTestSupport.MORNING);
         }
         partyBatchService.finishParty(partyId, TODAY.atTime(23, 59));   // 스케줄러와 같은 처리로 FINISHED
 

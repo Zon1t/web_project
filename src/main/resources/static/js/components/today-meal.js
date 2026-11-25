@@ -11,9 +11,9 @@
  *
  * 슬롯 상태
  *   - 찬 슬롯: 시간·식당·장소·인원 + 진행 막대(참여 → 일정 확정 → 참석 확정 → 식사 → 따봉) + 지금 할 일 버튼
- *       일정 미정 → 방장이 정하는 중 / 일정 확정·내 확정 전 → [참석 확정] / 확정 완료 → 만날 곳
+ *       일정 미정 → 방장이 정하는 중 (내가 방장이면 [일정 정하기]) / 일정 확정·내 확정 전 → [참석 확정] / 확정 완료 → 만날 곳
  *       식사 완료 → 따봉 대상이면 [따봉], 아니면 '식사 완료'
- *   - 빈 슬롯: 누르면 식사팟 목록(그 날짜·끼니 탭)으로 이동. 모집 중인 팟 개수를 함께 보여 준다
+ *   - 빈 슬롯: 참여할 수 있는 팟이 있으면 식사팟 목록(그 날짜·끼니 탭), 없으면 식사팟 만들기로 이동 (2026-11-25 T5)
  *   - 지난 끼니의 빈 슬롯(오늘 점심 14:00 이후 등): 흐리게, 누를 수 없음
  *
  * 처음 날짜: 오늘. 단, 오늘 식사 시간이 다 끝났고(20:00 이후) 오늘 팟이 없으면 내일.
@@ -159,6 +159,10 @@
         // 목록에는 식사 완료(FINISHED) 팟이 없어서, 오늘 끝난 팟은 my/today에서 찾는다
         party = mineOfDay.find((p) => p.mealType === meal && p.status === 'FINISHED') || null;
       }
+      // 일정 미정 팟은 내가 방장인지 알아야 할 일을 정할 수 있다 (목록·my/today 응답에는 방장 여부가 없음)
+      if (party && party.status !== 'FINISHED' && !party.meetPlace && party.isHost === undefined) {
+        party = await withHostFlag(party);
+      }
       result[meal] = { party, pending: false, recruitingCount };
     }
 
@@ -172,6 +176,16 @@
       });
     }
     return result;
+  }
+
+  /** 상세 조회로 내가 방장인지 붙인다. 실패하면 참여자로 본다 */
+  async function withHostFlag(party) {
+    try {
+      const d = await partyApi.getDetail(party.partyId);
+      return Object.assign({}, party, { isHost: d.myRole === 'HOST' });
+    } catch (err) {
+      return Object.assign({}, party, { isHost: false });
+    }
   }
 
   /** my/today(가까운 2개)에 없는 팟: 상세 조회로 장소·확정 정보를 채운다. 실패하면 목록 정보만 */
@@ -189,6 +203,7 @@
         confirmedCount: d.confirmedCount,
         myConfirmed: d.myConfirmed,
         meetPlace: d.schedule ? d.schedule.meetPlace : null,
+        isHost: d.myRole === 'HOST',
       };
     } catch (err) {
       return Object.assign({ partyDate: day, confirmedCount: 0, myConfirmed: false, meetPlace: null }, item);
@@ -206,19 +221,21 @@
     return confirmedSlotHtml(p);
   }
 
-  // 빈 슬롯: 누르면 그 날짜·끼니의 식사팟 목록
+  // 빈 슬롯: 참여할 수 있는 팟이 있으면 그 날짜·끼니의 식사팟 목록, 없으면 식사팟 만들기
   function emptySlotHtml(meal, count) {
     const label = MEAL_LABELS[meal];
-    const href = partyApi.LIST_URL + '?date=' + encodeURIComponent(date) + '&mealType=' + meal;
+    const href = count > 0
+      ? partyApi.LIST_URL + '?date=' + encodeURIComponent(date) + '&mealType=' + meal
+      : partyApi.createUrl(null, date);
     return (
       '<a class="tm-slot tm-slot--empty" href="' + href + '">' +
       '<span class="tm-slot__meal">' + label + '</span>' +
       '<span class="tm-slot__plus">' + ICONS.plus + '</span>' +
-      '<strong class="tm-slot__title">' + label + ' 자리가 비어 있어요</strong>' +
+      '<strong class="tm-slot__title">' + label + ' 계획이 아직 없어요</strong>' +
       '<span class="tm-slot__desc">' + (count > 0
-        ? '같이 먹을 팟이 ' + count + '개 모집 중이에요'
-        : '아직 모집 중인 팟이 없어요. 먼저 열어 보세요') + '</span>' +
-      '<span class="tm-slot__cta">' + (count > 0 ? '모집 중인 팟 보기' : '식사팟 보러 가기') + ' <span aria-hidden="true">&gt;</span></span>' +
+        ? '참여할 수 있는 ' + label + ' 식사팟이 ' + count + '개 있어요'
+        : '직접 만들어 밥친구를 모아 보세요') + '</span>' +
+      '<span class="tm-slot__cta">' + (count > 0 ? '식사팟 보기' : '식사팟 만들기') + ' <span aria-hidden="true">&gt;</span></span>' +
       '</a>'
     );
   }
@@ -236,6 +253,20 @@
 
   // 참여 중, 일정 미정
   function waitingSlotHtml(p) {
+    if (p.isHost) {
+      // 방장: 내가 정해야 다음 단계로 간다 (T6 P0)
+      return partySlotHtml(p, {
+        step: 1,
+        stepLabel: '일정 정하기',
+        timeTone: 'plain',
+        timeSub: '예정',
+        facts: [factHtml('pin', '장소를 아직 안 정했어요', true), factHtml('people', '참여 ' + p.memberCount + '명')],
+        note: '방장님, 시간과 장소를 정해 주세요',
+        noteTone: 'warning',
+        hint: '일정을 정하면 밥친구들에게 참석 확정을 받아요.',
+        actions: '<a class="btn btn--primary" href="' + partyApi.detailUrl(p.partyId) + '">일정 정하기</a>',
+      });
+    }
     return partySlotHtml(p, {
       step: 1,
       stepLabel: '일정 확정 대기',
@@ -339,12 +370,12 @@
   }
 
   function detailLink(p, primary) {
-    return '<a class="btn' + (primary ? ' btn--primary' : '') + '" href="' + partyApi.detailUrl(p.partyId) + '">팟 보기</a>';
+    return '<a class="btn' + (primary ? ' btn--primary' : '') + '" href="' + partyApi.detailUrl(p.partyId) + '">식사팟 보기</a>';
   }
 
-  // 오늘이면 '1시간 20분 후', 다른 날이면 '확정'
+  // 오늘이면 '1시간 20분 후', 다른 날이면 '일정 확정'
   function timeSub(p) {
-    return partyApi.isToday(p.partyDate || date) ? untilText(p.time) : '확정';
+    return partyApi.isToday(p.partyDate || date) ? untilText(p.time) : '일정 확정';
   }
 
   function loadingHtml() {

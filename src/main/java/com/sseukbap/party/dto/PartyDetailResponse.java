@@ -37,7 +37,8 @@ public record PartyDetailResponse(
         LocalDateTime cancelDeadline,            // 기준 시간 30분 전
         List<PartyMemberResponse> members,
         PartyRole myRole,
-        boolean myConfirmed
+        boolean myConfirmed,
+        boolean isPrivate                        // 비공개 식사팟인지 (11/25). 초대 코드는 invite-link API로 받는다
 ) {
 
     /**
@@ -78,7 +79,8 @@ public record PartyDetailResponse(
                 PartyTimePolicy.getDeadline(party.getPartyDate(), party.getBaseTime()),
                 members.stream().map(pm -> PartyMemberResponse.of(party, pm)).toList(),
                 myRole,
-                me != null && me.isConfirmed()
+                me != null && me.isConfirmed(),
+                party.isPrivateParty()
         );
     }
 }

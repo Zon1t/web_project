@@ -85,7 +85,7 @@ class PartyBatchServiceTest {
         flushAndClear();
 
         assertThat(statusOf(partyId)).isEqualTo(PartyStatus.FINISHED);
-        assertThat(lastChat(partyId)).isEqualTo("식사가 완료되었습니다");
+        assertThat(lastChat(partyId)).isEqualTo("식사가 끝났어요");
     }
 
     @Test
@@ -104,7 +104,7 @@ class PartyBatchServiceTest {
         Long deleted = createParty(LocalTime.of(12, 0));
         partyService.deleteParty(deleted, host.getMemberId());
         Long full = createParty(LocalTime.of(12, 0), 2);
-        partyMemberService.joinParty(full, user02.getMemberId());   // FULL
+        partyMemberService.joinParty(full, user02.getMemberId(), PartyTestSupport.MORNING);   // FULL
         flushAndClear();
 
         List<Long> targets = partyBatchService.findFinishTargetIds(TODAY.atTime(12, 1));
@@ -135,7 +135,7 @@ class PartyBatchServiceTest {
     @Test
     void 완료된_팟은_참여_불가_대화는_읽기_전용() {
         Long partyId = createParty(LocalTime.of(12, 0));
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         partyBatchService.finishParty(partyId, TODAY.atTime(12, 1));
         flushAndClear();
 
@@ -196,7 +196,7 @@ class PartyBatchServiceTest {
     /** 대화 3개짜리 팟: 생성(시스템) + user02 참여(시스템) + user02 메시지 */
     private Long createPartyWithChat() {
         Long partyId = createParty(LocalTime.of(12, 0));
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         partyChatService.createChat(partyId, new PartyChatCreateRequest("맛있게 드세요"), user02.getMemberId());
         return partyId;
     }

@@ -93,7 +93,7 @@ class PartyEntityMappingTest {
                 restaurant, host, LocalDate.now(), MealType.LUNCH, LocalTime.of(12, 30), 4, "테스트 팟"));
         partyMemberRepository.save(PartyMember.create(party, host));
         partyMemberRepository.save(PartyMember.create(party, guest));
-        PartyChat systemChat = partyChatRepository.save(PartyChat.createSystem(party, "점심요정님이 참여했습니다."));
+        PartyChat systemChat = partyChatRepository.save(PartyChat.createSystem(party, "점심요정님이 참여했어요."));
         partyChatRepository.save(PartyChat.createText(party, guest, "안녕하세요"));
 
         em.flush();   // INSERT SQL을 지금 DB로 보낸다 (컬럼·시퀀스·제약조건 오류가 여기서 드러남)

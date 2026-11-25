@@ -65,7 +65,7 @@ public class PartyBatchService {
         }
 
         party.finish();
-        partyChatRepository.save(PartyChat.createSystem(party, "식사가 완료되었습니다"));
+        partyChatRepository.save(PartyChat.createSystem(party, "식사가 끝났어요"));
         return true;
     }
 

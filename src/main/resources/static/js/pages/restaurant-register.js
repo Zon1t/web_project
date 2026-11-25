@@ -23,6 +23,12 @@
   const LABELS = restaurantApi.CATEGORY_LABELS;
   const EXAMPLES = restaurantApi.CATEGORY_EXAMPLES;
   const CATEGORY_HINT_DEFAULT = '후보를 고르면 네이버 분류로 카테고리를 미리 골라 둬요.';
+  // 등록 후 돌아갈 수 있는 화면 (returnTo 허용 목록)
+  const RETURN_TARGETS = {
+    'party-create': (restaurantId) => '/party-create.html?restaurantId=' + encodeURIComponent(restaurantId) + '&restore=1',
+  };
+  const params = new URLSearchParams(location.search);
+  const returnTo = Object.prototype.hasOwnProperty.call(RETURN_TARGETS, params.get('returnTo')) ? params.get('returnTo') : null;
 
   const els = {
     form: document.getElementById('register-form'),
@@ -49,6 +55,15 @@
 
   renderCategoryChips();
   bindEvents();
+  prefillName();
+
+  /** ?name= 으로 이름 칸을 미리 채운다 (식사팟 만들기에서 검색한 이름) */
+  function prefillName() {
+    const name = (params.get('name') || '').trim().slice(0, NAME_MAX);
+    if (!name || els.name.value) return;
+    els.name.value = name;
+    els.name.dispatchEvent(new Event('input', { bubbles: true })); // 비슷한 이름 보여 주기·글자 수 표시
+  }
 
   /* ---------- 카테고리 칩 ---------- */
 
@@ -424,7 +439,9 @@
       const { restaurantId } = await restaurantApi.register({
         mapUrl: url, name, category, placeName: place.name, placeAddress: place.address,
       });
-      location.href = '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
+      location.href = returnTo
+        ? RETURN_TARGETS[returnTo](restaurantId)
+        : '/restaurant-detail.html?id=' + encodeURIComponent(restaurantId);
     } catch (err) {
       if (err.statusCode === 401) return;
       setFormMessage(err.message);

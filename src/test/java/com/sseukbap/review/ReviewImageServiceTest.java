@@ -46,8 +46,10 @@ class ReviewImageServiceTest {
 
     @BeforeEach
     void setUp() {
+        // DB에 있는 식당 아무 곳 (숨김·구내식당 제외). 이름으로 찾으면 데이터에 따라 없을 수 있다 (2026-11-25)
+        // 테스트 안에서 새로 만들지 않는 이유: 삭제 테스트가 작성을 실제로 커밋해서 새 식당이 DB에 남는다
         hongId = restaurantRepository.findAll().stream()
-                .filter(r -> r.getName().equals("홍반점"))
+                .filter(r -> !r.isHidden() && !r.isCafeteria())
                 .findFirst()
                 .map(Restaurant::getRestaurantId)
                 .orElseThrow();

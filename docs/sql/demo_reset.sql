@@ -1,7 +1,8 @@
 -- =====================================================================
 -- demo_reset.sql : 시연 직전 DB 한 번에 초기화 (2026-11-24, A4)
 --   테이블을 모두 지우고 00 → 01 → 02 → 03 → 04 → 05 → 08_cafe_data → 08_account_admin → 10_email_login 순서로 다시 만든다.
---   (2026-11-25 T3) 시연 계정은 이메일로 로그인한다: user01@samsung.com ~ user05, demo01@samsung.com ~ demo10 / test1234!
+--   (2026-11-25 T3) 시연 계정은 아이디 또는 회사 이메일로 로그인한다: user01 ~ user05, demo01 ~ demo10 (이메일은 아이디@samsung.com) / test1234!
+--   (2026-11-25 T4) 비공개 식사팟 컬럼(11_private_party.sql)은 01_ddl.sql에 이미 들어 있어서 따로 부르지 않는다.
 --   날짜는 모두 실행일 기준이라, 발표 당일 아침(또는 리허설 직후)에 실행하면
 --     - 오늘 점심·저녁 식사팟 (모집중·일정 확정·정원 마감·모집 마감)
 --     - 내일 이후 다가오는 식사팟
@@ -36,5 +37,5 @@ SELECT (SELECT COUNT(*) FROM MEMBER)                                       AS ME
        (SELECT COUNT(*) FROM RESTAURANT)                                   AS RESTAURANTS,   -- 66 (구내식당 1 + 식당 57 + 카페 8)
        (SELECT COUNT(*) FROM MEAL_PARTY WHERE PARTY_DATE = TRUNC(SYSDATE)) AS TODAY_PARTIES, -- 5
        (SELECT LOGIN_ID FROM MEMBER WHERE ROLE = 'ADMIN')                  AS ADMIN_ID,      -- user05
-       (SELECT COUNT(*) FROM MEMBER WHERE EMAIL IS NOT NULL)               AS WITH_EMAIL     -- 15 (이메일로 로그인 가능)
+       (SELECT COUNT(*) FROM MEMBER WHERE EMAIL IS NOT NULL)               AS WITH_EMAIL     -- 15 (비밀번호 찾기·이메일 로그인 가능)
   FROM DUAL;

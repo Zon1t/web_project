@@ -154,7 +154,7 @@ class ReviewServiceTest {
     @Test
     void 작성_없는_태그면_INVALID_TAG_없는_식당이면_404() {
         Long me = user03Id();
-        assertError(() -> reviewService.createReview(restaurantId, me, "좋아요", List.of("1", "14"), null), ErrorCode.INVALID_TAG, null);
+        assertError(() -> reviewService.createReview(restaurantId, me, "좋아요", List.of("1", "9999"), null), ErrorCode.INVALID_TAG, null);   // 14는 06_add_tags로 생겨서 없는 번호로 (2026-11-25)
         assertError(() -> reviewService.createReview(restaurantId, me, "좋아요", List.of("abc"), null), ErrorCode.INVALID_TAG, null);
         assertError(() -> reviewService.createReview(-1L, me, "좋아요", null, null), ErrorCode.RESTAURANT_NOT_FOUND, null);
     }

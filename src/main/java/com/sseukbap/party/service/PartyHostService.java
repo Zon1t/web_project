@@ -8,6 +8,7 @@ import com.sseukbap.party.dto.PartyStatusUpdateRequest;
 import com.sseukbap.party.dto.PartyStatusUpdateResponse;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.entity.PartyChat;
+import com.sseukbap.party.entity.PartyMember;
 import com.sseukbap.party.repository.PartyChatRepository;
 import com.sseukbap.party.repository.PartyMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class PartyHostService {
     // ===== 일정 확정·수정 =====
 
     public PartyScheduleUpdateResponse updateSchedule(Long partyId, PartyScheduleUpdateRequest request, Long memberId) {
-        return updateSchedule(partyId, request, memberId, LocalDateTime.now());
+        return updateSchedule(partyId, request, memberId, PartyTimePolicy.now());
     }
 
     /** 현재 시각을 밖에서 받는 버전 (테스트에서 시각을 고정하려고 따로 둠) */
@@ -68,11 +69,17 @@ public class PartyHostService {
         // 7~8. 일정 저장 + RECRUITING이면 SCHEDULED (그 외 상태 유지)
         party.updateSchedule(request.confirmedTime(), request.meetPlace(), request.confirmMemo());
 
+        // 8-1. 방장은 일정을 정하면 자동으로 참석 확정 (2026-11-23, 일정 수정으로 초기화돼도 다시 확정)
+        //      6번의 초기화는 DB에 바로 반영되는 UPDATE라, 방장 참여 정보는 반드시 그 뒤에 읽어야 최신 값이다.
+        partyMemberRepository.findByPartyIdAndMemberId(partyId, memberId)
+                .filter(host -> !host.isConfirmed())
+                .ifPresent(PartyMember::confirm);
+
         // 9. 시스템 메시지 (최초 / 수정)
         String schedule = request.confirmedTime().format(HH_MM) + " · " + request.meetPlace();
         addSystemMessage(party, isUpdate
-                ? "방장이 일정을 변경했습니다 · " + schedule + ". 참여 확정을 다시 해 주세요"
-                : "방장이 일정을 확정했습니다 · " + schedule);
+                ? "방장이 일정을 바꿨어요 · " + schedule + ". 참석 확정을 다시 해 주세요"
+                : "방장이 일정을 확정했어요 · " + schedule);
 
         return new PartyScheduleUpdateResponse(party.getStatus(), isUpdate);
     }
@@ -97,14 +104,14 @@ public class PartyHostService {
                 throw new BusinessException(ErrorCode.INVALID_STATUS);
             }
             party.close();
-            addSystemMessage(party, "방장이 모집을 마감했습니다");
+            addSystemMessage(party, "방장이 모집을 마감했어요");
         } else {
             // 6. REOPEN: CLOSED만 가능 → 정원이 차 있으면 FULL, 아니면 일정 유무로 SCHEDULED / RECRUITING
             if (!party.getStatus().isReopenable()) {
                 throw new BusinessException(ErrorCode.INVALID_STATUS);
             }
             party.reopen((int) partyMemberRepository.countByPartyId(partyId));
-            addSystemMessage(party, "방장이 모집을 다시 열었습니다");
+            addSystemMessage(party, "방장이 모집을 다시 열었어요");
         }
 
         return new PartyStatusUpdateResponse(party.getStatus());

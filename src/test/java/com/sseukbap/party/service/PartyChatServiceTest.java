@@ -62,12 +62,13 @@ class PartyChatServiceTest {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
 
         partyId = partyService.createParty(
                 new PartyCreateRequest(restaurantRepository.findAll().get(0).getRestaurantId(),
                         MealType.LUNCH, LocalTime.of(12, 0), 4, null),
                 host.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
     }
 
     // ===== 조회 =====
@@ -78,8 +79,8 @@ class PartyChatServiceTest {
 
         assertThat(response.readOnly()).isFalse();
         assertThat(response.chats()).extracting(PartyChatResponse::content).containsExactly(
-                host.getNickname() + "님이 식사팟을 만들었습니다",
-                user02.getNickname() + "님이 참여했습니다");
+                host.getNickname() + "님이 식사팟을 만들었어요",
+                user02.getNickname() + "님이 참여했어요");
         assertThat(response.chats()).allSatisfy(chat -> {
             assertThat(chat.type()).isEqualTo(MessageType.SYSTEM);
             assertThat(chat.nickname()).isNull();

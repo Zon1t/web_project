@@ -8,6 +8,8 @@
  *   GET /restaurants/list
  *   GET /restaurants/{restaurantId}
  *   POST, DELETE /restaurants/{restaurantId}/interest
+ *   GET /restaurants/autocomplete, GET /restaurants/check-map-url, POST /restaurants/register
+ *   POST /restaurants/{restaurantId}/suggestions
  */
 (function () {
   'use strict';
@@ -106,6 +108,85 @@
     },
   ];
 
+  // ⚠️ '/restaurants/autocomplete'처럼 고정 주소 목업은 '/restaurants/{restaurantId}'보다 먼저 등록해야 한다.
+  //    (목업은 등록한 순서대로 찾기 때문에, 뒤에 두면 {restaurantId}가 'autocomplete'를 가로챈다)
+
+  // GET /api/restaurants/autocomplete
+  api.mock('GET', '/restaurants/autocomplete', ({ query }) => {
+    const keyword = (query.keyword || '').trim();
+    if (!keyword || keyword.length > 30) {
+      throw api.mockError(400, 'INVALID_REQUEST', '검색어를 입력해 주세요.');
+    }
+    return restaurants
+      .filter((r) => r.name.includes(keyword))
+      .sort((a, b) =>
+        Number(!a.name.startsWith(keyword)) - Number(!b.name.startsWith(keyword)) ||
+        a.name.localeCompare(b.name, 'ko'))
+      .slice(0, 5)
+      .map((r) => ({ restaurantId: r.restaurantId, name: r.name, category: r.category }));
+  });
+
+  // 목업용 장소 ID 찾기: map.naver.com/.../place/{숫자} 또는 naver.me/{아무 글자}
+  function mockPlaceKey(url) {
+    const place = /^https?:\/\/(m\.)?map\.naver\.com\/.*\/place\/(\d+)/i.exec(url);
+    if (place) return 'place:' + place[2];
+    const short = /^https?:\/\/naver\.me\/(\w+)/i.exec(url);
+    return short ? 'short:' + short[1] : null;
+  }
+
+  // GET /api/restaurants/check-map-url
+  // 목업 규칙: 이름에 '없는'이 들어가면 NOT_FOUND, 'naver.me/xxxx'(12번 식당 링크)는 DUPLICATE
+  api.mock('GET', '/restaurants/check-map-url', ({ query }) => {
+    const url = (query.url || '').trim();
+    const name = (query.name || '').trim();
+    if (!url || !name || name.length > 30) {
+      throw api.mockError(400, 'INVALID_REQUEST', 'URL과 식당 이름을 입력해 주세요.');
+    }
+    const key = mockPlaceKey(url);
+    const fail = (reason, message) => ({ valid: false, reason, message, radiusKm: 4, candidates: [] });
+    if (!key) return fail('INVALID_FORMAT', '네이버 지도 URL만 입력할 수 있습니다.');
+    if (restaurants.some((r) => mockPlaceKey(r.mapUrl) === key)) return fail('DUPLICATE', '이미 등록된 식당입니다.');
+    if (name.includes('없는')) return fail('NOT_FOUND', '존재하지 않는 주소입니다.');
+    // 2026-11-24: 후보 목록 (가까운 지점 / 먼 지점 / 음식점 아님)
+    return {
+      valid: true,
+      reason: null,
+      message: null,
+      radiusKm: 4,
+      candidates: [
+        { name: name + ' 세종대점', address: '서울 광진구 능동로 ...', lat: 37.5502, lng: 127.0731, naverCategory: '음식점>한식',
+          distanceKm: 0.01, suggestedCategory: 'KOREAN', registrable: true, blockReason: null },
+        { name: name + ' 강남점', address: '서울 강남구 ...', lat: 37.4979, lng: 127.0276, naverCategory: '음식점>한식',
+          distanceKm: 7.03, suggestedCategory: 'KOREAN', registrable: false, blockReason: 'OUT_OF_RANGE' },
+        { name: name + ' 편의점', address: '서울 광진구 ...', lat: 37.5495, lng: 127.0735, naverCategory: '생활,편의>편의점',
+          distanceKm: 0.1, suggestedCategory: null, registrable: false, blockReason: 'NOT_A_RESTAURANT' },
+      ],
+    };
+  });
+
+  // POST /api/restaurants/register
+  api.mock('POST', '/restaurants/register', ({ body }) => {
+    const name = (body.name || '').trim();
+    const category = body.category;
+    if (!body.mapUrl || !name || name.length > 30 || !CATEGORIES.includes(category) || category === 'CAFETERIA' ||
+        !body.placeName || !body.placeAddress) {
+      throw api.mockError(400, 'INVALID_REQUEST', '입력값을 확인해 주세요.');
+    }
+    const key = mockPlaceKey(body.mapUrl.trim());
+    if (!key) {
+      throw api.mockError(400, 'INVALID_MAP_URL', '네이버 지도 URL만 입력할 수 있습니다.');
+    }
+    if (restaurants.some((r) => mockPlaceKey(r.mapUrl) === key)) {
+      throw api.mockError(409, 'RESTAURANT_ALREADY_EXISTS', '이미 등록된 식당입니다.');
+    }
+    const restaurantId = Math.max(...restaurants.map((r) => r.restaurantId)) + 1;
+    restaurants.push({
+      restaurantId, name, category, mapUrl: body.mapUrl.trim(), address: '서울 광진구 능동로 ...',
+      lat: 37.5502, lng: 127.0731, thumbsCount30d: 0, reviewCount: 0, interestCount: 0, interested: false, topTags: [],
+    });
+    return { restaurantId };
+  });
+
   // GET /api/restaurants/list
   // 정렬: 따봉 수 내림차순 → 리뷰 수 내림차순 → 등록 순(restaurantId 오름차순)
   api.mock('GET', '/restaurants/list', ({ query }) => {
@@ -148,6 +229,8 @@
       cafeteria: r.category === 'CAFETERIA',
       mapUrl: r.mapUrl,
       address: r.address,
+      lat: r.lat,
+      lng: r.lng,
       topTags: r.topTags,
       thumbsCount30d: r.thumbsCount30d,
       interestCount: r.interestCount,
@@ -179,5 +262,18 @@
     r.interested = false;
     r.interestCount -= 1;
     return { interested: false, interestCount: r.interestCount };
+  });
+
+  // POST /api/restaurants/{restaurantId}/suggestions
+  let nextSuggestionId = 1;
+  api.mock('POST', '/restaurants/{restaurantId}/suggestions', ({ params, body }) => {
+    const content = ((body && body.content) || '').trim();
+    if (!content || content.length > 500) {
+      throw api.mockError(400, 'INVALID_REQUEST', '제안 내용을 입력해 주세요.');
+    }
+    if (!restaurants.some((item) => String(item.restaurantId) === params.restaurantId)) {
+      throw api.mockError(404, 'RESTAURANT_NOT_FOUND', '식당을 찾을 수 없습니다.');
+    }
+    return { suggestionId: nextSuggestionId++ };
   });
 })();

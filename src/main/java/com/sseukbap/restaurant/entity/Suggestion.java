@@ -3,6 +3,8 @@ package com.sseukbap.restaurant.entity;
 import com.sseukbap.member.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -47,11 +49,20 @@ public class Suggestion {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "STATUS", nullable = false, length = 10)
+    private SuggestionStatus status = SuggestionStatus.OPEN;   // 관리자가 처리하면 DONE (2026-11-24)
+
     private Suggestion(Restaurant restaurant, Member member, String content) {
         this.restaurant = restaurant;
         this.member = member;
         this.content = content;
         this.createdAt = LocalDateTime.now();
+    }
+
+    /** 관리자 처리 상태 변경: DONE(처리 완료) / OPEN(되돌리기) (2026-11-24 A3) */
+    public void changeStatus(SuggestionStatus status) {
+        this.status = status;
     }
 
     /** 수정 제안 저장 */

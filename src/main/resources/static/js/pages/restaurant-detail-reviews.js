@@ -6,11 +6,12 @@
  *
  * 하는 일
  *   1. 리뷰 작성: 한줄평(필수, 100자) + 태그(선택, 여러 개). 등록 후 목록 1페이지를 다시 불러온다.
+ *      작성 폼은 처음에 접혀 있고 [리뷰 쓰기]를 누르면 펼쳐진다. 리뷰 목록이 먼저 보이도록 (2026-11-25)
  *   2. 리뷰 목록: 최신순 10개씩, [더보기]로 다음 페이지를 아래에 이어 붙인다.
  *   3. 리뷰 삭제: 내 리뷰에만 [삭제]. 확인 창 → 삭제 → 목록 1페이지 다시 불러오기.
  *   작성·삭제가 성공하면 onChange()를 불러 위쪽 리뷰 수·태그 TOP 3도 갱신한다.
  *
- * 사진(F-09)은 feature/review-image에서 추가한다.
+ * 사진(F-09): 작성 폼에서 1장 선택(jpg·png 5MB, 고를 때 바로 검사) + 미리보기, 목록은 썸네일 → 누르면 원본
  */
 (function (global) {
   'use strict';
@@ -33,8 +34,12 @@
     };
 
     section.innerHTML =
+      '<div class="detail-reviews__head">' +
       '<h2 id="review-title" class="section-title">리뷰<span id="review-count" class="detail-reviews__count"></span></h2>' +
-      renderForm() +
+      '<button id="review-write-toggle" type="button" class="btn btn--primary detail-reviews__write" ' +
+      'aria-expanded="false" aria-controls="review-form-panel">리뷰 쓰기</button>' +
+      '</div>' +
+      '<div id="review-form-panel" class="review-form-panel" hidden>' + renderForm() + '</div>' +
       '<div id="review-list-area" aria-live="polite"></div>';
 
     const els = {
@@ -45,7 +50,18 @@
       formMessage: section.querySelector('#review-form-message'),
       submit: section.querySelector('#review-submit'),
       listArea: section.querySelector('#review-list-area'),
+      formPanel: section.querySelector('#review-form-panel'),
+      writeToggle: section.querySelector('#review-write-toggle'),
+      cancel: section.querySelector('#review-cancel'),
+      image: section.querySelector('#review-image'),
+      photoName: section.querySelector('#review-photo-name'),
+      photoPreview: section.querySelector('#review-photo-preview'),
+      photoRemove: section.querySelector('#review-photo-remove'),
     };
+
+    // 고른 사진 (없으면 null)과 미리보기용 임시 주소
+    let selectedImage = null;
+    let previewUrl = null;
 
     bindEvents();
     loadFirstPage();
@@ -53,6 +69,13 @@
     /* ---------- 이벤트 ---------- */
 
     function bindEvents() {
+      // [리뷰 쓰기] / [취소]: 작성 폼 펼치기·접기
+      els.writeToggle.addEventListener('click', () => setFormOpen(els.formPanel.hidden));
+      els.cancel.addEventListener('click', () => setFormOpen(false));
+      section.addEventListener('click', (event) => {
+        if (event.target.closest('[data-action="write-first"]')) setFormOpen(true);
+      });
+
       els.content.addEventListener('input', () => {
         els.length.textContent = els.content.value.length + ' / ' + reviewApi.CONTENT_MAX;
         if (els.content.value.trim()) setFormMessage('');
@@ -63,16 +86,72 @@
         submitReview();
       });
 
+      // 사진 고르기 / 빼기
+      els.image.addEventListener('change', () => selectImage(els.image.files[0] || null));
+      els.photoRemove.addEventListener('click', () => {
+        selectImage(null);
+        els.image.focus();
+      });
+
       els.listArea.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
         if (!button) return;
         if (button.dataset.action === 'more') loadNextPage();
         if (button.dataset.action === 'retry-reviews') loadFirstPage();
         if (button.dataset.action === 'delete-review') deleteReview(button.dataset.reviewId, button);
+        if (button.dataset.action === 'toggle-image') toggleImage(button);
       });
     }
 
+    /* ---------- 사진 ---------- */
+
+    // 목록의 사진을 누르면 그 리뷰 안에서 크게 펼치고, 다시 누르면 접는다 (C, 2026-11-24)
+    function toggleImage(button) {
+      const item = button.closest('.review-item');
+      const open = !item.classList.contains('is-image-open');
+      item.classList.toggle('is-image-open', open);
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? '사진 작게 보기' : '사진 크게 보기');
+    }
+
+    function selectImage(file) {
+      if (file) {
+        const error = reviewApi.checkImage(file);
+        if (error) {
+          setFormMessage(error);
+          file = null; // 고른 파일은 버리고 이전 상태(사진 없음)로
+        } else {
+          setFormMessage('');
+        }
+      }
+
+      selectedImage = file;
+      if (previewUrl) URL.revokeObjectURL(previewUrl); // 이전 미리보기 주소 정리
+      previewUrl = file ? URL.createObjectURL(file) : null;
+      if (!file) els.image.value = ''; // 같은 파일을 다시 골라도 change가 일어나게
+
+      els.photoName.textContent = file ? file.name : '선택된 파일 없음 (선택, jpg·png 5MB)';
+      els.photoPreview.hidden = !file;
+      els.photoRemove.hidden = !file;
+      if (file) els.photoPreview.src = previewUrl;
+      else els.photoPreview.removeAttribute('src');
+    }
+
     /* ---------- 작성 ---------- */
+
+    /** 작성 폼 펼치기·접기. 펼치면 한줄평 칸으로 이동, 접으면 [리뷰 쓰기]로 돌아온다 */
+    function setFormOpen(open) {
+      els.formPanel.hidden = !open;
+      els.writeToggle.hidden = open;
+      els.writeToggle.setAttribute('aria-expanded', String(open));
+      if (open) {
+        els.content.focus();
+        els.formPanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        setFormMessage('');
+        els.writeToggle.focus();
+      }
+    }
 
     async function submitReview() {
       if (state.submitting) return;
@@ -89,16 +168,30 @@
       setSubmitting(true);
       setFormMessage('');
       try {
-        await reviewApi.create(restaurantId, { content, tagIds });
+        await reviewApi.create(restaurantId, { content, tagIds, image: selectedImage });
         els.form.reset();
+        selectImage(null);
         els.length.textContent = '0 / ' + reviewApi.CONTENT_MAX;
+        setFormOpen(false);
         await loadFirstPage();
         onChange();
+        showCreatedFeedback();
       } catch (err) {
         if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
         setFormMessage(err.message);
       } finally {
         setSubmitting(false);
+      }
+    }
+
+    // 리뷰를 올린 뒤: 토스트 + 맨 위 내 리뷰를 잠깐 강조 (C, 2026-11-24)
+    function showCreatedFeedback() {
+      global.ui.toast('리뷰를 남겼어요. 고마워요!');
+      els.listArea.scrollTop = 0;   // 리뷰 목록이 따로 스크롤되므로 맨 위(새 리뷰)로 (2026-11-26)
+      const mine = els.listArea.querySelector('.review-item.is-mine');
+      if (mine) {
+        mine.classList.add('is-new');
+        setTimeout(() => mine.classList.remove('is-new'), 1600);
       }
     }
 
@@ -166,13 +259,15 @@
     /* ---------- 삭제 ---------- */
 
     async function deleteReview(reviewId, button) {
-      if (!global.confirm('리뷰를 삭제할까요? 삭제하면 되돌릴 수 없습니다.')) return;
+      const ok = await global.ui.confirm({ title: '리뷰를 삭제할까요?', message: '삭제하면 되돌릴 수 없어요.', confirmText: '삭제', danger: true });
+      if (!ok) return;
 
       button.disabled = true;
       try {
         await reviewApi.delete(reviewId);
         await loadFirstPage();
         onChange();
+        global.ui.toast('리뷰를 삭제했어요.');
       } catch (err) {
         if (err.statusCode === 401) return;
         if (err.error === 'REVIEW_NOT_FOUND') {
@@ -182,7 +277,7 @@
           return;
         }
         button.disabled = false;
-        global.alert(err.message);
+        global.ui.toast(err.message, { type: 'error' });
       }
     }
 
@@ -194,6 +289,7 @@
           '<div class="state state--empty">' +
           '<p class="state__title">첫 리뷰를 남겨 주세요</p>' +
           '<p class="state__desc">한줄평과 태그로 이 식당을 알려 주세요.</p>' +
+          '<button type="button" class="btn" data-action="write-first">리뷰 쓰기</button>' +
           '</div>';
         return;
       }
@@ -223,9 +319,13 @@
           review.tags.map((name) => '<li class="detail-tag">#' + esc(name) + '</li>').join('') +
           '</ul>'
         : '';
-      // 사진은 feature/review-image에서 서버 저장을 붙인다. 응답에 오면 썸네일로 보여 준다.
-      const image = typeof review.imageUrl === 'string' && review.imageUrl.startsWith('/uploads/')
-        ? '<img class="review-item__image" src="' + esc(review.imageUrl) + '" alt="리뷰 사진" width="56" height="56" loading="lazy">'
+      // 사진 썸네일. 누르면 이 리뷰 안에서 크게 펼친다 (2026-11-24, 전에는 새 탭). 목업은 blob: 임시 주소
+      const hasImage = typeof review.imageUrl === 'string' &&
+        (review.imageUrl.startsWith('/uploads/') || review.imageUrl.startsWith('blob:'));
+      const image = hasImage
+        ? '<button type="button" class="review-item__image-link" data-action="toggle-image" aria-expanded="false" aria-label="사진 크게 보기">' +
+          '<img class="review-item__image" src="' + esc(review.imageUrl) + '" alt="' + esc(review.nickname) + '님의 리뷰 사진" ' +
+          'width="56" height="56" loading="lazy"></button>'
         : '';
       const deleteButton = review.mine
         ? '<button type="button" class="btn review-item__delete" data-action="delete-review" ' +
@@ -233,7 +333,7 @@
         : '';
 
       return (
-        '<li class="review-item">' +
+        '<li class="review-item' + (review.mine ? ' is-mine' : '') + '">' +
         image +
         '<div class="review-item__body">' +
         '<p class="review-item__meta"><strong>' + esc(review.nickname) + '</strong>' +
@@ -249,17 +349,13 @@
     }
 
     function showLoading() {
-      els.listArea.innerHTML =
-        '<div class="state state--loading">' +
-        '<span class="spinner" aria-hidden="true"></span>' +
-        '<p class="state__desc">리뷰를 불러오는 중…</p>' +
-        '</div>';
+      els.listArea.innerHTML = global.ui.skeleton('row', 3);
     }
 
     function showListError(message) {
       els.listArea.innerHTML =
         '<div class="state state--error">' +
-        '<p class="state__title">리뷰를 불러오지 못했습니다</p>' +
+        '<p class="state__title">리뷰를 불러오지 못했어요</p>' +
         '<p class="state__desc">' + esc(message) + '</p>' +
         '<button type="button" class="btn" data-action="retry-reviews">다시 시도</button>' +
         '</div>';
@@ -293,12 +389,23 @@
       '<legend class="review-tags__legend">태그 <span class="text-muted">(선택, 분류와 관계없이 여러 개 선택 가능)</span></legend>' +
       groups +
       '</fieldset>' +
+      // 사진 (선택): 파일 입력은 눈에 안 보이게 두고 [사진 선택] 라벨로 연다
+      '<div class="review-photo">' +
+      '<input id="review-image" class="sr-only" type="file" accept="image/jpeg,image/png" aria-describedby="review-photo-name">' +
+      '<label for="review-image" class="btn review-photo__pick">사진 선택</label>' +
+      '<img id="review-photo-preview" class="review-photo__preview" alt="선택한 사진 미리보기" hidden>' +
+      '<span id="review-photo-name" class="text-muted review-photo__name">선택된 파일 없음 (선택, jpg·png 5MB)</span>' +
+      '<button id="review-photo-remove" type="button" class="btn btn--text review-photo__remove" hidden>사진 빼기</button>' +
+      '</div>' +
       '<div class="review-form__footer">' +
       '<p id="review-form-message" class="field__message field__message--error" role="alert"></p>' +
       '<span id="review-length" class="text-muted">0 / ' + reviewApi.CONTENT_MAX + '</span>' +
       '</div>' +
       '</div>' +
+      '<div class="review-form__actions">' +
+      '<button id="review-cancel" type="button" class="btn">취소</button>' +
       '<button id="review-submit" type="submit" class="btn btn--primary review-form__submit">등록</button>' +
+      '</div>' +
       '</form>'
     );
   }

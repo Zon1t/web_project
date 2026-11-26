@@ -1,0 +1,654 @@
+/*
+ * party-detail.css — S-12 식사팟 상세 (A)
+ * 색·간격·글꼴은 tokens.css 변수만 쓴다. 버튼·입력·뱃지·상태 화면은 base.css(B)의 것을 쓴다.
+ */
+
+.party-detail-page {
+  padding-top: var(--space-4);
+}
+
+.party-breadcrumb {
+  margin-bottom: var(--space-4);
+}
+
+.party-breadcrumb a:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+/* ---------- 2단 배치: 왼쪽 정보 / 오른쪽 대화 ---------- */
+.party-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+/* 대화창이 없으면(미참여) 왼쪽이 넓게 */
+.party-layout:has(.party-chat[hidden]) {
+  grid-template-columns: minmax(0, 640px);
+}
+
+.party-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* ---------- 제목·상태 ---------- */
+.party-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.party-head__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.party-head__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.party-head__title a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.party-head__title a:hover {
+  color: var(--color-primary);
+}
+
+/* 오늘이 아닌 팟: 제목 옆 날짜 표시 (예: 내일, 11.22 (토)) */
+.party-head__when {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  vertical-align: middle;
+}
+
+/* 제목 옆: 상태 뱃지 + 카테고리 */
+.party-head__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 비공개 식사팟 뱃지 (자물쇠 + '비공개', 2026-11-25) */
+.party-badge--private {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
+/* 진행 3단계는 .my-progress 모양을 그대로 쓰고, 제목 아래에서는 위쪽 여백만 준다 */
+.party-flow {
+  margin: var(--space-1) 0 0;
+}
+
+/* ---------- 일정 정보 ---------- */
+.party-info {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+}
+
+.party-info dt {
+  color: var(--color-text-muted);
+}
+
+.party-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.party-info__schedule {
+  font-weight: var(--font-weight-bold);
+}
+
+/* ---------- 내 버튼 ---------- */
+.party-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.party-actions__row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.party-actions__row .btn {
+  height: 48px;
+  font-size: var(--font-size-md);
+}
+
+.party-actions__row .btn--primary {
+  flex: 1;
+}
+
+.party-actions__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.party-actions__done {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.party-feedback {
+  min-height: 1.6em;
+  font-size: var(--font-size-sm);
+}
+
+.party-feedback--error {
+  color: var(--color-danger);
+}
+
+.party-feedback--success {
+  color: var(--color-success);
+}
+
+/* ---------- 참여자 ---------- */
+.party-members__head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.party-members__head h2 {
+  font-size: var(--font-size-md);
+}
+
+.party-members__item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--font-size-sm);
+}
+
+.party-members__name {
+  overflow-wrap: anywhere;
+}
+
+.party-members__state {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.party-members__state.is-confirmed {
+  color: var(--color-success);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ---------- 방장 메뉴: 대화 입력창 위 버튼 줄 ---------- */
+.party-host-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+  overflow-x: auto;             /* 좁은 화면에서는 줄바꿈 대신 옆으로 밀기 */
+}
+
+/* display:flex가 hidden 속성을 덮어쓰지 않도록 (방장이 아니면 숨긴다) */
+.party-host-bar[hidden] {
+  display: none;
+}
+
+.party-host-bar__label {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.party-host-bar .btn {
+  flex-shrink: 0;
+  height: auto;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+}
+
+.party-host-bar .btn--danger {
+  margin-left: auto;
+}
+
+/* ---------- 대화 ---------- */
+.party-chat {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  height: min(640px, calc(100vh - var(--header-height) - var(--space-10)));
+  min-height: 420px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+/* display:flex가 hidden 속성을 덮어쓰지 않도록 (미참여자에게는 대화창을 숨긴다) */
+.party-chat[hidden] {
+  display: none;
+}
+
+.party-chat__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+}
+
+.party-chat__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.party-chat__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.party-chat__form {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+}
+
+.party-chat__error:empty {
+  display: none;
+}
+
+.party-chat__error {
+  padding: 0 var(--space-3) var(--space-2);
+  background: var(--color-bg);
+}
+
+/* 시스템 메시지: 가운데 회색 */
+.chat-system {
+  align-self: center;
+  max-width: 90%;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-border-light);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+/* 일반 메시지: 남은 왼쪽, 나는 오른쪽 */
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: flex-start;
+  max-width: 75%;
+}
+
+.chat-msg--mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-msg__name {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.chat-msg__bubble {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-msg--mine .chat-msg__bubble {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.chat-msg__time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- 일정 확정 창 ---------- */
+.party-dialog {
+  width: min(440px, calc(100vw - var(--space-8)));
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.party-dialog::backdrop {
+  background: color-mix(in srgb, var(--color-text) 40%, transparent);
+}
+
+.party-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.party-dialog__notice {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+}
+
+.party-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ---------- 좁은 화면: 위아래로 쌓기 ---------- */
+@media (max-width: 960px) {
+  .party-layout,
+  .party-layout:has(.party-chat[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .party-chat {
+    position: static;
+    height: 480px;
+  }
+}
+
+@media (max-width: 640px) {
+  .party-info {
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+/* ===================== 리뉴얼 (방 설명·내 진행·할 일·참여자 칩·말풍선) ===================== */
+.party-head__desc {
+  margin-top: calc(var(--space-1) * -1);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-md);
+  overflow-wrap: anywhere;
+}
+
+/* 내 진행 3단계 */
+.my-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.my-progress__item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.my-progress__item:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  min-width: 12px;
+  border-radius: 1px;
+  background: var(--color-border-light);
+}
+
+.my-progress__item.is-done:not(:last-child)::after {
+  background: var(--color-primary);
+}
+
+.my-progress__dot {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.my-progress__label small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.my-progress__item.is-done {
+  color: var(--color-text);
+}
+
+.my-progress__item.is-done .my-progress__dot {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.my-progress__item.is-current {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.my-progress__item.is-current .my-progress__dot {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+/* 할 일 상자 */
+.party-todo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.party-todo > svg {
+  flex-shrink: 0;
+  color: var(--color-accent-strong);
+}
+
+.party-todo p {
+  flex: 1;
+  min-width: 180px;
+}
+
+.party-todo .btn {
+  flex-shrink: 0;
+}
+
+.party-todo--wait {
+  background: var(--color-surface);
+}
+
+.party-todo--wait > svg {
+  color: var(--color-text-muted);
+}
+
+/* 참여자 아바타 칩 */
+.party-members__item {
+  align-items: center;
+}
+
+.party-members__name {
+  flex: 1;
+}
+
+.member-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.member-avatar.is-confirmed {
+  box-shadow: 0 0 0 2px var(--color-primary);   /* 색은 사람마다 다르고(profile-card.css), 참석 확정은 테두리로 */
+}
+
+.member-avatar--sm {
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-xs);
+}
+
+.party-members__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 말풍선 */
+.chat-msg {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 82%;
+}
+
+.chat-msg__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-msg--mine .chat-msg__main {
+  align-items: flex-end;
+}
+
+.chat-msg__line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.chat-msg--mine .chat-msg__line {
+  flex-direction: row-reverse;
+}
+
+.chat-msg__bubble {
+  border: none;
+  border-radius: 4px 16px 16px 16px;
+  background: var(--color-surface);
+}
+
+.chat-msg--mine .chat-msg__bubble {
+  border-radius: 16px 4px 16px 16px;
+}
+
+.chat-msg__time {
+  flex-shrink: 0;
+}
+
+@keyframes chat-pop {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.chat-msg,
+.chat-system {
+  animation: chat-pop 0.22s ease-out;
+}
+
+@media (max-width: 480px) {
+  .my-progress__label small {
+    display: none;
+  }
+  .my-progress__item {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* 대화창 배경(회색) 위에서 남의 말풍선·아바타가 보이도록 흰 바탕 */
+.chat-msg:not(.chat-msg--mine) .chat-msg__bubble {
+  background: var(--color-bg);
+  box-shadow: 0 1px 2px rgba(27, 36, 48, 0.08);
+}
+
+.chat-msg__avatar {
+  box-shadow: 0 0 0 1px var(--color-border-light);
+}
+
+/* 뒤로 가기 (2026-11-25) */
+.party-back {
+  margin-bottom: var(--space-2);
+}
+
+/* 참여자 이름 버튼 (누르면 프로필 카드) */
+.party-members__name .pc-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.chat-msg__name.pc-name {
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
+}

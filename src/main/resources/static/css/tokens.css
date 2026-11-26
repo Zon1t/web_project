@@ -3,15 +3,28 @@
  *
  * 색·간격·글꼴·둥글기는 이 파일의 변수만 사용한다.
  *   예) color: var(--color-text);  padding: var(--space-4);
- * 기준: 와이어프레임 'S-01 메인 디자인 시안 A' (Noto Sans KR, 파랑 포인트 #2D6CDF)
+ * 기준: 와이어프레임 'S-01 메인 디자인 시안 A' (파랑 포인트 #2D6CDF), 글꼴은 Pretendard (2026-11-20)
  * 그라데이션은 쓰지 않는다 (CLAUDE.md 7장).
  */
+/* ---------- 글꼴 파일: Pretendard (OFL, static/fonts/LICENSE.txt) — 한글 2,350자 서브셋 ---------- */
+@font-face { font-family: 'Pretendard'; font-weight: 400; font-display: swap; src: url('/fonts/Pretendard-Regular.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 500; font-display: swap; src: url('/fonts/Pretendard-Medium.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 600; font-display: swap; src: url('/fonts/Pretendard-SemiBold.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 700; font-display: swap; src: url('/fonts/Pretendard-Bold.subset.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 800; font-display: swap; src: url('/fonts/Pretendard-ExtraBold.subset.woff2') format('woff2'); }
+
 :root {
   /* ---------- 색: 기본 ---------- */
   --color-primary: #2d6cdf;          /* 주요 버튼, 링크, 강조 */
   --color-primary-hover: #2459bd;
   --color-primary-soft: #e3eeff;     /* 연한 파랑 배경 (선택된 칩 등) */
   --color-on-primary: #ffffff;       /* primary 배경 위 글자 */
+
+  /* 보조색(주황): 따봉·룰렛·구내식당 핀·강조 배지에만 쓴다. 글자색으로 쓸 땐 --color-accent-strong */
+  --color-accent: #e8772e;
+  --color-accent-hover: #cf6420;
+  --color-accent-strong: #b0520f;    /* 흰 바탕 위 글자 (명도 대비 4.5:1 이상) */
+  --color-accent-soft: #fdeee3;
 
   --color-text: #1b2430;             /* 본문 */
   --color-text-sub: #4a5563;         /* 보조 설명 */
@@ -44,8 +57,12 @@
   --color-status-finished: #5a6675;        /* 식사 완료 */
   --color-status-finished-bg: #f4f6f9;
 
+  /* ---------- 색: 파스텔 타일 (기록 카드·일러스트 바탕) ---------- */
+  --color-tile-purple: #5b47b5;
+  --color-tile-purple-bg: #f0edfb;
+
   /* ---------- 글꼴 ---------- */
-  --font-family: 'Noto Sans KR', system-ui, -apple-system, 'Malgun Gothic', sans-serif;
+  --font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, 'Malgun Gothic', sans-serif;
 
   --font-size-xs: 12px;
   --font-size-sm: 14px;
@@ -56,7 +73,9 @@
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   --line-height-tight: 1.3;
   --line-height-base: 1.6;

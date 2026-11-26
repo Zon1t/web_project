@@ -1,5 +1,6 @@
 package com.sseukbap.auth.controller;
 
+import com.sseukbap.auth.dto.CheckEmailResponse;
 import com.sseukbap.auth.dto.CheckIdResponse;
 import com.sseukbap.auth.dto.CheckNicknameResponse;
 import com.sseukbap.auth.dto.LoginRequest;
@@ -39,6 +40,13 @@ public class AuthController {
         return ApiResponse.success(authService.checkLoginId(loginId));
     }
 
+    /** 이메일 중복 확인 (로그인 불필요, 2026-11-25 T3) */
+    @GetMapping("/check-email")
+    public ApiResponse<CheckEmailResponse> checkEmail(@RequestParam(required = false) String email) {
+        // required = false: 값이 없을 때도 Service에서 API별 문구로 400을 내려주기 위해
+        return ApiResponse.success(authService.checkEmail(email));
+    }
+
     /** 닉네임 중복 확인 (로그인 불필요) */
     @GetMapping("/check-nickname")
     public ApiResponse<CheckNicknameResponse> checkNickname(@RequestParam(required = false) String nickname) {
@@ -55,7 +63,7 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<MemberInfoResponse> login(@Valid @RequestBody LoginRequest request,
                                                  HttpServletRequest httpRequest) {
-        // 1~3. 아이디·비밀번호 확인 (실패 시 401 LOGIN_FAILED)
+        // 1~3. 아이디(또는 이메일)·비밀번호 확인 (실패 시 401 LOGIN_FAILED)
         MemberInfoResponse member = authService.login(request);
 
         // 4. 기존 세션이 있으면 무효화하고 새 세션 생성

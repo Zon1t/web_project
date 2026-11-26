@@ -2,6 +2,7 @@ package com.sseukbap.restaurant.entity;
 
 import com.sseukbap.member.entity.Member;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,6 +17,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.type.YesNoConverter;
 
 import java.time.LocalDateTime;
 
@@ -63,6 +65,10 @@ public class Restaurant {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Convert(converter = YesNoConverter.class)
+    @Column(name = "HIDDEN_YN", nullable = false, length = 1)
+    private boolean hidden;           // 관리자 숨김 (2026-11-24, 08_account_admin.sql). true면 목록·랭킹·룰렛 등에서 뺀다
+
     private Restaurant(String name, RestaurantCategory category, String mapUrl,
                        String address, Double lat, Double lng, Member member) {
         this.name = name;
@@ -79,6 +85,16 @@ public class Restaurant {
     public static Restaurant create(String name, RestaurantCategory category, String mapUrl,
                                     String address, Double lat, Double lng, Member member) {
         return new Restaurant(name, category, mapUrl, address, lat, lng, member);
+    }
+
+    /** 관리자 숨김·숨김 해제 (2026-11-24 A3) */
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    /** 관리자 카테고리 변경 (2026-11-24 A3). CAFETERIA 관련 검사는 관리자 Service에서 먼저 한다 */
+    public void changeCategory(RestaurantCategory category) {
+        this.category = category;
     }
 
     /** 구내식당 여부 (응답의 cafeteria 필드). DB에 별도 컬럼은 없다. */

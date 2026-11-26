@@ -1,0 +1,161 @@
+/* ===================== 프로필 카드 (profile-card.js, C, 2026-11-25) ===================== */
+.pc-card {
+  position: fixed;
+  z-index: 900;
+  width: 280px;
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.pc-card[hidden] {
+  display: none;
+}
+
+.pc-card__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pc-card__close:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.pc-card__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.pc-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+}
+
+.pc-card__name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.pc-card__id {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.pc-card__info {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.pc-card__info dt {
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.pc-card__info dd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.pc-card__email {
+  color: var(--color-primary);
+}
+
+.pc-card__copy {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.pc-card__copy:hover {
+  background: var(--color-surface);
+}
+
+.pc-card__loading,
+.pc-card__error {
+  margin: var(--space-2) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* 누를 수 있는 이름·아바타 */
+[data-profile-id] {
+  cursor: pointer;
+}
+
+button[data-profile-id] {
+  padding: 0;
+  border: 0;
+  font: inherit;
+}
+
+button.pc-name {
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+button.pc-name:hover {
+  text-decoration: underline;
+}
+
+/* 사람마다 다른 색 (아바타 배경 / 글자) — 대화방에서 누가 누군지 구분 */
+.pc-color-0 { background: #fde8e8; color: #c53030; }
+.pc-color-1 { background: #feebc8; color: #c05621; }
+.pc-color-2 { background: #fefcbf; color: #975a16; }
+.pc-color-3 { background: #c6f6d5; color: #276749; }
+.pc-color-4 { background: #bee3f8; color: #2b6cb0; }
+.pc-color-5 { background: #e9d8fd; color: #6b46c1; }
+.pc-color-6 { background: #fed7e2; color: #b83280; }
+.pc-color-7 { background: #c4f1f9; color: #0987a0; }
+
+/* 이름 글자에만 색을 쓸 때 (배경 없이). button.pc-name의 color: inherit보다 우선하도록 선택자를 길게 */
+.pc-text.pc-color-0, button.pc-name.pc-text.pc-color-0 { background: none; color: #c53030; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-1, button.pc-name.pc-text.pc-color-1 { background: none; color: #c05621; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-2, button.pc-name.pc-text.pc-color-2 { background: none; color: #975a16; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-3, button.pc-name.pc-text.pc-color-3 { background: none; color: #276749; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-4, button.pc-name.pc-text.pc-color-4 { background: none; color: #2b6cb0; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-5, button.pc-name.pc-text.pc-color-5 { background: none; color: #6b46c1; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-6, button.pc-name.pc-text.pc-color-6 { background: none; color: #b83280; font-weight: var(--font-weight-bold); }
+.pc-text.pc-color-7, button.pc-name.pc-text.pc-color-7 { background: none; color: #0987a0; font-weight: var(--font-weight-bold); }

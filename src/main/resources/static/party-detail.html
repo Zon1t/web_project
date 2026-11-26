@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식사팟 상세 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/party-detail.css">
+  <link rel="stylesheet" href="/css/profile-card.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <main class="container party-detail-page">
+    <!-- 뒤로 가기 (2026-11-25): 누르면 식사팟 목록으로 -->
+    <a class="ui-back party-back" href="/party-list.html"><span data-ui-icon="chevronRight" data-size="16"></span>식사팟</a>
+
+    <div class="party-layout">
+      <!-- 왼쪽: 제목·상태, 진행 3단계, 일정, 내 버튼, 참여자 (로딩 / 없는 팟 / 오류도 여기) -->
+      <div id="party-root" class="party-main"></div>
+
+      <!-- 오른쪽: 대화 (참여자만) -->
+      <section id="chat-root" class="party-chat" aria-labelledby="chat-title" hidden>
+        <div class="party-chat__head">
+          <h2 id="chat-title" class="party-chat__title">대화</h2>
+          <span class="text-muted">식사 완료 후 읽기 전용 · 다음 날 삭제</span>
+        </div>
+        <div id="chat-body" class="party-chat__body" aria-live="polite"></div>
+        <!-- 방장 메뉴: 입력창 위 버튼 줄 (방장에게만, party-detail.js가 그린다) -->
+        <div id="host-bar" class="party-host-bar" role="toolbar" aria-label="방장 메뉴" hidden></div>
+        <form id="chat-form" class="party-chat__form" novalidate>
+          <label for="chat-input" class="sr-only">메시지 입력</label>
+          <input id="chat-input" class="input" maxlength="200" autocomplete="off" placeholder="메시지를 입력하세요">
+          <button type="submit" class="btn btn--primary">전송</button>
+        </form>
+        <p id="chat-message" class="field__message field__message--error party-chat__error" role="alert"></p>
+      </section>
+    </div>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <!-- 방장의 일정 확정·수정 창 -->
+  <dialog id="schedule-dialog" class="party-dialog" aria-labelledby="schedule-title">
+    <form id="schedule-form" class="party-dialog__form" method="dialog" novalidate>
+      <h2 id="schedule-title" class="section-title">일정 정하기</h2>
+      <p id="schedule-notice" class="party-dialog__notice" hidden>
+        일정을 바꾸면 밥친구들의 참석 확정이 초기화되어 다시 받아야 해요. 방장은 자동으로 다시 참석 확정돼요.
+      </p>
+      <div class="field">
+        <label class="field__label" for="schedule-time">확정 시간</label>
+        <select id="schedule-time" class="select"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="schedule-place">만날 장소</label>
+        <input id="schedule-place" class="input" maxlength="30" placeholder="예: 1층 로비">
+        <p class="field__message">최대 30자</p>
+      </div>
+      <div class="field">
+        <label class="field__label" for="schedule-memo">일정 메모 (선택)</label>
+        <input id="schedule-memo" class="input" maxlength="50" placeholder="예: 늦으면 채팅 남겨 주세요">
+        <p class="field__message">최대 50자</p>
+      </div>
+      <p id="schedule-message" class="field__message field__message--error" role="alert"></p>
+      <div class="party-dialog__actions">
+        <button type="button" class="btn" data-action="close-dialog">취소</button>
+        <button type="submit" class="btn btn--primary" id="schedule-submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/party-join.js"></script>
+  <script src="/js/components/profile-card.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/party-detail.js"></script>
+</body>
+</html>

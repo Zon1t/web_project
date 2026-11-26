@@ -9,8 +9,23 @@ Oracle XE 11g 기준. 테이블은 JPA가 만들지 않으므로(`ddl-auto: none
 | (0) | `00_drop.sql` | 테이블·시퀀스 전체 삭제 | 처음부터 다시 만들 때만 |
 | 1 | `01_ddl.sql` | 테이블 11개, 제약조건, 인덱스 5개 | 필수 |
 | 2 | `02_sequence.sql` | 시퀀스 10개 | 필수 |
-| 3 | `03_init_data.sql` | 리뷰 태그 13건, 구내식당 1건 | 필수 |
+| 3 | `03_init_data.sql` | 리뷰 태그 18건, 구내식당 1건 | 필수 |
 | 4 | `04_dummy_data.sql` | 테스트용 회원·식당·리뷰·식사팟·대화 등 | 개발 PC에서만 |
+| 5 | `05_demo_data.sql` | 시연용 계정 demo01~10, 식사팟·리뷰·따봉·관심 | 시연 전 (아래 주의 참고) |
+| - | `05_demo_data_cleanup.sql` | 05로 넣은 데모 데이터만 삭제 (COMMIT은 주석) | 데모 데이터를 지울 때만 |
+| 6 | `06_add_tags.sql` | 리뷰 태그 14~18 추가 | **기존 DB만** (새로 만들면 03에 포함) |
+| 7 | `07_add_cafe_category.sql` | 식당 카테고리에 카페(CAFE) 추가 | **기존 DB만** (새로 만들면 01에 포함) |
+| 8 | `08_cafe_data.sql` | 카페 8곳 | 7 다음에 (등록자 user01 필요) |
+| 8 | `08_account_admin.sql` | 회원 상태·이메일·역할, 식당·리뷰 숨김, 제안 상태 컬럼 + 관리자(user05) 지정 | **모든 DB** (04 다음에. 새 코드로 서버 띄우기 전에 필수) |
+| - | `08_account_admin_rollback.sql` | 08_account_admin 되돌리기 (컬럼 삭제) | 되돌릴 때만 |
+| 9 | `09_cafeteria_backup_menu.sql` | 구내식당 예비 메뉴 (오늘·내일 점심·저녁, 비어 있을 때만) | 크롤링 실패 시에만 |
+| 10 | `10_email_login.sql` | 회사 이메일 필수(T3): 닉네임 12자(36 CHAR), 더미·시연 계정 이메일 채우기 | **모든 DB** (08_account_admin 다음에. 새 코드로 서버 띄우기 전에 필수) |
+| 11 | `11_private_party.sql` | 비공개 식사팟(T4): MEAL_PARTY에 PRIVATE_YN·INVITE_CODE 추가 | **기존 DB만** (새로 만들면 01에 포함. 새 코드로 서버 띄우기 전에 필수) |
+| - | `11_private_party_rollback.sql` | 11_private_party 되돌리기 (컬럼 삭제) | 되돌릴 때만 |
+| 12 | `12_official_names.sql` | 식당 이름을 네이버 공식 이름으로 (지점명만 붙는 30곳, 지도 URL로 찾음) | **모든 DB** (05 다음, 맨 마지막에) |
+| ★ | `demo_reset.sql` | 위 00 → 05, 08 두 개, 10, 12를 한 번에 실행 (전체 초기화, 11은 01에 포함) | **발표 당일 아침·리허설 직후** |
+
+> 이미 쓰던 DB에 최신 변경만 반영할 때: `07` → `06` → `08_cafe_data` → `08_account_admin` → `10_email_login` → `11_private_party` → `12_official_names` 순서로 실행하면 된다. 모두 여러 번 실행해도 결과가 같다.
 
 ## SQL Developer에서 실행하는 법
 
@@ -21,9 +36,19 @@ Oracle XE 11g 기준. 테이블은 JPA가 만들지 않으므로(`ddl-auto: none
 
 ## 더미데이터 테스트 계정
 
-- `user01` ~ `user05`, 비밀번호는 모두 `04_dummy_data.sql` 맨 위 주석에 적힌 값이다.
+- `user01` ~ `user05`, 비밀번호는 모두 `04_dummy_data.sql` 맨 위 주석에 적힌 값이다. 로그인은 아이디(`user01`) 또는 회사 이메일(`user01@samsung.com`, `10_email_login.sql` 실행 후)로 한다.
 - 날짜는 실행한 날 기준이다. 다음 날이 되면 "오늘 식사팟"이 사라지므로 `00` → `04` 순서로 다시 실행하면 된다.
 - 기대 결과(랭킹 순서, 오늘 식사팟 수 등)는 `04_dummy_data.sql` 맨 위 주석에 있다.
+
+## 시연 데이터 초기화 (발표 당일)
+
+- `04_dummy_data.sql`에 실제 식당 57곳이 들어 있고, `05_demo_data.sql`이 그 식당을 **이름으로** 찾아 리뷰·식사팟·따봉을 붙인다.
+- 날짜는 모두 실행한 날 기준이다. 하루가 지나면 "오늘 식사팟"이 식사 완료로 바뀌므로 발표 당일에 다시 넣는다.
+- **가장 쉬운 방법**: `demo_reset.sql`을 열고 F5 → 전체를 지우고 다시 만든다(화면에서 만든 데이터도 모두 지워짐). 끝나면 서버 재시작.
+- 데모 데이터(05)만 다시 넣고 싶으면 `05_demo_data_cleanup.sql`(맨 아래 COMMIT 주석 풀기) → `05_demo_data.sql`.
+  이때 04의 "오늘 식사팟"은 날짜가 그대로라 오늘이 아니면 안 맞는다 → 이 경우에도 `demo_reset.sql`을 권장.
+- 메인의 '오늘의 구내식당'이 비어 있으면 `09_cafeteria_backup_menu.sql`을 실행한다.
+- 시연 계정 (아이디 또는 회사 이메일로 로그인): `demo01`~`demo10`, `user01`~`user05` (이메일은 `아이디@samsung.com`, 비밀번호 `test1234!`), 관리자 `user05`. `user01`로 로그인하면 따봉 알림이 1건 있다.
 
 ## 수정 규칙
 

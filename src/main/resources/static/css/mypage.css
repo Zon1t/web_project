@@ -1,0 +1,308 @@
+/*
+ * mypage.css — 마이페이지 화면 (S-10, C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ */
+/* ---------- 프로필 + 나의 슥밥 기록 ---------- */
+.mypage-profile {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.mypage-profile .state {
+  width: 100%;
+  padding: var(--space-6);
+}
+
+.mypage-profile__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.mypage-profile__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+}
+
+/* [계정 설정] 버튼: 프로필 줄 오른쪽 끝 (2026-11-24) */
+.mypage-profile__settings {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.mypage-profile__nickname {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.mypage-profile__login-id {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-record__title {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.mypage-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mypage-stat {
+  --stat-bg: var(--color-surface);
+  --stat-fg: var(--color-text-sub);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--stat-bg);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mypage-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.mypage-stat--blue { --stat-bg: var(--color-primary-soft); --stat-fg: var(--color-primary); }
+.mypage-stat--orange { --stat-bg: var(--color-accent-soft); --stat-fg: var(--color-accent-strong); }
+.mypage-stat--green { --stat-bg: var(--color-success-soft); --stat-fg: var(--color-success); }
+.mypage-stat--purple { --stat-bg: var(--color-tile-purple-bg); --stat-fg: var(--color-tile-purple); }
+
+.mypage-stat__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--stat-fg);
+}
+
+.mypage-stat__label {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.mypage-stat__count {
+  color: var(--stat-fg);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+}
+
+.mypage-stat__count small {
+  margin-left: 2px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 640px) {
+  .mypage-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- 탭 ---------- */
+.mypage-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.mypage-tab {
+  flex: 0 0 auto;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font: inherit;
+  font-size: var(--font-size-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mypage-tab:hover {
+  color: var(--color-text);
+}
+
+.mypage-tab.is-selected {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.mypage-panel {
+  padding-top: var(--space-4);
+}
+
+.mypage-state {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- 목록 ---------- */
+.mypage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mypage-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* 줄 전체가 링크인 항목 (식사팟, 등록한 식당) */
+.mypage-item--link:hover {
+  background: var(--color-surface-hover);
+}
+
+.mypage-item__cover {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+
+.mypage-item__cover:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.mypage-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mypage-item__title {
+  display: inline-block;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+a.mypage-item__title:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.mypage-item__content {
+  margin-top: var(--space-1);
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.mypage-item__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-item__meta {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mypage-item__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.mypage-item__thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-surface);
+}
+
+.mypage-item__actions {
+  flex: 0 0 auto;
+}
+
+.mypage-item__danger {
+  color: var(--color-danger);
+}
+
+.mypage-badge--confirmed {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.mypage-badge--host {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.mypage-thumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.mypage-visited--yes {
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 640px) {
+  .mypage-tab {
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .mypage-item {
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .mypage-item__thumb {
+    width: 56px;
+    height: 56px;
+  }
+}

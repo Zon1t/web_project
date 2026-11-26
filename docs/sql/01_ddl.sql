@@ -16,13 +16,23 @@
 -- ---------------------------------------------------------------------
 CREATE TABLE MEMBER (
     MEMBER_ID   NUMBER                      NOT NULL,
-    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 영문·숫자 4~20자
+    LOGIN_ID    VARCHAR2(20)                NOT NULL,   -- 내부 아이디: 영문·숫자 4~20자 (2026-11-25 T3: 가입 시 이메일 앞부분으로 자동 생성)
     PASSWORD    VARCHAR2(60)                NOT NULL,   -- BCrypt 해시
-    NICKNAME    VARCHAR2(30)                NOT NULL,   -- 2~10자
+    NICKNAME    VARCHAR2(36 CHAR)           NOT NULL,   -- 2~12자 (2026-11-25 T3: 30바이트 → 36 CHAR, 기존 DB는 10_email_login.sql)
     CREATED_AT  DATE         DEFAULT SYSDATE NOT NULL,
+    -- 2026-11-24 추가 (기존 DB는 08_account_admin.sql)
+    STATUS                  VARCHAR2(10)  DEFAULT 'ACTIVE' NOT NULL,   -- ACTIVE / WITHDRAWN
+    WITHDRAWN_AT            DATE,                                      -- 탈퇴 일시
+    EMAIL                   VARCHAR2(100),                             -- 회사 이메일 = 로그인 아이디 (2026-11-25 T3, 기존 회원 때문에 아직 NULL 허용)
+    RESET_TOKEN_HASH        VARCHAR2(64),                              -- 재설정 토큰 SHA-256 16진수
+    RESET_TOKEN_EXPIRES_AT  DATE,                                      -- 재설정 토큰 만료
+    ROLE                    VARCHAR2(10)  DEFAULT 'USER' NOT NULL,     -- USER / ADMIN
     CONSTRAINT PK_MEMBER          PRIMARY KEY (MEMBER_ID),
     CONSTRAINT UK_MEMBER_LOGIN_ID UNIQUE (LOGIN_ID),
-    CONSTRAINT UK_MEMBER_NICKNAME UNIQUE (NICKNAME)
+    CONSTRAINT UK_MEMBER_NICKNAME UNIQUE (NICKNAME),
+    CONSTRAINT UK_MEMBER_EMAIL    UNIQUE (EMAIL),
+    CONSTRAINT CK_MEMBER_STATUS   CHECK (STATUS IN ('ACTIVE', 'WITHDRAWN')),
+    CONSTRAINT CK_MEMBER_ROLE     CHECK (ROLE IN ('USER', 'ADMIN'))
 );
 
 
@@ -39,10 +49,12 @@ CREATE TABLE RESTAURANT (
     LNG            NUMBER(10, 7),                           -- 경도
     MEMBER_ID      NUMBER,                                  -- 등록자 (구내식당 초기 데이터는 NULL)
     CREATED_AT     DATE          DEFAULT SYSDATE NOT NULL,
+    HIDDEN_YN      CHAR(1)       DEFAULT 'N'     NOT NULL,   -- 관리자 숨김 (2026-11-24)
     CONSTRAINT PK_RESTAURANT         PRIMARY KEY (RESTAURANT_ID),
+    CONSTRAINT CK_RESTAURANT_HIDDEN_YN CHECK (HIDDEN_YN IN ('Y', 'N')),
     CONSTRAINT UK_RESTAURANT_MAP_URL UNIQUE (MAP_URL),
     CONSTRAINT CK_RESTAURANT_CATEGORY CHECK (CATEGORY IN
-        ('CAFETERIA', 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'ETC')),
+        ('CAFETERIA', 'KOREAN', 'CHINESE', 'JAPANESE', 'WESTERN', 'SNACK', 'ETC', 'CAFE')),   -- CAFE: 2026-11-23 추가
     CONSTRAINT FK_RESTAURANT_MEMBER  FOREIGN KEY (MEMBER_ID) REFERENCES MEMBER (MEMBER_ID)
 );
 
@@ -57,7 +69,9 @@ CREATE TABLE REVIEW (
     CONTENT        VARCHAR2(300)                NOT NULL,   -- 100자
     IMAGE_PATH     VARCHAR2(300),                           -- 사진 경로
     CREATED_AT     DATE          DEFAULT SYSDATE NOT NULL,
+    HIDDEN_YN      CHAR(1)       DEFAULT 'N'     NOT NULL,   -- 관리자 숨김 (2026-11-24)
     CONSTRAINT PK_REVIEW            PRIMARY KEY (REVIEW_ID),
+    CONSTRAINT CK_REVIEW_HIDDEN_YN  CHECK (HIDDEN_YN IN ('Y', 'N')),
     CONSTRAINT FK_REVIEW_RESTAURANT FOREIGN KEY (RESTAURANT_ID) REFERENCES RESTAURANT (RESTAURANT_ID),
     CONSTRAINT FK_REVIEW_MEMBER     FOREIGN KEY (MEMBER_ID)     REFERENCES MEMBER (MEMBER_ID)
 );
@@ -113,7 +127,7 @@ CREATE TABLE MEAL_PARTY (
     PARTY_ID        NUMBER                               NOT NULL,
     RESTAURANT_ID   NUMBER                               NOT NULL,
     HOST_ID         NUMBER                               NOT NULL,   -- 방장 → MEMBER
-    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(당일), 시간 없이 TRUNC 값
+    PARTY_DATE      DATE                                 NOT NULL,   -- 식사 날짜(오늘~14일 후), 시간 없이 TRUNC 값
     MEAL_TYPE       VARCHAR2(10)                         NOT NULL,   -- LUNCH / DINNER
     MEAL_TIME       VARCHAR2(5)                          NOT NULL,   -- 예정 시간 'HH:mm'
     CAPACITY        NUMBER(2)     DEFAULT 4              NOT NULL,   -- 방장 포함 2~12
@@ -122,12 +136,16 @@ CREATE TABLE MEAL_PARTY (
     CONFIRMED_TIME  VARCHAR2(5),                                     -- 방장 확정 시간 'HH:mm'
     MEET_PLACE      VARCHAR2(90),                                    -- 30자
     CONFIRM_MEMO    VARCHAR2(150),                                   -- 50자
+    PRIVATE_YN      CHAR(1)       DEFAULT 'N'            NOT NULL,   -- 비공개 식사팟 (11/25, 11_private_party.sql)
+    INVITE_CODE     VARCHAR2(32),                                    -- 비공개 초대 코드 22자, 공개는 NULL
     CREATED_AT      DATE          DEFAULT SYSDATE        NOT NULL,
     CONSTRAINT PK_MEAL_PARTY            PRIMARY KEY (PARTY_ID),
     CONSTRAINT CK_MEAL_PARTY_MEAL_TYPE  CHECK (MEAL_TYPE IN ('LUNCH', 'DINNER')),
     CONSTRAINT CK_MEAL_PARTY_CAPACITY   CHECK (CAPACITY BETWEEN 2 AND 12),
     CONSTRAINT CK_MEAL_PARTY_STATUS     CHECK (STATUS IN
         ('RECRUITING', 'SCHEDULED', 'FULL', 'CLOSED', 'FINISHED', 'DELETED')),
+    CONSTRAINT CK_MEAL_PARTY_PRIVATE_YN CHECK (PRIVATE_YN IN ('Y', 'N')),
+    CONSTRAINT UK_MEAL_PARTY_INVITE_CODE UNIQUE (INVITE_CODE),
     CONSTRAINT FK_MEAL_PARTY_RESTAURANT FOREIGN KEY (RESTAURANT_ID) REFERENCES RESTAURANT (RESTAURANT_ID),
     CONSTRAINT FK_MEAL_PARTY_MEMBER     FOREIGN KEY (HOST_ID)       REFERENCES MEMBER (MEMBER_ID)
 );
@@ -194,7 +212,9 @@ CREATE TABLE SUGGESTION (
     MEMBER_ID      NUMBER                        NOT NULL,
     CONTENT        VARCHAR2(1500)                NOT NULL,   -- 500자
     CREATED_AT     DATE           DEFAULT SYSDATE NOT NULL,
+    STATUS         VARCHAR2(10)   DEFAULT 'OPEN'  NOT NULL,   -- OPEN / DONE (2026-11-24)
     CONSTRAINT PK_SUGGESTION            PRIMARY KEY (SUGGESTION_ID),
+    CONSTRAINT CK_SUGGESTION_STATUS     CHECK (STATUS IN ('OPEN', 'DONE')),
     CONSTRAINT FK_SUGGESTION_RESTAURANT FOREIGN KEY (RESTAURANT_ID) REFERENCES RESTAURANT (RESTAURANT_ID),
     CONSTRAINT FK_SUGGESTION_MEMBER     FOREIGN KEY (MEMBER_ID)     REFERENCES MEMBER (MEMBER_ID)
 );
@@ -205,6 +225,6 @@ CREATE TABLE SUGGESTION (
 -- ---------------------------------------------------------------------
 CREATE INDEX IX_REVIEW_RESTAURANT     ON REVIEW (RESTAURANT_ID, CREATED_AT);   -- 식당별 리뷰 페이징
 CREATE INDEX IX_MEAL_PARTY_RESTAURANT ON MEAL_PARTY (RESTAURANT_ID, PARTY_DATE); -- 30일 따봉 집계
-CREATE INDEX IX_MEAL_PARTY_DATE       ON MEAL_PARTY (PARTY_DATE, MEAL_TYPE);    -- 당일 식사팟 목록
+CREATE INDEX IX_MEAL_PARTY_DATE       ON MEAL_PARTY (PARTY_DATE, MEAL_TYPE);    -- 날짜별 식사팟 목록
 CREATE INDEX IX_PARTY_CHAT_PARTY      ON PARTY_CHAT (PARTY_ID, CHAT_ID);        -- 대화 폴링
 CREATE INDEX IX_PARTY_MEMBER_MEMBER   ON PARTY_MEMBER (MEMBER_ID);              -- 내가 참여한 식사팟

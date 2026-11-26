@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원가입 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/password-field.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header" data-variant="simple"></header>
+
+  <main class="auth-page">
+    <div class="auth-split">
+    <aside class="auth-brand" aria-hidden="true">
+      <p class="auth-brand__logo">슥밥</p>
+      <p class="auth-brand__title">오늘 점심,<br>슥 정하고 같이 먹어요</p>
+      <ul class="auth-brand__list">
+        <li><span data-ui-icon="people"></span>시간 맞는 밥친구와 식사팟 만들기</li>
+        <li><span data-ui-icon="roulette"></span>고민될 땐 룰렛으로 식당 정하기</li>
+        <li><span data-ui-icon="thumbs"></span>따봉으로 모이는 진짜 맛집 랭킹</li>
+      </ul>
+      <span class="auth-brand__illust" data-ui-illust="tray"></span>
+    </aside>
+    <section class="auth-card" aria-labelledby="signup-title">
+      <a class="ui-back" href="/login.html" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>로그인으로</a>
+      <h1 id="signup-title" class="auth-card__title">회원가입</h1>
+      <p class="auth-card__desc">아이디, 회사 이메일, 닉네임은 중복 확인 후 가입할 수 있어요.</p>
+
+      <form id="signup-form" class="auth-form" novalidate>
+        <!-- 서버 오류 등 화면 전체 안내 -->
+        <p id="signup-notice" class="auth-notice auth-notice--error" role="alert" hidden></p>
+
+        <div class="field">
+          <label class="field__label" for="signup-login-id">아이디</label>
+          <div class="auth-field__row">
+            <input id="signup-login-id" class="input" type="text" name="loginId" maxlength="20"
+                   placeholder="영문·숫자 4~20자" autocomplete="username" autocapitalize="off"
+                   spellcheck="false" aria-describedby="signup-login-id-message">
+            <button id="signup-id-check" class="btn" type="button">중복 확인</button>
+          </div>
+          <p id="signup-login-id-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <!-- 회사 이메일 (2026-11-25 T3): @samsung.com만, [중복 확인] 필수 -->
+        <div class="field">
+          <label class="field__label" for="signup-email">회사 이메일</label>
+          <div class="auth-field__row">
+            <input id="signup-email" class="input" type="email" name="email" maxlength="100"
+                   placeholder="name@samsung.com" autocomplete="email" autocapitalize="off"
+                   spellcheck="false" aria-describedby="signup-email-message">
+            <button id="signup-email-check" class="btn" type="button">중복 확인</button>
+          </div>
+          <p id="signup-email-message" class="field__message" aria-live="polite">비밀번호 찾기에 쓰고, 로그인할 때 아이디 대신 쓸 수도 있어요. @samsung.com 주소만 가입할 수 있어요.</p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="signup-password">비밀번호</label>
+          <input id="signup-password" class="input" type="password" name="password" maxlength="20"
+                 placeholder="영문·숫자를 함께 넣어 8~20자" autocomplete="new-password" aria-describedby="signup-password-message"
+                 data-password-field>
+          <p id="signup-password-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="signup-password-confirm">비밀번호 확인</label>
+          <input id="signup-password-confirm" class="input" type="password" name="passwordConfirm" maxlength="20"
+                 autocomplete="new-password" aria-describedby="signup-password-confirm-message" data-password-field>
+          <p id="signup-password-confirm-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="signup-nickname">닉네임</label>
+          <div class="auth-field__row">
+            <input id="signup-nickname" class="input" type="text" name="nickname" maxlength="12"
+                   placeholder="2~12자" autocomplete="nickname" aria-describedby="signup-nickname-message">
+            <button id="signup-nickname-check" class="btn" type="button">중복 확인</button>
+          </div>
+          <p id="signup-nickname-message" class="field__message" aria-live="polite"></p>
+        </div>
+
+        <!-- 근무지 (2026-11-23): 삼성 전체 서비스 중 '멀티캠퍼스 세종대'만 열려 있다는 콘셉트.
+             다른 사업장은 선택할 수 없게 disabled. 지금은 한 곳뿐이라 서버로 보내지 않는다. -->
+        <div class="field">
+          <label class="field__label" for="signup-workplace">근무지</label>
+          <select id="signup-workplace" class="select" aria-describedby="signup-workplace-message">
+            <optgroup label="멀티캠퍼스">
+              <option value="MULTICAMPUS_SEJONG" selected>멀티캠퍼스 세종대</option>
+              <option disabled>멀티캠퍼스 역삼 (준비 중)</option>
+            </optgroup>
+            <optgroup label="삼성 사업장">
+              <option disabled>삼성전자 서초사옥 (준비 중)</option>
+              <option disabled>삼성전자 수원사업장 (준비 중)</option>
+              <option disabled>삼성전자 기흥캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 화성캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 평택캠퍼스 (준비 중)</option>
+              <option disabled>삼성전자 구미사업장 (준비 중)</option>
+              <option disabled>삼성전자 서울R&amp;D캠퍼스 (준비 중)</option>
+              <option disabled>삼성SDS 잠실캠퍼스 (준비 중)</option>
+              <option disabled>삼성디스플레이 아산캠퍼스 (준비 중)</option>
+              <option disabled>삼성바이오로직스 송도 (준비 중)</option>
+            </optgroup>
+          </select>
+          <p id="signup-workplace-message" class="field__message">지금은 멀티캠퍼스 세종대만 이용할 수 있어요. 다른 사업장은 준비 중이에요.</p>
+        </div>
+
+        <button id="signup-submit" class="btn btn--primary auth-submit" type="submit">가입하기</button>
+      </form>
+
+      <p class="auth-card__footer">
+        이미 계정이 있나요? <a href="/login.html">로그인</a>
+      </p>
+    </section>
+    </div>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/password-field.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/signup.js"></script>
+</body>
+</html>

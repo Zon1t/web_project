@@ -63,6 +63,7 @@ class PartyMemberServiceTest {
         host = memberRepository.findByLoginId("user01").orElseThrow();
         user02 = memberRepository.findByLoginId("user02").orElseThrow();
         user03 = memberRepository.findByLoginId("user03").orElseThrow();
+        PartyTestSupport.hideExistingParties(em);   // 더미데이터 팟 숨김 ('한 끼에 팟 하나' 규칙)
     }
 
     // ===== 참여하기 =====
@@ -71,25 +72,37 @@ class PartyMemberServiceTest {
     void 참여하면_인원이_늘고_시스템_메시지가_남는다() {
         Long partyId = createParty(4);
 
-        PartyJoinResponse response = partyMemberService.joinParty(partyId, user02.getMemberId());
+        PartyJoinResponse response = partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         flushAndClear();
 
         assertThat(response.memberCount()).isEqualTo(2);
         assertThat(response.status()).isEqualTo(PartyStatus.RECRUITING);
         assertThat(partyMemberRepository.findByPartyIdAndMemberId(partyId, user02.getMemberId()))
                 .hasValueSatisfying(pm -> assertThat(pm.isConfirmed()).isFalse());
-        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 참여했습니다");
+        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 참여했어요");
+    }
+
+    @Test
+    void 기준_시간이_지나면_스케줄러_처리_전이어도_참여할_수_없다() {
+        // 12:00 팟, 12:01에 참여 시도 (스케줄러가 아직 FINISHED로 바꾸기 전) → T6 P1
+        Long partyId = createParty(4);
+
+        assertErrorCode(() -> partyMemberService.joinParty(partyId, user02.getMemberId(), LocalDate.now().atTime(12, 1)),
+                ErrorCode.PARTY_FINISHED);
+        // 정각까지는 참여할 수 있다
+        assertThat(partyMemberService.joinParty(partyId, user02.getMemberId(), LocalDate.now().atTime(12, 0)).memberCount())
+                .isEqualTo(2);
     }
 
     @Test
     void 정원에_도달하면_FULL() {
         Long partyId = createParty(2);
 
-        PartyJoinResponse response = partyMemberService.joinParty(partyId, user02.getMemberId());
+        PartyJoinResponse response = partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         assertThat(response.status()).isEqualTo(PartyStatus.FULL);
         assertThat(statusOf(partyId)).isEqualTo(PartyStatus.FULL);
-        assertErrorCode(() -> partyMemberService.joinParty(partyId, user03.getMemberId()), ErrorCode.PARTY_FULL);
+        assertErrorCode(() -> partyMemberService.joinParty(partyId, user03.getMemberId(), PartyTestSupport.MORNING), ErrorCode.PARTY_FULL);
     }
 
     @Test
@@ -98,7 +111,7 @@ class PartyMemberServiceTest {
         setSchedule(partyId, NOON);
         setStatus(partyId, PartyStatus.SCHEDULED);
 
-        assertThat(partyMemberService.joinParty(partyId, user02.getMemberId()).status())
+        assertThat(partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING).status())
                 .isEqualTo(PartyStatus.SCHEDULED);
     }
 
@@ -106,7 +119,7 @@ class PartyMemberServiceTest {
     void 이미_참여_중이면_ALREADY_JOINED() {
         Long partyId = createParty(4);
 
-        assertErrorCode(() -> partyMemberService.joinParty(partyId, host.getMemberId()), ErrorCode.ALREADY_JOINED);
+        assertErrorCode(() -> partyMemberService.joinParty(partyId, host.getMemberId(), PartyTestSupport.MORNING), ErrorCode.ALREADY_JOINED);
     }
 
     @Test
@@ -114,19 +127,46 @@ class PartyMemberServiceTest {
         Long partyId = createParty(4);
         setStatus(partyId, PartyStatus.CLOSED);
 
-        assertErrorCode(() -> partyMemberService.joinParty(partyId, user02.getMemberId()), ErrorCode.PARTY_FULL);
+        assertErrorCode(() -> partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.PARTY_FULL);
     }
 
     @Test
     void 식사_완료_삭제_없는_팟() {
         Long finished = createParty(4);
         setStatus(finished, PartyStatus.FINISHED);
+        PartyTestSupport.moveToTomorrow(em, finished);   // 같은 끼니에 팟 하나 규칙 때문에 비켜 둠
         Long deleted = createParty(4);
         partyService.deleteParty(deleted, host.getMemberId());
 
-        assertErrorCode(() -> partyMemberService.joinParty(finished, user02.getMemberId()), ErrorCode.PARTY_FINISHED);
-        assertErrorCode(() -> partyMemberService.joinParty(deleted, user02.getMemberId()), ErrorCode.PARTY_DELETED);
-        assertErrorCode(() -> partyMemberService.joinParty(-1L, user02.getMemberId()), ErrorCode.PARTY_NOT_FOUND);
+        assertErrorCode(() -> partyMemberService.joinParty(finished, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.PARTY_FINISHED);
+        assertErrorCode(() -> partyMemberService.joinParty(deleted, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.PARTY_DELETED);
+        assertErrorCode(() -> partyMemberService.joinParty(-1L, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.PARTY_NOT_FOUND);
+    }
+
+    @Test
+    void 같은_날짜_같은_끼니에는_팟_하나만_참여할_수_있다() {
+        Long first = createParty(4);   // user01 오늘 점심
+        Long second = partyService.createParty(new PartyCreateRequest(
+                restaurantRepository.findAll().get(0).getRestaurantId(), MealType.LUNCH, LocalTime.of(12, 30), 4, null),
+                user02.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();   // user02 오늘 점심
+        Long dinner = partyService.createParty(new PartyCreateRequest(
+                restaurantRepository.findAll().get(0).getRestaurantId(), MealType.DINNER, LocalTime.of(18, 0), 4, null),
+                user02.getMemberId(), LocalDate.now().atTime(9, 0)).partyId();   // user02 오늘 저녁
+
+        partyMemberService.joinParty(first, user03.getMemberId(), PartyTestSupport.MORNING);
+
+        // 확정 전이어도 같은 점심의 다른 팟은 막힌다 (방장도 마찬가지)
+        assertErrorCode(() -> partyMemberService.joinParty(second, user03.getMemberId(), PartyTestSupport.MORNING), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+        assertErrorCode(() -> partyMemberService.joinParty(second, host.getMemberId(), PartyTestSupport.MORNING), ErrorCode.ALREADY_JOINED_SAME_MEAL);
+
+        // 저녁은 따로라 참여할 수 있다
+        partyMemberService.joinParty(dinner, user03.getMemberId(), PartyTestSupport.MORNING);
+
+        // 앞의 팟이 삭제되면 같은 점심의 다른 팟에 참여할 수 있다
+        partyService.deleteParty(first, host.getMemberId());
+        partyMemberService.joinParty(second, user03.getMemberId(), PartyTestSupport.MORNING);
+        flushAndClear();
+        assertThat(partyMemberRepository.existsByPartyIdAndMemberId(second, user03.getMemberId())).isTrue();
     }
 
     // ===== 나가기 =====
@@ -134,7 +174,7 @@ class PartyMemberServiceTest {
     @Test
     void 참여자가_나가면_행이_지워지고_시스템_메시지가_남는다() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         PartyLeaveResponse response = partyMemberService.leaveParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
         flushAndClear();
@@ -142,13 +182,13 @@ class PartyMemberServiceTest {
         assertThat(response.partyDeleted()).isFalse();
         assertThat(partyMemberRepository.existsByPartyIdAndMemberId(partyId, user02.getMemberId())).isFalse();
         assertThat(partyMemberRepository.countByPartyId(partyId)).isEqualTo(1);
-        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 나갔습니다");
+        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 나갔어요");
     }
 
     @Test
     void 방장이_나가면_팟이_삭제된다() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         PartyLeaveResponse response = partyMemberService.leaveParty(partyId, host.getMemberId(), BEFORE_DEADLINE);
 
@@ -160,7 +200,7 @@ class PartyMemberServiceTest {
     @Test
     void FULL에서_나가면_일정_없으면_RECRUITING() {
         Long partyId = createParty(2);
-        partyMemberService.joinParty(partyId, user02.getMemberId());   // FULL
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);   // FULL
 
         partyMemberService.leaveParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
 
@@ -171,7 +211,7 @@ class PartyMemberServiceTest {
     void FULL에서_나가면_일정_있으면_SCHEDULED() {
         Long partyId = createParty(2);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());   // FULL
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);   // FULL
 
         partyMemberService.leaveParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
 
@@ -181,7 +221,7 @@ class PartyMemberServiceTest {
     @Test
     void CLOSED는_나가도_CLOSED_유지() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         setStatus(partyId, PartyStatus.CLOSED);
 
         partyMemberService.leaveParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
@@ -193,9 +233,9 @@ class PartyMemberServiceTest {
     void 확정자는_마감_후_나갈_수_없고_미확정자는_나갈_수_있다() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
-        partyMemberService.joinParty(partyId, user03.getMemberId());
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
+        partyMemberService.joinParty(partyId, user03.getMemberId(), PartyTestSupport.MORNING);
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         assertErrorCode(() -> partyMemberService.leaveParty(partyId, user02.getMemberId(), AFTER_DEADLINE),
                 ErrorCode.LEAVE_DEADLINE_PASSED);
@@ -207,8 +247,8 @@ class PartyMemberServiceTest {
     void 확정자도_마감_전이면_나갈_수_있다() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         partyMemberService.leaveParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
 
@@ -231,36 +271,46 @@ class PartyMemberServiceTest {
     @Test
     void 일정이_없으면_SCHEDULE_NOT_SET() {
         Long partyId = createParty(4);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
-        assertErrorCode(() -> partyMemberService.confirmParty(partyId, user02.getMemberId()), ErrorCode.SCHEDULE_NOT_SET);
+        assertErrorCode(() -> partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.SCHEDULE_NOT_SET);
     }
 
     @Test
     void 확정하면_확정_인원이_늘고_방장도_확정할_수_있다() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
-        PartyConfirmResponse first = partyMemberService.confirmParty(partyId, user02.getMemberId());
-        PartyConfirmResponse second = partyMemberService.confirmParty(partyId, host.getMemberId());
+        PartyConfirmResponse first = partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
+        PartyConfirmResponse second = partyMemberService.confirmParty(partyId, host.getMemberId(), PartyTestSupport.MORNING);
         flushAndClear();
 
         assertThat(first.confirmed()).isTrue();
         assertThat(first.confirmedCount()).isEqualTo(1);
         assertThat(second.confirmedCount()).isEqualTo(2);
         assertThat(partyMemberRepository.countConfirmedByPartyId(partyId)).isEqualTo(2);
-        assertThat(lastChat(partyId)).isEqualTo(host.getNickname() + "님이 참여를 확정했습니다");
+        assertThat(lastChat(partyId)).isEqualTo(host.getNickname() + "님이 참석을 확정했어요");
+    }
+
+    @Test
+    void 기준_시간이_지나면_참석_확정할_수_없다() {
+        Long partyId = createParty(4);
+        setSchedule(partyId, NOON);
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
+
+        assertErrorCode(() -> partyMemberService.confirmParty(partyId, user02.getMemberId(), LocalDate.now().atTime(12, 1)),
+                ErrorCode.PARTY_FINISHED);
     }
 
     @Test
     void 중복_확정은_ALREADY_CONFIRMED_참여자가_아니면_NOT_JOINED() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.confirmParty(partyId, host.getMemberId());
+        partyMemberService.confirmParty(partyId, host.getMemberId(), PartyTestSupport.MORNING);
 
-        assertErrorCode(() -> partyMemberService.confirmParty(partyId, host.getMemberId()), ErrorCode.ALREADY_CONFIRMED);
-        assertErrorCode(() -> partyMemberService.confirmParty(partyId, user02.getMemberId()), ErrorCode.NOT_JOINED);
+        assertErrorCode(() -> partyMemberService.confirmParty(partyId, host.getMemberId(), PartyTestSupport.MORNING), ErrorCode.ALREADY_CONFIRMED);
+        assertErrorCode(() -> partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING), ErrorCode.NOT_JOINED);
     }
 
     // ===== 확정 취소 =====
@@ -269,8 +319,8 @@ class PartyMemberServiceTest {
     void 확정_취소하면_확정_인원이_줄고_참여는_유지된다() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         PartyConfirmResponse response =
                 partyMemberService.cancelConfirmParty(partyId, user02.getMemberId(), BEFORE_DEADLINE);
@@ -279,19 +329,19 @@ class PartyMemberServiceTest {
         assertThat(response.confirmed()).isFalse();
         assertThat(response.confirmedCount()).isZero();
         assertThat(partyMemberRepository.existsByPartyIdAndMemberId(partyId, user02.getMemberId())).isTrue();
-        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 참여 확정을 취소했습니다");
+        assertThat(lastChat(partyId)).isEqualTo(user02.getNickname() + "님이 참석 확정을 취소했어요");
     }
 
     @Test
     void 확정하지_않았으면_NOT_CONFIRMED_마감_후면_CANCEL_DEADLINE_PASSED() {
         Long partyId = createParty(4);
         setSchedule(partyId, NOON);
-        partyMemberService.joinParty(partyId, user02.getMemberId());
+        partyMemberService.joinParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
 
         assertErrorCode(() -> partyMemberService.cancelConfirmParty(partyId, user02.getMemberId(), BEFORE_DEADLINE),
                 ErrorCode.NOT_CONFIRMED);
 
-        partyMemberService.confirmParty(partyId, user02.getMemberId());
+        partyMemberService.confirmParty(partyId, user02.getMemberId(), PartyTestSupport.MORNING);
         assertErrorCode(() -> partyMemberService.cancelConfirmParty(partyId, user02.getMemberId(), AFTER_DEADLINE),
                 ErrorCode.CANCEL_DEADLINE_PASSED);
     }

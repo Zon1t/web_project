@@ -1,5 +1,6 @@
 package com.sseukbap.common.config;
 
+import com.sseukbap.common.interceptor.AdminCheckInterceptor;
 import com.sseukbap.common.interceptor.LoginCheckInterceptor;
 import com.sseukbap.common.interceptor.LoginMemberArgumentResolver;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${upload.dir}")
     private String uploadDir;
 
+    /** 관리자 확인 인터셉터 (DB에서 회원 역할을 읽어야 해서 Spring이 만든 것을 받는다, 2026-11-24 A3) */
+    private final AdminCheckInterceptor adminCheckInterceptor;
+
+    public WebConfig(AdminCheckInterceptor adminCheckInterceptor) {
+        this.adminCheckInterceptor = adminCheckInterceptor;
+    }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new LoginCheckInterceptor())
@@ -31,8 +39,14 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/signup",
                         "/api/auth/login",
                         "/api/auth/check-id",
-                        "/api/auth/check-nickname"
+                        "/api/auth/check-email",            // 이메일 중복 확인 (2026-11-25 T3)
+                        "/api/auth/check-nickname",
+                        "/api/auth/password-reset/**"   // 비밀번호 찾기 (2026-11-24): 로그인 전에 쓰는 기능
                 );
+
+        // 관리자 API: 로그인 확인(위) 다음에 관리자인지 확인. 아니면 403 (2026-11-24 A3)
+        registry.addInterceptor(adminCheckInterceptor)
+                .addPathPatterns("/api/admin/**");
     }
 
     @Override

@@ -1,0 +1,238 @@
+/*
+ * auth.css — 로그인(S-03)·회원가입(S-02) 화면 (C)
+ * 색·간격은 tokens.css 변수만 사용한다.
+ */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+}
+
+/* 왼쪽 브랜드 패널 + 오른쪽 폼 (좁은 화면에서는 폼만) */
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  width: 100%;
+  max-width: 920px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.auth-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-10) var(--space-8);
+  background: var(--color-primary-soft);
+  overflow: hidden;
+}
+
+.auth-brand__logo {
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.auth-brand__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.auth-brand__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.auth-brand__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.auth-brand__list [data-ui-icon] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.auth-brand__illust {
+  display: block;
+  width: 220px;
+  height: 165px;
+  margin-top: auto;
+  align-self: flex-end;
+}
+
+.auth-brand__illust svg {
+  width: 100%;
+  height: 100%;
+}
+
+.auth-card {
+  width: 100%;
+  padding: var(--space-10) var(--space-8);
+  background: var(--color-bg);
+}
+
+.auth-card__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.auth-card__desc {
+  margin-bottom: var(--space-6);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* 입력창 + [중복 확인] 버튼 한 줄 */
+.auth-field__row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.auth-field__row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-field__row .btn {
+  flex-shrink: 0;
+}
+
+/* 화면 위쪽 안내 상자 (가입 완료, 로그인 실패 등) */
+.auth-notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+/* display:flex가 hidden 속성을 덮어쓰지 않게 (단계별로 숨김) */
+.auth-form[hidden],
+.auth-step[hidden],
+.auth-notice[hidden] {
+  display: none;
+}
+
+.auth-notice--success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.auth-notice--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* 안내 (예: 비밀번호를 잊으셨나요?) — 2026-11-24 */
+.auth-notice--info {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+/* 브랜드 패널 없이 카드만 있는 화면 (비밀번호 찾기, 2026-11-24) */
+.auth-card--single {
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+/* 비밀번호 찾기: 단계별로 나타나는 묶음 (인증번호, 새 비밀번호) */
+.auth-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.auth-help--note {
+  margin-top: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* 인증번호 남은 시간 */
+.reset-timer {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 로그인 버튼 아래 작은 링크 줄 */
+.auth-help {
+  margin-top: calc(var(--space-2) * -1);
+  text-align: center;
+}
+
+.auth-help__link {
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.auth-help__link:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.auth-card__footer {
+  margin-top: var(--space-6);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.auth-card__footer a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 760px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+
+  .auth-brand {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: var(--space-6) var(--space-3);
+  }
+
+  .auth-card {
+    padding: var(--space-6) var(--space-5);
+  }
+}

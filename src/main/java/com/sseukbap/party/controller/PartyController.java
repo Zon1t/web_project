@@ -2,9 +2,11 @@ package com.sseukbap.party.controller;
 
 import com.sseukbap.common.interceptor.LoginMember;
 import com.sseukbap.common.response.ApiResponse;
+import com.sseukbap.party.dto.PartyActionPendingResponse;
 import com.sseukbap.party.dto.PartyCreateRequest;
 import com.sseukbap.party.dto.PartyCreateResponse;
 import com.sseukbap.party.dto.PartyDetailResponse;
+import com.sseukbap.party.dto.PartyInviteCodeResponse;
 import com.sseukbap.party.dto.PartyInviteLinkResponse;
 import com.sseukbap.party.dto.PartyListResponse;
 import com.sseukbap.party.dto.PartyMyTodayResponse;
@@ -49,30 +51,38 @@ public class PartyController {
     }
 
     /**
-     * 식사팟 목록 (오늘, FINISHED·DELETED 제외)
+     * 식사팟 목록 (date 날짜, 없으면 오늘. FINISHED·DELETED 제외)
      * 파라미터는 모두 선택값. 잘못된 값이면 Service에서 400 "조회 조건을 확인해 주세요."
      * (문자열로 받는 이유: 타입이 틀린 값도 같은 문구로 응답하기 위해)
      */
     @GetMapping("/list")
-    public ApiResponse<PartyListResponse> getPartyList(@RequestParam(required = false) String mealType,
+    public ApiResponse<PartyListResponse> getPartyList(@RequestParam(required = false) String date,
+                                                       @RequestParam(required = false) String mealType,
                                                        @RequestParam(required = false) String status,
                                                        @RequestParam(required = false) String excludeJoined,
                                                        @RequestParam(required = false) String limit,
                                                        @LoginMember Long memberId) {
-        return ApiResponse.success(partyService.getPartyList(mealType, status, excludeJoined, limit, memberId));
+        return ApiResponse.success(partyService.getPartyList(date, mealType, status, excludeJoined, limit, memberId));
     }
 
-    /** 내가 참여 중인 오늘 식사팟 (최대 2개, 메인 카드용) */
+    /** 내가 참여 중인 식사팟 (오늘 ~ 14일 후 중 가까운 2개, 메인 카드용) */
     @GetMapping("/my/today")
     public ApiResponse<List<PartyMyTodayResponse>> getMyTodayPartyList(@LoginMember Long memberId) {
         return ApiResponse.success(partyService.getMyTodayPartyList(memberId));
     }
 
+    /** 내가 할 일이 있는 식사팟 (헤더 종 알림: 방장 일정 정하기 / 참석 확정). 없으면 빈 배열 */
+    @GetMapping("/my/action-pending")
+    public ApiResponse<List<PartyActionPendingResponse>> getActionPendingList(@LoginMember Long memberId) {
+        return ApiResponse.success(partyService.getActionPendingList(memberId));
+    }
+
     /** 식사팟 상세 조회 */
     @GetMapping("/{partyId}")
     public ApiResponse<PartyDetailResponse> getParty(@PathVariable Long partyId,
+                                                     @RequestParam(required = false) String code,
                                                      @LoginMember Long memberId) {
-        return ApiResponse.success(partyService.getParty(partyId, memberId));
+        return ApiResponse.success(partyService.getParty(partyId, memberId, code));
     }
 
     /** 식사팟 삭제 (방장, 소프트 삭제) */
@@ -88,6 +98,13 @@ public class PartyController {
     public ApiResponse<PartyInviteLinkResponse> getInviteLink(@PathVariable Long partyId,
                                                               @LoginMember Long memberId) {
         return ApiResponse.success(partyService.getInviteLink(partyId, memberId));
+    }
+
+    /** 비공개 식사팟 초대 코드 새로 만들기 (방장, 2026-11-25) */
+    @PostMapping("/{partyId}/invite-code")
+    public ApiResponse<PartyInviteCodeResponse> regenerateInviteCode(@PathVariable Long partyId,
+                                                                     @LoginMember Long memberId) {
+        return ApiResponse.success(partyService.regenerateInviteCode(partyId, memberId));
     }
 
     /** 일정 확정·수정 (방장). 수정이면 모든 참여자의 확정이 초기화된다 */

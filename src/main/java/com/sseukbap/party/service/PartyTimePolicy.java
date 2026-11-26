@@ -5,6 +5,7 @@ import com.sseukbap.common.enums.MealType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 
 /**
  * 식사팟 시간 규칙 모음 (DB·스프링 없이 동작하는 순수 계산)
@@ -19,11 +20,38 @@ import java.time.LocalTime;
  */
 public final class PartyTimePolicy {
 
+    /**
+     * 식사팟 시간 기준: 서울 (2026-11-25 T6 P2)
+     * 서버 PC 시간대가 달라도(예: 클라우드 UTC) 날짜·시간 판단이 어긋나지 않게 식사팟 코드는 이 값으로 현재 시각을 구한다.
+     */
+    public static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
+    /** 지금 서울 시각 */
+    public static LocalDateTime now() {
+        return LocalDateTime.now(ZONE);
+    }
+
+    /** 오늘 서울 날짜 */
+    public static LocalDate today() {
+        return LocalDate.now(ZONE);
+    }
+
     /** 시간 선택 단위 (분) */
     public static final int TIME_STEP_MINUTES = 30;
 
     /** 확정 취소·나가기 마감: 기준 시간 몇 분 전까지 */
     public static final int DEADLINE_MINUTES_BEFORE = 30;
+
+    /** 식사팟을 만들고 조회할 수 있는 날짜: 오늘 ~ 오늘 + 14일 (11/20 변경, 기존 당일만) */
+    public static final int MAX_DAYS_AHEAD = 14;
+
+    /**
+     * 식사 날짜가 모집 가능한 범위(오늘 ~ 오늘+14일)인지
+     * 예) 오늘 11/20 → 11/20 true, 12/4 true(14일 후), 12/5 false, 11/19 false
+     */
+    public static boolean isWithinDateRange(LocalDate partyDate, LocalDate today) {
+        return !partyDate.isBefore(today) && !partyDate.isAfter(today.plusDays(MAX_DAYS_AHEAD));
+    }
 
     private static final LocalTime LUNCH_START = LocalTime.of(11, 0);
     private static final LocalTime LUNCH_END = LocalTime.of(13, 30);

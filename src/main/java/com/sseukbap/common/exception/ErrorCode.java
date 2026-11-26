@@ -21,7 +21,12 @@ public enum ErrorCode {
     // ===== 400 =====
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "입력값을 확인해 주세요."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "비밀번호가 일치하지 않습니다."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD", "현재 비밀번호가 일치하지 않습니다."),       // 2026-11-24 비밀번호 변경
+    INVALID_RESET_CODE(HttpStatus.BAD_REQUEST, "INVALID_RESET_CODE", "인증번호가 맞지 않거나 시간이 지났습니다."), // 2026-11-24 비밀번호 찾기
+    INVALID_EMAIL_DOMAIN(HttpStatus.BAD_REQUEST, "INVALID_EMAIL_DOMAIN", "회사 이메일(@samsung.com)만 쓸 수 있습니다."), // 2026-11-25 T3. 도메인은 설정값이라 서비스에서 문구를 다시 만든다
     INVALID_MAP_URL(HttpStatus.BAD_REQUEST, "INVALID_MAP_URL", "네이버 지도 URL만 입력할 수 있습니다."),
+    NOT_A_RESTAURANT(HttpStatus.BAD_REQUEST, "NOT_A_RESTAURANT", "음식점·카페만 등록할 수 있습니다."),          // 2026-11-24 식당 등록
+    RESTAURANT_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "RESTAURANT_OUT_OF_RANGE", "회사에서 4km 안의 식당만 등록할 수 있습니다."), // 반경은 설정값이라 서비스에서 문구를 다시 만든다
     INVALID_TAG(HttpStatus.BAD_REQUEST, "INVALID_TAG", "선택할 수 없는 태그입니다."),
     INVALID_IMAGE(HttpStatus.BAD_REQUEST, "INVALID_IMAGE", "jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다."),
     INVALID_MEAL_TIME(HttpStatus.BAD_REQUEST, "INVALID_MEAL_TIME", "선택할 수 없는 식사 시간입니다."),
@@ -49,9 +54,11 @@ public enum ErrorCode {
     // ===== 409 =====
     LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "LOGIN_ID_ALREADY_EXISTS", "이미 사용 중인 아이디입니다."),
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "NICKNAME_ALREADY_EXISTS", "이미 사용 중인 닉네임입니다."),
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "이미 등록된 이메일입니다."),               // 2026-11-24 이메일 등록
     RESTAURANT_ALREADY_EXISTS(HttpStatus.CONFLICT, "RESTAURANT_ALREADY_EXISTS", "이미 등록된 식당입니다."),
     ALREADY_INTERESTED(HttpStatus.CONFLICT, "ALREADY_INTERESTED", "이미 관심 등록한 식당입니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "ALREADY_JOINED", "이미 참여 중인 식사팟입니다."),
+    ALREADY_JOINED_SAME_MEAL(HttpStatus.CONFLICT, "ALREADY_JOINED_SAME_MEAL", "같은 시간대에 이미 참여 중인 식사팟이 있습니다."),
     NOT_JOINED(HttpStatus.CONFLICT, "NOT_JOINED", "참여하지 않은 식사팟입니다."),
     PARTY_FULL(HttpStatus.CONFLICT, "PARTY_FULL", "이미 마감된 식사팟입니다."),
     PARTY_FINISHED(HttpStatus.CONFLICT, "PARTY_FINISHED", "식사가 완료된 식사팟입니다."),
@@ -65,6 +72,9 @@ public enum ErrorCode {
     CHAT_READ_ONLY(HttpStatus.CONFLICT, "CHAT_READ_ONLY", "식사가 완료되어 메시지를 보낼 수 없습니다."),
     INVALID_STATUS(HttpStatus.CONFLICT, "INVALID_STATUS", "현재 상태에서는 변경할 수 없습니다."),
     NOT_ENOUGH_CANDIDATES(HttpStatus.CONFLICT, "NOT_ENOUGH_CANDIDATES", "룰렛을 돌릴 식당이 부족합니다."),
+
+    // ===== 429 (2026-11-24 로그인 시도 제한) =====
+    TOO_MANY_LOGIN_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_LOGIN_ATTEMPTS", "로그인을 여러 번 실패했습니다. 5분 뒤에 다시 시도해 주세요."),
 
     // ===== 500, 502 =====
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),

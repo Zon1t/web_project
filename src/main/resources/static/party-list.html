@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식사팟 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/date-picker.css">
+  <link rel="stylesheet" href="/css/party-list.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <main class="container party-list-page">
+    <div class="party-list-head">
+      <h1 class="page-title"><span id="list-title">오늘의 식사팟</span> <span id="today-label" class="party-list-head__date"></span></h1>
+      <a class="btn btn--primary" id="create-link" href="/party-create.html" data-create-party>식사팟 만들기</a>
+    </div>
+
+    <!-- 날짜: 오늘 ~ 14일 후 (11/20 추가). ‹ 전날 · 달력 · 다음 날 › -->
+    <div class="party-date-bar" role="group" aria-label="날짜 선택">
+      <button type="button" class="party-date-bar__step" id="date-prev" aria-label="전날">&lsaquo;</button>
+      <div id="date-picker"></div>
+      <button type="button" class="party-date-bar__step" id="date-next" aria-label="다음 날">&rsaquo;</button>
+      <button type="button" class="btn btn--text" id="date-today" hidden>오늘로</button>
+    </div>
+
+    <!-- 점심 / 저녁 탭 (건수 표시) -->
+    <div class="party-tabs" role="tablist" aria-label="끼니">
+      <button type="button" class="party-tabs__tab" role="tab" id="tab-LUNCH" data-meal-type="LUNCH"
+              aria-controls="party-list-root" aria-selected="false">점심 <span class="party-tabs__count"></span></button>
+      <button type="button" class="party-tabs__tab" role="tab" id="tab-DINNER" data-meal-type="DINNER"
+              aria-controls="party-list-root" aria-selected="false">저녁 <span class="party-tabs__count"></span></button>
+    </div>
+
+    <p id="list-message" class="party-list-message" role="alert"></p>
+
+    <!-- 목록 / 로딩 / 빈 상태 / 오류가 이 안에 그려진다 -->
+    <div id="party-list-root" role="tabpanel"></div>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/party-join.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/components/date-picker.js"></script>
+  <script src="/js/pages/party-list.js"></script>
+</body>
+</html>

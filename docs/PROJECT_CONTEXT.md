@@ -34,7 +34,7 @@
 
 1. **구내식당 메뉴**: 계절밥상 메뉴를 Jsoup으로 크롤링, 당일 점심·저녁 표시 (실패 시 안내 문구, 불가 시 관리자 수동 입력)
 2. **식당 아카이빙**: 네이버 지도 URL로 식당 등록(네이버 API로 주소·좌표 저장), 목록+지도, 리뷰(한줄평·태그·사진), 관심
-3. **식사팟**: 당일 점심/저녁 식사 모임 생성·참여, 2단계 참여(참여하기 → 방장 일정 확정 후 참여 확정), 대화(폴링)
+3. **식사팟**: 오늘~14일 후 점심/저녁 식사 모임 생성·참여, 2단계 참여(참여하기 → 방장 일정 확정 후 참여 확정), 대화(폴링)
 4. **따봉·랭킹**: 식사 완료 후 참여 확정자가 식당에 따봉, 최근 30일 따봉 수 랭킹
 5. **메뉴 룰렛**: 카테고리별 최대 8곳 후보 → 서버가 1곳 무작위 선정
 
@@ -187,14 +187,14 @@ naver:
 
 - 회원: 아이디 영문·숫자 4~20자, 비밀번호 8~20자, 닉네임 2~10자. **아이디·닉네임 모두 중복 불가**(중복 확인 API + 가입 시 서버 재검사 + DB UK). 닉네임은 앞뒤 공백 제거 후 비교, 대소문자 구분. 가입 후 자동 로그인 없음.
 - 식당 카테고리: 구내식당/한식/중식/일식/양식/분식/기타. 식당 이름 최대 30자, 등록 식당 자동완성으로 중복 방지. 등록자 수정·삭제 없음 → "식당 정보 수정 제안"(저장만, 처리 방식 미정).
-- 식사팟: 당일만, 끼니(점심 11:00~13:30 / 저녁 17:00~19:30, 30분 단위, 기본 11:00/17:00), 정원 2~12(기본 4, 방장 포함), 한마디 50자. 생성자 = 방장 + 첫 참여자.
+- 식사팟: 오늘 ~ 14일 후(11/20 변경, 기존 당일만. 날짜 미지정 시 오늘), 끼니(점심 11:00~13:30 / 저녁 17:00~19:30, 30분 단위, 기본 11:00/17:00), 정원 2~12(기본 4, 방장 포함), 한마디 50자. 생성자 = 방장 + 첫 참여자.
 - 참여 2단계: [참여하기](1차, 수락 없이 대화 입장) → 방장 일정 확정 후 [참여 확정](2차). 일정 수정 시 모든 확정 초기화.
 - 확정 취소·확정자 나가기: 기준 시간 30분 전까지. 기준 시간 = `confirmed_time`, 없으면 `meal_time`.
 - 방장이 나가거나 삭제 → 식사팟 DELETED(소프트 삭제).
 - 대화: 참여자 전용, 200자, 3초 폴링(afterId), 시스템 메시지(참여·나가기·일정·확정 등), 식사 완료 후 읽기 전용, 다음 날 0시 삭제.
 - 따봉: FINISHED 팟의 참여 확정자만, 팟 1건당 1회, 대상 = 팟의 식당. 메인 배너로 요청, [다음에] 시 당일 숨김(FE 브라우저 저장소). 요청 대상은 식사 후 7일 이내.
-- 랭킹: 오늘 포함 최근 30일(오늘-29 ~ 오늘, **식사일 PARTY_DATE 기준**) 따봉 수 내림차순 → 리뷰 수 → 등록 순. 랭킹 TOP 10, 메인 TOP 3. 따봉 1건 이상만.
-- 룰렛: 후보 조회(최대 8, 무작위) → spin(candidateIds 2~8개 중 1곳 선정), 2곳 미만이면 실행 불가.
+- 랭킹: 오늘 포함 최근 30일(오늘-29 ~ 오늘, **식사일 PARTY_DATE 기준**) 따봉 수 내림차순 → 리뷰 수 → 등록 순. 랭킹 TOP 10, 메인 TOP 3. 구내식당 제외, 따봉 0건 식당도 포함(11/23 변경, 기존 따봉 1건 이상만).
+- 룰렛: [카테고리 룰렛] 후보 조회(최대 8, 무작위, 구내식당 제외, 화면 칩에 기타 없음) → spin(candidateIds 2~8개 중 1곳 선정) / [내 룰렛](11/23) 등록 식당을 검색해 2~8곳 담고 spin, 구내식당 포함 가능, 서버 저장 없음. 2곳 미만이면 실행 불가.
 
 ---
 
@@ -208,8 +208,8 @@ naver:
 | S-04 | 식당 목록 (목록+지도) | F-03, F-04, F-17 | 좌측 목록(최근 30일 따봉순), 우측 네이버 지도 |
 | S-05 | 식당 상세 | F-03, F-06, F-07~F-10 | 태그 TOP 3, 따봉(30일), 관심, 리뷰(페이징), 수정 제안 링크 |
 | S-06 | 식당 등록 | F-03 | 네이버 URL(최상단) → 이름(자동완성) → 카테고리 |
-| S-07 | 식사팟 목록 | F-06, F-16 | 점심/저녁 탭(15시 전 점심 기본) |
-| S-08 | 식사팟 생성 | F-06 | 식당 상세에서 진입 시 식당 고정 |
+| S-07 | 식사팟 목록 | F-06, F-16 | 날짜 선택(오늘~14일 후, 기본 오늘) + 점심/저녁 탭(15시 전 점심 기본) |
+| S-08 | 식사팟 생성 | F-06 | 식당 상세에서 진입 시 식당 고정, 날짜 선택(오늘~14일 후) |
 | S-09 | 랭킹 | F-08, F-15 | |
 | S-10 | 마이페이지 | F-11, F-08 | 탭: 내 리뷰 / 참여한 식사팟 / 등록한 식당 / 관심 식당 |
 | S-11 | 메뉴 룰렛 | F-12 | |
@@ -259,7 +259,7 @@ naver:
 
 ### API별 상세 오류 코드 (명세서에 등장한 것, 전체 목록은 노션 확인)
 
-`PASSWORD_MISMATCH`, `LOGIN_ID_ALREADY_EXISTS`, `NICKNAME_ALREADY_EXISTS`, `RESTAURANT_NOT_FOUND`, `ALREADY_INTERESTED`, `INTEREST_NOT_FOUND`, `PARTY_NOT_FOUND`, `PARTY_DELETED`, `PARTY_FINISHED`, `PARTY_FULL`, `ALREADY_JOINED`, `NOT_JOINED`, `NOT_HOST`, `INVALID_MEAL_TIME`, `INVALID_STATUS`, `SCHEDULE_NOT_SET`, `ALREADY_CONFIRMED`, `NOT_CONFIRMED`, `CANCEL_DEADLINE_PASSED`, `LEAVE_DEADLINE_PASSED`, `CHAT_READ_ONLY`, `NOT_CONFIRMED_MEMBER`, `PARTY_NOT_FINISHED`, `ALREADY_THUMBED`, `NOT_ENOUGH_CANDIDATES`
+`PASSWORD_MISMATCH`, `LOGIN_ID_ALREADY_EXISTS`, `NICKNAME_ALREADY_EXISTS`, `RESTAURANT_NOT_FOUND`, `ALREADY_INTERESTED`, `INTEREST_NOT_FOUND`, `PARTY_NOT_FOUND`, `PARTY_DELETED`, `PARTY_FINISHED`, `PARTY_FULL`, `ALREADY_JOINED`, `ALREADY_JOINED_SAME_MEAL`, `NOT_JOINED`, `NOT_HOST`, `INVALID_MEAL_TIME`, `INVALID_STATUS`, `SCHEDULE_NOT_SET`, `ALREADY_CONFIRMED`, `NOT_CONFIRMED`, `CANCEL_DEADLINE_PASSED`, `LEAVE_DEADLINE_PASSED`, `CHAT_READ_ONLY`, `NOT_CONFIRMED_MEMBER`, `PARTY_NOT_FINISHED`, `ALREADY_THUMBED`, `NOT_ENOUGH_CANDIDATES`
 
 ### 코드 값
 
@@ -357,8 +357,8 @@ naver:
 | B | POST | `/api/restaurants/{restaurantId}/suggestions` | 식당 정보 수정 제안 | |
 | B | DELETE | `/api/reviews/{reviewId}` | 리뷰 삭제 | |
 | A | POST | `/api/parties/create` | 식사팟 생성 | |
-| A | GET | `/api/parties/list` | 식사팟 목록 | mealType, status, excludeJoined, limit |
-| A | GET | `/api/parties/my/today` | 참여 중인 오늘 식사팟 (최대 2) | |
+| A | GET | `/api/parties/list` | 식사팟 목록 | date, mealType, status, excludeJoined, limit |
+| A | GET | `/api/parties/my/today` | 참여 중인 식사팟 (오늘~14일 후, 최대 2) | |
 | A | GET | `/api/parties/my/thumbs-pending` | 따봉 요청 대상 조회 (최근 1건) | |
 | A | GET | `/api/parties/{partyId}` | 식사팟 상세 | |
 | A | DELETE | `/api/parties/{partyId}` | 식사팟 삭제 (방장, 소프트 삭제) | |
@@ -454,7 +454,7 @@ naver:
 | PARTY_ID | NUMBER | PK, SEQ_MEAL_PARTY | |
 | RESTAURANT_ID | NUMBER | FK, NN | |
 | HOST_ID | NUMBER | FK, NN | 방장 → MEMBER |
-| PARTY_DATE | DATE | NN | 식사 날짜(당일) |
+| PARTY_DATE | DATE | NN | 식사 날짜(오늘~14일 후) |
 | MEAL_TYPE | VARCHAR2(10) | NN, CHECK | LUNCH/DINNER |
 | MEAL_TIME | VARCHAR2(5) | NN | 예정 시간 |
 | CAPACITY | NUMBER(2) | NN, 기본 4, CHECK 2~12 | 방장 포함 |
@@ -524,7 +524,7 @@ naver:
 | --- | --- | --- |
 | IX_REVIEW_RESTAURANT | REVIEW(RESTAURANT_ID, CREATED_AT) | 식당별 리뷰 페이징 |
 | IX_MEAL_PARTY_RESTAURANT | MEAL_PARTY(RESTAURANT_ID, PARTY_DATE) | 30일 따봉 집계 |
-| IX_MEAL_PARTY_DATE | MEAL_PARTY(PARTY_DATE, MEAL_TYPE) | 당일 식사팟 목록 |
+| IX_MEAL_PARTY_DATE | MEAL_PARTY(PARTY_DATE, MEAL_TYPE) | 날짜별 식사팟 목록 |
 | IX_PARTY_CHAT_PARTY | PARTY_CHAT(PARTY_ID, CHAT_ID) | 대화 폴링 |
 | IX_PARTY_MEMBER_MEMBER | PARTY_MEMBER(MEMBER_ID) | 내가 참여한 식사팟 |
 
@@ -672,6 +672,13 @@ com.sseukbap
 | 11/18 | thumbs·roulette 도메인 정리 → 랭킹·룰렛은 restaurants, 따봉 요청 대상은 parties/my 하위로 이동 |
 | 11/18 | 기술 스택 확정: Boot 4.1.2 + Hibernate 7 + OracleLegacyDialect + ojdbc8 19.33 (연결 테스트 통과) |
 | 11/18 | 역할 분담안(A 식사팟 / B 식당 / C 회원·메뉴·공통) 작성, 컨벤션 초안 작성 |
+| 11/19 | 구내식당은 초기 데이터로만 제공, 식당 등록 시 CAFETERIA 선택 불가 (룰렛 카테고리 반영은 C와 확인) |
+| 11/19 | check-map-url에 name 추가: 네이버에 URL·장소 ID 조회 공식 API가 없어 식당 이름으로 지역 검색, 사용자가 주소 확인 후 등록. map_url은 장소 ID 기준 표준 URL(`https://map.naver.com/p/entry/place/{id}`)로 저장·중복 판단 |
+| 11/19 | 네이버 검색 API 발급처 변경: 개발자센터 → 네이버 클라우드 NAVER API HUB (키 이름 `naver.client-id/secret` 유지). 지도 키(Maps)는 서버 yml에 넣지 않음 |
+| 11/20 | 식사팟 날짜 확대: 당일만 → 오늘 ~ 14일 후(2주) (팀 합의, 처음 7일 → 같은 날 14일로 조정). 날짜는 달력에서 고른다(만들기·목록). 생성 API에 partyDate(선택, 기본 오늘), 목록 API에 date(선택, 기본 오늘) 추가. `/api/parties/my/today`는 URI 유지(메인 호환)하고 오늘~14일 후 중 가까운 2개 + 응답에 partyDate 추가. DB·스케줄러·대화 삭제·따봉·랭킹은 변경 없음 |
+| 11/23 | 랭킹: 따봉 1건 이상만 → 따봉 0건 식당도 리뷰 수·등록 순으로 채워 TOP 10(메인 TOP 3), 구내식당 제외 (팀 합의) |
+| 11/23 | 한 끼에 팟 하나: 같은 날짜·같은 끼니의 팟(DELETED 제외)에 이미 들어가 있으면 참여하기·식사팟 생성 불가, 409 `ALREADY_JOINED_SAME_MEAL` (확정 여부 무관, 팀 합의) |
+| 11/23 | 룰렛: 카테고리 칩에서 '기타' 제거('전체'에는 포함), '내 룰렛' 추가(등록 식당 검색해 2~8곳, 서버 저장 없이 브라우저에만 기억). spin은 구내식당도 허용 (팀 합의) |
 
 ### 미결 사항
 

@@ -14,7 +14,7 @@ public interface ReviewTagRepository extends JpaRepository<ReviewTag, Long> {
 
     /**
      * 식당 리뷰들에서 많이 선택된 태그 (식당 상세의 TOP 3)
-     * 13개 태그 전체 대상, 정렬: 선택 수 내림차순 → tagId 오름차순. 선택된 적 없는 태그는 나오지 않는다.
+     * 태그 전체(18개) 대상, 정렬: 선택 수 내림차순 → tagId 오름차순. 선택된 적 없는 태그는 나오지 않는다.
      * 개수는 pageable로 제한한다. (PageRequest.of(0, 3))
      */
     @Query("""
@@ -23,6 +23,7 @@ public interface ReviewTagRepository extends JpaRepository<ReviewTag, Long> {
               JOIN rt.tag t
               JOIN rt.review r
              WHERE r.restaurant.restaurantId = :restaurantId
+               AND r.hidden = false
              GROUP BY t.tagId, t.tagName, t.tagCategory
              ORDER BY COUNT(rt) DESC, t.tagId ASC
             """)
@@ -43,7 +44,7 @@ public interface ReviewTagRepository extends JpaRepository<ReviewTag, Long> {
 
     /**
      * 리뷰의 태그 연결 삭제 (리뷰 삭제 전에 호출).
-     * 일괄 DELETE 쿼리 대신 엔티티를 조회해서 하나씩 지운다. (리뷰 태그는 최대 13개)
+     * 일괄 DELETE 쿼리 대신 엔티티를 조회해서 하나씩 지운다. (리뷰 태그는 최대 18개)
      * 그래야 같은 트랜잭션에서 저장한 ReviewTag가 메모리(영속성 컨텍스트)에 남아 오류를 내지 않는다.
      */
     void deleteByReview_ReviewId(Long reviewId);

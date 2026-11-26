@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>마이페이지 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/mypage.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <main class="container mypage">
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">마이페이지</h1>
+        <p class="ui-page-head__desc">내가 남긴 리뷰와 참여한 식사팟을 모아 봤어요.</p>
+      </div>
+    </div>
+
+    <!-- ② 프로필 + 활동 건수 -->
+    <section id="mypage-profile" class="mypage-profile" aria-label="내 정보"></section>
+
+    <!-- ③ 탭 -->
+    <div class="mypage-tabs" role="tablist" aria-label="내 활동">
+      <button class="mypage-tab" type="button" role="tab" id="tab-reviews" data-tab="reviews"
+              aria-controls="mypage-panel" aria-selected="false">내 리뷰</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-parties" data-tab="parties"
+              aria-controls="mypage-panel" aria-selected="false">참여한 식사팟</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-restaurants" data-tab="restaurants"
+              aria-controls="mypage-panel" aria-selected="false">등록한 식당</button>
+      <button class="mypage-tab" type="button" role="tab" id="tab-interests" data-tab="interests"
+              aria-controls="mypage-panel" aria-selected="false">관심 식당</button>
+    </div>
+
+    <!-- ④ 탭 내용: 목록 / 로딩 / 빈 상태 / 오류 -->
+    <section id="mypage-panel" class="mypage-panel" role="tabpanel" aria-live="polite"></section>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/review.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/api/mypage.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/mypage.js"></script>
+</body>
+</html>

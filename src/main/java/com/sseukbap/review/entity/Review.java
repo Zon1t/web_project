@@ -3,6 +3,7 @@ package com.sseukbap.review.entity;
 import com.sseukbap.member.entity.Member;
 import com.sseukbap.restaurant.entity.Restaurant;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -15,6 +16,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.type.YesNoConverter;
 
 import java.time.LocalDateTime;
 
@@ -54,6 +56,10 @@ public class Review {
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Convert(converter = YesNoConverter.class)
+    @Column(name = "HIDDEN_YN", nullable = false, length = 1)
+    private boolean hidden;           // 관리자 숨김 (2026-11-24, 08_account_admin.sql). true면 목록·개수·태그 집계에서 뺀다
+
     private Review(Restaurant restaurant, Member member, String content, String imagePath) {
         this.restaurant = restaurant;
         this.member = member;
@@ -65,6 +71,11 @@ public class Review {
     /** 리뷰 작성. 사진이 없으면 imagePath = null */
     public static Review create(Restaurant restaurant, Member member, String content, String imagePath) {
         return new Review(restaurant, member, content, imagePath);
+    }
+
+    /** 관리자 숨김·숨김 해제 (2026-11-24 A3) */
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     /** 작성자 본인인지 확인 (리뷰 삭제 권한, 목록의 mine 필드) */

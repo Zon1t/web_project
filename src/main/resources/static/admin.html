@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>관리자 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <!-- 관리자 (A3, 2026-11-24): 식당 / 수정 제안 / 리뷰 / 구내식당 메뉴. 관리자가 아니면 서버가 403 -->
+  <main class="container admin-page">
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">관리자</h1>
+        <p class="ui-page-head__desc">식당·리뷰를 숨기고, 수정 제안과 구내식당 메뉴를 관리해요. 숨긴 항목은 다른 화면에 보이지 않아요.</p>
+      </div>
+    </div>
+
+    <div id="admin-tabs" class="admin-tabs" role="tablist" aria-label="관리 항목">
+      <button class="admin-tab" type="button" role="tab" id="tab-restaurants" data-tab="restaurants" aria-controls="admin-panel">식당</button>
+      <button class="admin-tab" type="button" role="tab" id="tab-suggestions" data-tab="suggestions" aria-controls="admin-panel">수정 제안</button>
+      <button class="admin-tab" type="button" role="tab" id="tab-reviews" data-tab="reviews" aria-controls="admin-panel">리뷰</button>
+      <button class="admin-tab" type="button" role="tab" id="tab-cafeteria" data-tab="cafeteria" aria-controls="admin-panel">구내식당 메뉴</button>
+    </div>
+
+    <section id="admin-panel" class="admin-panel" role="tabpanel" aria-live="polite"></section>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/admin.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/admin.js"></script>
+</body>
+</html>

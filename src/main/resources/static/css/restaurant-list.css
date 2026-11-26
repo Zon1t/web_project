@@ -6,6 +6,11 @@
   height: calc(100vh - var(--header-height));
 }
 
+/* 지도 바로 아래에 푸터가 붙게 (공통 푸터의 위 여백 없앰) */
+.restaurant-page + .app-footer {
+  margin-top: 0;
+}
+
 /* ---------- 왼쪽 패널 ---------- */
 .restaurant-panel {
   display: flex;
@@ -49,12 +54,59 @@
   padding-bottom: var(--space-6);
 }
 
+/* 고른 카테고리의 음식 예시 (2026-11-24) */
+.restaurant-category-hint:empty {
+  display: none;
+}
+
+.restaurant-category-hint {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+/* 결과 수 + 정렬 (2026-11-24) */
+.restaurant-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.restaurant-sort {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.restaurant-sort__btn {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.restaurant-sort__btn[aria-pressed="true"] {
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
 .restaurant-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-1);
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s, transform 0.15s;
+  padding: var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--color-border-light);
 }
 
@@ -96,18 +148,64 @@
   background: var(--color-surface);
 }
 
-.restaurant-map__placeholder {
+.restaurant-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 지도 로딩·오류 안내 */
+.restaurant-map__state {
+  height: 100%;
+}
+
+/* 목록에서 지도와 연결된 항목 (마우스·포커스) */
+.restaurant-item.is-highlighted {
+  background: var(--color-surface-hover);
+  transform: translateX(4px);
+}
+
+.restaurant-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* ---------- 지도 말풍선 ---------- */
+.map-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: 100%;
-  text-align: center;
+  gap: 2px;
+  min-width: 140px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.map-info__name {
+  font-weight: var(--font-weight-bold);
+}
+
+.map-info__meta {
   color: var(--color-text-muted);
 }
 
-/* ---------- 좁은 화면: 목록만 위아래로 ---------- */
+.map-info__link {
+  margin-top: var(--space-1);
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* ---------- 좁은 화면 [지도 보기]/[목록 보기] 전환 버튼 (2026-11-25) ---------- */
+.restaurant-view-toggle {
+  display: none; /* 넓은 화면에서는 목록·지도가 함께 보여서 필요 없다 */
+}
+
+/* ---------- 좁은 화면: 목록 또는 지도 하나만 크게 (2026-11-25) ---------- */
 @media (max-width: 900px) {
   .restaurant-page {
     flex-direction: column;
@@ -116,13 +214,70 @@
 
   .restaurant-panel {
     width: 100%;
-    padding: var(--space-6) var(--space-4) 0;
+    padding: var(--space-6) var(--space-4) var(--space-12); /* 맨 아래 항목이 떠 있는 버튼에 가리지 않게 */
     border-right: none;
     overflow: visible;
   }
 
+  /* 지도 보기: 헤더 아래 화면 전체 (주소창이 줄었다 늘었다 하는 휴대폰은 dvh) */
   .restaurant-map {
-    height: 320px;
+    height: calc(100vh - var(--header-height));
+    height: calc(100dvh - var(--header-height));
     flex: none;
+  }
+
+  .restaurant-page[data-view="list"] .restaurant-map,
+  .restaurant-page[data-view="map"] .restaurant-panel {
+    display: none;
+  }
+
+  /* 지도만 볼 때는 아래 푸터를 숨겨 지도가 화면을 다 쓰게 */
+  .restaurant-page[data-view="map"] + .app-footer {
+    display: none;
+  }
+
+  /* 아래 가운데에 떠 있는 알약 버튼 (오른쪽 아래 룰렛 버튼과 겹치지 않게 가운데) */
+  .restaurant-view-toggle {
+    position: fixed;
+    bottom: var(--space-6);
+    left: 50%;
+    z-index: 15;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 48px;
+    padding: 0 var(--space-5);
+    border: 0;
+    border-radius: var(--radius-full);
+    background: var(--color-text);
+    color: var(--color-surface);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    box-shadow: var(--shadow-md);
+    transform: translateX(-50%);
+    cursor: pointer;
+  }
+
+  .restaurant-view-toggle:hover {
+    opacity: 0.92;
+  }
+
+  .restaurant-view-toggle:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+}
+
+/* 지도 화면은 헤더처럼 푸터도 전체 폭 */
+.restaurant-page + .app-footer .app-footer__inner {
+  max-width: none;
+  padding-right: var(--space-12);
+  padding-left: var(--space-12);
+}
+
+@media (max-width: 640px) {
+  .restaurant-page + .app-footer .app-footer__inner {
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
   }
 }

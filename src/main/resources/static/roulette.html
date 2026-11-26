@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>메뉴 룰렛 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/roulette.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <main class="container roulette-page">
+    <a class="ui-back" href="/" data-ui-back><span data-ui-icon="chevronRight" data-size="16"></span>뒤로</a>
+    <div class="ui-page-head">
+      <div>
+        <h1 class="ui-page-head__title">오늘 뭐 먹지?</h1>
+        <p class="ui-page-head__desc">고민될 땐 룰렛에 맡겨 보세요. 정해진 식당으로 바로 식사팟도 만들 수 있어요.</p>
+      </div>
+    </div>
+
+    <!-- ① 룰렛 종류: 카테고리 룰렛 / 내 룰렛 (2026-11-23) -->
+    <div id="roulette-modes" class="roulette-modes" role="tablist" aria-label="룰렛 종류">
+      <button type="button" class="roulette-modes__tab" role="tab" data-mode="category" aria-selected="true">카테고리 룰렛</button>
+      <button type="button" class="roulette-modes__tab" role="tab" data-mode="custom" aria-selected="false">내 룰렛</button>
+    </div>
+
+    <!-- ② 카테고리 선택 (단일 선택, 기본 '전체') — 카테고리 룰렛 -->
+    <div id="roulette-categories" class="roulette-categories" role="group" aria-label="카테고리 선택"></div>
+
+    <!-- ②' 내 룰렛: 등록된 식당을 검색해 2~8곳 담기 -->
+    <section id="roulette-custom" class="roulette-custom" aria-label="내 룰렛 식당 고르기" hidden>
+      <div class="roulette-custom__search">
+        <label class="sr-only" for="custom-keyword">등록된 식당 이름 검색</label>
+        <input id="custom-keyword" class="input" type="search" maxlength="30"
+               placeholder="등록된 식당 이름으로 검색해서 담기" autocomplete="off"
+               aria-controls="custom-results" aria-describedby="custom-hint">
+        <ul id="custom-results" class="roulette-custom__results" aria-label="검색 결과" hidden></ul>
+      </div>
+      <div class="roulette-custom__head">
+        <p id="custom-hint" class="roulette-custom__hint" aria-live="polite"></p>
+        <button id="custom-clear" class="btn btn--text roulette-custom__clear" type="button">모두 비우기</button>
+      </div>
+      <ul id="custom-picked" class="roulette-custom__picked" aria-label="담은 식당"></ul>
+    </section>
+
+    <div class="roulette-layout">
+      <!-- ③ 룰렛 휠 + ④ 돌리기 버튼 -->
+      <div class="roulette-stage">
+        <div class="roulette-wheel-box">
+          <!-- 12시 방향 화살표 (돌지 않는다, 칸을 지날 때마다 '틱' 하고 튕긴다) -->
+          <span id="roulette-pointer" class="roulette-pointer" aria-hidden="true">
+            <svg viewBox="0 0 36 44" focusable="false"><path d="M18 42 L4 14 A14 14 0 1 1 32 14 Z" /><circle cx="18" cy="14" r="5" /></svg>
+          </span>
+          <div id="roulette-wheel" class="roulette-wheel" aria-hidden="true"></div>
+          <div id="roulette-wheel-state" class="roulette-wheel-state" aria-live="polite" hidden></div>
+        </div>
+        <button id="roulette-spin" class="btn btn--primary roulette-spin" type="button" disabled>룰렛 돌리기</button>
+        <div class="roulette-tools">
+          <button id="roulette-refill" class="btn btn--text roulette-refill" type="button" disabled>
+            <span data-ui-icon="refresh" data-size="18"></span>다시 채우기
+          </button>
+          <button id="roulette-sound" class="btn btn--text roulette-sound" type="button" aria-pressed="false">효과음 끔</button>
+        </div>
+      </div>
+
+      <!-- ⑤ 결과 카드 -->
+      <section id="roulette-result" class="roulette-result" aria-live="polite" aria-label="룰렛 결과"></section>
+    </div>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/api/roulette.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/pages/roulette.js"></script>
+</body>
+</html>

@@ -4,24 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>식당 상세 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <script>
+    // 지도 화면의 상세 카드(iframe)로 열릴 때(?embed=1): 헤더·푸터 없이, 링크는 바깥 화면에서 열리게
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.classList.add('is-embed');
+      document.write('<base target="_top">');
+    }
+  </script>
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/map-kit.css">
   <link rel="stylesheet" href="/css/restaurant-detail.css">
 </head>
 <body>
-  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
-  <header class="app-header">
-    <div class="app-header__inner">
-      <a class="app-header__logo" href="/">슥밥</a>
-      <nav class="app-header__nav" aria-label="주 메뉴">
-        <a class="app-header__link" href="/">구내식당</a>
-        <a class="app-header__link is-active" href="/restaurant-list.html">식당</a>
-        <a class="app-header__link" href="/party-list.html">식사팟</a>
-        <a class="app-header__link" href="#">랭킹</a>
-      </nav>
-    </div>
-  </header>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
 
   <main class="container detail-page">
     <nav class="detail-breadcrumb text-muted" aria-label="현재 위치">
@@ -32,14 +34,49 @@
     <div id="detail-root"></div>
   </main>
 
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <!-- 식당 정보 수정 제안 입력 창 (상세 맨 아래 링크로 연다) -->
+  <dialog id="suggestion-dialog" class="suggestion-dialog" aria-labelledby="suggestion-title">
+    <form id="suggestion-form" class="suggestion-dialog__form" method="dialog" novalidate>
+      <h2 id="suggestion-title" class="section-title">식당 정보 수정 제안</h2>
+      <p class="text-sub suggestion-dialog__desc">이름·카테고리·위치 등 잘못된 정보가 있으면 알려 주세요.</p>
+      <div class="field">
+        <label class="sr-only" for="suggestion-content">제안 내용</label>
+        <textarea id="suggestion-content" class="textarea" maxlength="500" rows="5" required
+                  placeholder="예: 카테고리가 일식이 아니라 한식이에요" aria-describedby="suggestion-message"></textarea>
+        <div class="suggestion-dialog__footer">
+          <p id="suggestion-message" class="field__message field__message--error" role="alert"></p>
+          <span id="suggestion-length" class="text-muted">0 / 500</span>
+        </div>
+      </div>
+      <div class="suggestion-dialog__actions">
+        <button type="button" class="btn" data-action="close-suggestion">취소</button>
+        <button id="suggestion-submit" type="submit" class="btn btn--primary">제출</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 제출 완료 안내 (잠깐 보였다가 사라짐) -->
+  <p id="toast" class="toast" role="status" aria-live="polite"></p>
+
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
   <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
   <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
   <!-- <script src="/js/api/mock/review.mock.js"></script> -->
   <script src="/js/api/restaurant.js"></script>
   <script src="/js/api/review.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/components/map-kit.js"></script>
   <script src="/js/pages/restaurant-detail-reviews.js"></script>
+  <script src="/js/pages/restaurant-detail-suggestion.js"></script>
   <script src="/js/pages/restaurant-detail.js"></script>
 </body>
 </html>

@@ -1,0 +1,65 @@
+/*
+ * footer.css — 공통 푸터 (B, 2026-11-20)
+ * HTML은 js/components/app-footer.js가 그린다. 로고 스타일(.brand-logo)은 header.css.
+ */
+.app-footer {
+  margin-top: var(--space-12);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.app-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4) var(--space-12);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+.app-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.app-footer__desc {
+  color: var(--color-text-sub);
+}
+
+.app-footer__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-8);
+  margin: 0;
+}
+
+.app-footer__info div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.app-footer__info dt {
+  color: var(--color-text-sub);
+  font-weight: var(--font-weight-medium);
+}
+
+.app-footer__info dd {
+  margin: 0;
+}
+
+.app-footer__copy {
+  flex-basis: 100%;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+  font-size: var(--font-size-xs);
+}
+
+@media (max-width: 640px) {
+  .app-footer__inner {
+    padding: var(--space-6) var(--space-4);
+  }
+}

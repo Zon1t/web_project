@@ -1,0 +1,282 @@
+/*
+ * party-list.css — S-07 식사팟 목록 (A)
+ * 색·간격·글꼴은 tokens.css 변수만 쓴다. 버튼·뱃지·상태 화면은 base.css(B)의 것을 쓴다.
+ */
+
+.party-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.party-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.party-list-head__date {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ---------- 날짜: ‹ 전날 · 달력 · 다음 날 › (오늘 ~ 14일 후) ---------- */
+.party-date-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.party-date-bar__step {
+  width: var(--control-height);
+  height: var(--control-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.party-date-bar__step:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.party-date-bar__step:disabled {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.party-date-bar .btn[hidden] {
+  display: none;
+}
+
+/* ---------- 탭 ---------- */
+.party-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.party-tabs__tab {
+  height: var(--control-height);
+  margin-bottom: -2px;
+  padding: 0 var(--space-6);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.party-tabs__tab:hover {
+  color: var(--color-text);
+}
+
+.party-tabs__tab[aria-selected="true"] {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.party-tabs__count:not(:empty)::before {
+  content: '(';
+}
+
+.party-tabs__count:not(:empty)::after {
+  content: ')';
+}
+
+.party-list-message:empty {
+  display: none;
+}
+
+.party-list-message {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 목록: 카드 ---------- */
+.party-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.party-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+
+.party-card:hover {
+  border-color: var(--color-border);
+}
+
+.party-card.is-closed {
+  background: var(--color-surface);
+}
+
+.party-card.is-closed .ui-avatar {
+  filter: grayscale(0.7);
+  opacity: 0.7;
+}
+
+.party-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.party-card__title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.party-card__link {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.party-card__link:hover {
+  color: var(--color-primary);
+}
+
+.party-card__category {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.party-card__time {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.party-card__desc {
+  min-height: 1.5em;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.party-card__people {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.party-seats {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+}
+
+.party-seat {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-light);
+}
+
+.party-seat.is-taken {
+  background: var(--color-primary);
+}
+
+.party-card.is-closed .party-seat.is-taken {
+  background: var(--color-text-disabled);
+}
+
+.party-card__count {
+  flex-shrink: 0;
+  color: var(--color-text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.party-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.party-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.party-badge--hot {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.party-badge--soon {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+.party-badge--joined {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+/* 비공개 식사팟 (참여자에게만 보임, 2026-11-25) */
+.party-badge--private {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
+.party-card__foot .btn {
+  flex-shrink: 0;
+  min-width: 96px;
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 760px) {
+  .party-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .party-tabs__tab {
+    flex: 1;
+    padding: 0 var(--space-3);
+  }
+}

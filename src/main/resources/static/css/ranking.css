@@ -1,0 +1,418 @@
+/*
+ * ranking.css — 랭킹 화면 (S-09, C · 2026-11-20 개편: 이달의 식당 배너 · 시상대 · 리스트)
+ * 색·간격은 tokens.css 변수만 사용한다. 클래스 앞머리 rk-
+ */
+.rk-state {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ---------- 이달의 식당 배너 ---------- */
+.rk-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-6);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+  padding: var(--space-8) var(--space-10);
+  border-radius: 24px;
+  background: var(--color-accent-soft);
+}
+
+.rk-banner[hidden] {
+  display: none;
+}
+
+/* 배너 오른쪽 위 은은한 원 장식 */
+.rk-banner::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -40px;
+  width: 320px;
+  height: 320px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.rk-banner.is-in {
+  animation: rk-banner-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rk-banner-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+.rk-banner__text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rk-banner__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-accent-strong);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.rk-banner__name {
+  font-size: 34px;
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.rk-banner__name a:hover {
+  color: var(--color-accent-strong);
+}
+
+.rk-banner__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-sub);
+}
+
+.rk-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.rk-banner__actions .btn--primary .ui-icon {
+  margin-right: 2px;
+}
+
+.rk-banner__art {
+  position: relative;
+}
+
+.rk-banner__illust {
+  width: 220px;
+  height: 165px;
+  animation: rk-float 3.2s ease-in-out infinite;
+}
+
+@keyframes rk-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* ---------- 공통 조각 ---------- */
+.rk-dot {
+  color: var(--color-border);
+}
+
+.rk-thumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-accent-strong);
+  font-weight: var(--font-weight-bold);
+}
+
+.rk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-height: 0;
+}
+
+.rk-tags.is-filled {
+  animation: ui-fade-in 0.3s ease;
+}
+
+.rk-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.rk-banner .rk-tag {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- 카테고리 ---------- */
+.rk-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+/* ---------- 시상대 ---------- */
+.rk-podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: var(--space-4);
+  max-width: 880px;
+  margin: 0 auto var(--space-10);
+}
+
+.rk-podium__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  animation: rk-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.rk-podium__slot--1 { animation-delay: 0.05s; }
+.rk-podium__slot--2 { animation-delay: 0.15s; }
+.rk-podium__slot--3 { animation-delay: 0.25s; }
+
+@keyframes rk-rise {
+  from { opacity: 0; transform: translateY(24px); }
+}
+
+.rk-podium__item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: -12px;    /* 단상 위에 살짝 올라앉게 */
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border-light);
+  border-radius: 20px;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.rk-podium__slot--1 .rk-podium__item {
+  padding-top: var(--space-6);
+  border-color: #f3d48a;
+  box-shadow: 0 10px 24px rgba(240, 163, 58, 0.22);
+}
+
+.rk-medal {
+  position: absolute;
+  top: -14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--color-bg);
+  border-radius: var(--radius-full);
+  color: var(--color-on-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.rk-medal--1 { background: #f0a33a; }
+.rk-medal--2 { background: #8d99a8; }
+.rk-medal--3 { background: #c9824a; }
+
+.rk-podium__item .ui-avatar {
+  margin-bottom: var(--space-2);
+}
+
+.rk-podium__name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  word-break: keep-all;
+}
+
+.rk-podium__slot--1 .rk-podium__name {
+  font-size: var(--font-size-xl);
+}
+
+.rk-podium__category {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.rk-podium__thumbs {
+  margin: var(--space-1) 0;
+  font-size: var(--font-size-lg);
+}
+
+.rk-podium__item .rk-tags {
+  justify-content: center;
+}
+
+.rk-podium__stand {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--space-3);
+  border-radius: 0 0 16px 16px;
+  font-size: 40px;
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+}
+
+.rk-podium__slot--1 .rk-podium__stand { height: 120px; background: #fff3cf; color: #d58a1e; }
+.rk-podium__slot--2 .rk-podium__stand { height: 88px; background: #eef2f7; color: #8d99a8; }
+.rk-podium__slot--3 .rk-podium__stand { height: 68px; background: #fdeee3; color: #c9824a; font-size: 34px; }
+
+/* ---------- 따봉 0개 안내 (배너 대신, 2026-11-23) ---------- */
+.rk-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 880px;
+  margin: 0 auto var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+}
+
+.rk-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.rk-notice__title {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.rk-notice__desc {
+  margin-top: 2px;
+  font-size: var(--font-size-sm);
+  word-break: keep-all;
+}
+
+/* ---------- 4위부터 리스트 ---------- */
+.rk-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.rk-list > li {
+  animation: rk-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(0.3s + var(--rk-delay, 0ms));
+}
+
+.rk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.rk-row__rank {
+  width: 28px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+  text-align: center;
+}
+
+.rk-row__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rk-row__name {
+  font-weight: var(--font-weight-bold);
+}
+
+.rk-row__sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.rk-row__main .rk-tags {
+  margin-top: 2px;
+}
+
+.rk-row__score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.rk-bar {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.rk-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transform-origin: left;
+  animation: rk-bar 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both;
+}
+
+@keyframes rk-bar {
+  from { transform: scaleX(0); }
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 760px) {
+  .rk-banner {
+    grid-template-columns: 1fr;
+    padding: var(--space-6);
+  }
+
+  .rk-banner__art {
+    display: none;
+  }
+
+  .rk-banner__name {
+    font-size: var(--font-size-2xl);
+  }
+
+  .rk-podium {
+    gap: var(--space-2);
+  }
+
+  .rk-podium__item {
+    padding: var(--space-4) var(--space-2) var(--space-5);
+  }
+
+  .rk-podium__item .rk-tags,
+  .rk-podium__category {
+    display: none;
+  }
+
+  .rk-podium__name,
+  .rk-podium__slot--1 .rk-podium__name {
+    font-size: var(--font-size-sm);
+  }
+
+  .rk-row__score {
+    width: 72px;
+  }
+
+  .rk-row__main .rk-tags {
+    display: none;
+  }
+}

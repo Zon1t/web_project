@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public record PartyChatResponse(
         Long chatId,
         MessageType type,         // TEXT / SYSTEM
+        Long memberId,            // 보낸 회원 (시스템 메시지는 null). 프로필 카드·이름 색 구분용 (2026-11-25)
         String nickname,          // 시스템 메시지는 null
         String content,
         boolean mine,             // 로그인 회원이 보낸 메시지인지
@@ -22,6 +23,7 @@ public record PartyChatResponse(
         return new PartyChatResponse(
                 chat.getChatId(),
                 chat.getMessageType(),
+                isSystem ? null : chat.getMember().getMemberId(),
                 isSystem ? null : chat.getMember().getNickname(),
                 chat.getContent(),
                 !isSystem && chat.getMember().getMemberId().equals(loginMemberId),

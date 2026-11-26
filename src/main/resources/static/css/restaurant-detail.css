@@ -249,6 +249,56 @@
   accent-color: var(--color-primary);
 }
 
+/* 리뷰 사진 선택 */
+.review-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.review-photo__pick {
+  height: 34px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+/* 파일 입력은 숨겨 두었으므로 키보드로 왔을 때 [사진 선택]에 포커스 표시 */
+.review-photo input:focus-visible + .review-photo__pick {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.review-photo__preview {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.review-photo__preview[hidden] {
+  display: none;
+}
+
+.review-photo__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.review-photo__remove {
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.review-photo__remove[hidden] {
+  display: none;
+}
+
 /* 리뷰 목록 */
 .review-item {
   display: flex;
@@ -258,8 +308,52 @@
   border-bottom: 1px solid var(--color-border-light);
 }
 
+.review-item__image-link {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: zoom-in;
+}
+
+/* 사진 크게 보기 (2026-11-24): 사진이 글 아래 한 줄 전체로 내려가고, 비율을 지켜 크게 */
+.review-item.is-image-open {
+  flex-wrap: wrap;
+}
+
+.review-item.is-image-open .review-item__image-link {
+  order: 3;
+  flex-basis: 100%;
+  cursor: zoom-out;
+}
+
+.review-item.is-image-open .review-item__image {
+  width: auto;
+  max-width: min(100%, 480px);
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  animation: review-image-open 0.2s ease-out;
+}
+
+@keyframes review-image-open {
+  from { opacity: 0.4; transform: scale(0.96); }
+}
+
+/* 방금 올린 내 리뷰를 잠깐 강조 (2026-11-24) */
+.review-item.is-new {
+  animation: review-new 1.6s ease-out;
+}
+
+@keyframes review-new {
+  0%, 30% { background: var(--color-primary-soft, #eaf2ff); }
+  100%    { background: transparent; }
+}
+
 .review-item__image {
   flex-shrink: 0;
+  background: var(--color-surface);
   width: 56px;
   height: 56px;
   border-radius: var(--radius-sm);
@@ -317,6 +411,97 @@
   display: none;
 }
 
+/* ---------- 식당 정보 수정 제안 ---------- */
+.detail-suggestion {
+  padding-top: var(--space-2);
+}
+
+/* 글자 링크처럼 보이는 버튼 (페이지 이동이 아니라 창을 여는 동작이라 button) */
+.detail-suggestion__link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.detail-suggestion__link:hover {
+  color: var(--color-text);
+}
+
+.suggestion-dialog {
+  width: min(480px, calc(100% - 2 * var(--space-4)));
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.suggestion-dialog::backdrop {
+  background: rgba(27, 36, 48, 0.4);
+}
+
+.suggestion-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.suggestion-dialog__desc {
+  margin-top: calc(-1 * var(--space-2));
+  font-size: var(--font-size-sm);
+}
+
+.suggestion-dialog__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.suggestion-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* 제출 완료 안내 (화면 아래 가운데) */
+.toast {
+  position: fixed;
+  bottom: var(--space-8);
+  left: 50%;
+  z-index: 20;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, var(--space-2));
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
+
+  .review-item.is-image-open .review-item__image,
+  .review-item.is-new {
+    animation: none;
+  }
+}
+
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 640px) {
   .review-form {
@@ -332,5 +517,193 @@
 
   .review-tags {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- 2026-11-20 개편: 머리·숫자 타일·태그 막대 ---------- */
+.is-embed .detail-breadcrumb {
+  display: none;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.detail-hero__text {
+  min-width: 0;
+}
+
+/* 작은 지도 (2026-11-23, css/map-kit.css의 .mini-map): 이름 바로 아래 */
+.detail-mini-map {
+  margin-top: var(--space-2);
+}
+
+.detail-info__address {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-sub);
+}
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.detail-stat__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.detail-stat strong {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+}
+
+.detail-stat--thumbs {
+  background: var(--color-accent-soft);
+}
+
+.detail-stat--thumbs strong,
+.detail-stat--thumbs .detail-stat__label {
+  color: var(--color-accent-strong);
+}
+
+.detail-tags {
+  display: block;
+  margin-top: var(--space-5);
+}
+
+.detail-tags__label {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.detail-tagbars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 480px;
+}
+
+.detail-tagbar {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.detail-tagbar__name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.detail-tagbar__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.detail-tagbar__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transform-origin: left;
+  animation: detail-bar 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+@keyframes detail-bar {
+  from { transform: scaleX(0); }
+}
+
+.detail-tagbar__count {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.detail-map-link {
+  display: inline-block;
+  margin-top: var(--space-4);
+}
+
+/* ---------- 리뷰: 목록 먼저, 작성 폼은 [리뷰 쓰기]로 펼침 (2026-11-25) ---------- */
+.detail-reviews__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.detail-reviews__write[hidden] {
+  display: none;
+}
+
+.review-form-panel {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  animation: ui-fade-in 0.2s ease;
+}
+
+.review-form-panel[hidden] {
+  display: none;
+}
+
+/* 펼친 폼은 위에서 아래로: 입력 → 태그 → 사진 → [취소][등록] */
+.review-form-panel .review-form {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.review-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.review-form-panel .review-form__submit {
+  width: auto;
+  min-width: 96px;
+  height: var(--control-height);
+  margin-top: 0;
+}
+
+.review-form-panel .textarea {
+  background: var(--color-bg);
+}
+
+/* 리뷰 목록만 따로 스크롤 (2026-11-26): 리뷰가 많아도 페이지가 끝없이 길어지지 않게 */
+#review-list-area {
+  max-height: 560px;
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* 목록 끝에서 페이지 전체가 같이 스크롤되지 않게 */
+  padding-right: var(--space-1);
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 768px) {
+  #review-list-area {
+    max-height: 70vh;
   }
 }

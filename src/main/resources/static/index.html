@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>슥밥 · 오늘 뭐 먹지?</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/party-main.css">
+  <link rel="stylesheet" href="/css/today-meal.css">
+</head>
+<body>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header"></header>
+
+  <main class="container main-page">
+    <h1 class="sr-only">슥밥 메인</h1>
+
+    <!-- 시간대 인사 (main.js renderGreeting) -->
+    <section id="main-greeting" class="main-greeting" aria-label="인사"></section>
+
+    <!-- 내 식사 (js/components/today-meal.js): 날짜를 넘겨 보는 점심·저녁 슬롯 (2026-11-23 개편) -->
+    <section id="today-meal" class="today-meal" aria-labelledby="today-meal-title"></section>
+
+    <!-- ③ 오늘의 구내식당 (C) -->
+    <section id="main-cafeteria" class="main-section" aria-labelledby="cafeteria-title">
+      <div class="main-section__head">
+        <h2 id="cafeteria-title" class="main-section__title">오늘의 구내식당</h2>
+        <p id="cafeteria-meta" class="main-section__meta"></p>
+      </div>
+      <div id="cafeteria-body"></div>
+    </section>
+
+    <!-- ⑤ 오늘의 식사팟 (A 부품 partyMain.renderTodayParties): 점심·저녁 탭 + [참여] 목록 + 만들기, 항상 표시 -->
+    <div id="today-parties"></div>
+
+    <div class="main-bottom">
+      <!-- ⑥ 따봉 TOP 3 (C, 최근 30일 기준이라 '이달의'는 뺌 2026-11-23) -->
+      <section id="main-top3" class="main-section main-card" aria-labelledby="top3-title">
+        <div class="main-section__head">
+          <h2 id="top3-title" class="main-section__title">따봉 TOP 3</h2>
+          <p class="main-section__meta">최근 30일</p>
+          <a class="main-section__more" href="/ranking.html">랭킹 보기 &gt;</a>
+        </div>
+        <div id="top3-body"></div>
+      </section>
+
+      <!-- ⑦ 메뉴 룰렛 배너 (P1, 룰렛 화면 S-11이 생기면 main.js의 ROULETTE_READY를 true로) -->
+      <section id="main-roulette" class="main-section main-roulette" aria-labelledby="roulette-title" hidden>
+        <span id="main-roulette-illust" class="main-roulette__illust" aria-hidden="true"></span>
+        <div class="main-roulette__text">
+          <h2 id="roulette-title" class="main-roulette__title">오늘 뭐 먹지?</h2>
+          <p class="main-roulette__desc">메뉴 룰렛으로 식당을 정해 보세요.</p>
+        </div>
+        <a class="btn btn--primary" href="/roulette.html">룰렛 돌리기</a>
+      </section>
+    </div>
+  </main>
+
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="/js/api/client.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
+  <script src="/js/api/restaurant.js"></script>
+  <script src="/js/api/party.js"></script>
+  <script src="/js/api/cafeteria.js"></script>
+  <script src="/js/api/ranking.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/party-join.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/components/party-main.js"></script>
+  <script src="/js/components/today-meal.js"></script>
+  <script src="/js/pages/main.js"></script>
+</body>
+</html>

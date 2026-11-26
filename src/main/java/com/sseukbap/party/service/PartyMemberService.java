@@ -9,6 +9,7 @@ import com.sseukbap.party.dto.PartyLeaveResponse;
 import com.sseukbap.party.entity.MealParty;
 import com.sseukbap.party.entity.PartyChat;
 import com.sseukbap.party.entity.PartyMember;
+import com.sseukbap.party.entity.PartyStatus;
 import com.sseukbap.party.repository.PartyChatRepository;
 import com.sseukbap.party.repository.PartyMemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,15 +38,33 @@ public class PartyMemberService {
     // ===== 참여하기 (1차) =====
 
     public PartyJoinResponse joinParty(Long partyId, Long memberId) {
-        // 1~2. 행 잠금 조회. 없거나 DELETED면 중단
-        MealParty party = partyFinder.getPartyForUpdate(partyId);
+        return joinParty(partyId, memberId, PartyTimePolicy.now());
+    }
 
-        // 3. 식사 완료
-        validateNotFinished(party);
+    /** now를 넘겨받는 버전 (테스트에서 시각을 정할 때 사용). 공개 식사팟용 (초대 코드 없음) */
+    public PartyJoinResponse joinParty(Long partyId, Long memberId, LocalDateTime now) {
+        return joinParty(partyId, memberId, null, now);
+    }
+
+    /**
+     * 참여하기. 비공개 식사팟은 초대 코드(inviteCode)가 맞아야 한다. (2026-11-25 T4)
+     */
+    public PartyJoinResponse joinParty(Long partyId, Long memberId, String inviteCode, LocalDateTime now) {
+        // 1~2. 행 잠금 조회. 없거나 비공개인데 코드가 틀리면 PARTY_NOT_FOUND, DELETED면 PARTY_DELETED
+        MealParty party = partyFinder.getVisiblePartyForUpdate(partyId, memberId, inviteCode);
+
+        // 3. 식사 완료 (스케줄러가 아직 FINISHED로 바꾸지 않았어도 기준 시간이 지났으면 완료로 본다)
+        validateNotFinished(party, now);
 
         // 4. 이미 참여 중
         if (partyMemberRepository.existsByPartyIdAndMemberId(partyId, memberId)) {
             throw new BusinessException(ErrorCode.ALREADY_JOINED);
+        }
+
+        // 4-1. 같은 날짜·같은 끼니의 다른 팟에 이미 들어가 있음 (확정 여부 무관, 삭제된 팟 제외)
+        if (partyMemberRepository.existsSameMealParty(
+                memberId, party.getPartyDate(), party.getMealType(), PartyStatus.DELETED)) {
+            throw new BusinessException(ErrorCode.ALREADY_JOINED_SAME_MEAL);
         }
 
         // 5. FULL·CLOSED이거나 정원이 찼으면 중단
@@ -63,7 +82,7 @@ public class PartyMemberService {
         party.join(memberCountAfter);
 
         // 8. 시스템 메시지
-        addSystemMessage(party, member.getNickname() + "님이 참여했습니다");
+        addSystemMessage(party, member.getNickname() + "님이 참여했어요");
 
         return new PartyJoinResponse(partyId, memberCountAfter, party.getStatus());
     }
@@ -71,7 +90,7 @@ public class PartyMemberService {
     // ===== 나가기 =====
 
     public PartyLeaveResponse leaveParty(Long partyId, Long memberId) {
-        return leaveParty(partyId, memberId, LocalDateTime.now());
+        return leaveParty(partyId, memberId, PartyTimePolicy.now());
     }
 
     /** 현재 시각을 밖에서 받는 버전 (테스트에서 마감 시각 전후를 확인하려고 따로 둠) */
@@ -105,7 +124,7 @@ public class PartyMemberService {
         party.leave(memberCountAfter);
 
         // 8. 시스템 메시지
-        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 나갔습니다");
+        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 나갔어요");
 
         return new PartyLeaveResponse(false);
     }
@@ -113,11 +132,16 @@ public class PartyMemberService {
     // ===== 참여 확정 (2차) =====
 
     public PartyConfirmResponse confirmParty(Long partyId, Long memberId) {
+        return confirmParty(partyId, memberId, PartyTimePolicy.now());
+    }
+
+    /** now를 넘겨받는 버전 (테스트에서 시각을 정할 때 사용) */
+    public PartyConfirmResponse confirmParty(Long partyId, Long memberId, LocalDateTime now) {
         // 1. 팟 조회 (행 잠금). 없거나 DELETED면 중단
         MealParty party = partyFinder.getPartyForUpdate(partyId);
 
-        // 2. 식사 완료
-        validateNotFinished(party);
+        // 2. 식사 완료 (기준 시간이 지났으면 스케줄러 처리 전이어도 완료로 본다)
+        validateNotFinished(party, now);
 
         // 3. 참여자 확인
         PartyMember partyMember = getPartyMember(partyId, memberId);
@@ -137,7 +161,7 @@ public class PartyMemberService {
         partyMember.confirm();
 
         // 7. 시스템 메시지
-        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 참여를 확정했습니다");
+        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 참석을 확정했어요");
 
         // 8. 확정 인원 수
         return new PartyConfirmResponse(true, confirmedCountAfter);
@@ -146,7 +170,7 @@ public class PartyMemberService {
     // ===== 참여 확정 취소 =====
 
     public PartyConfirmResponse cancelConfirmParty(Long partyId, Long memberId) {
-        return cancelConfirmParty(partyId, memberId, LocalDateTime.now());
+        return cancelConfirmParty(partyId, memberId, PartyTimePolicy.now());
     }
 
     /** 현재 시각을 밖에서 받는 버전 (테스트용) */
@@ -173,7 +197,7 @@ public class PartyMemberService {
         partyMember.cancelConfirm();
 
         // 6. 시스템 메시지
-        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 참여 확정을 취소했습니다");
+        addSystemMessage(party, partyMember.getMember().getNickname() + "님이 참석 확정을 취소했어요");
 
         // 7. 확정 인원 수
         return new PartyConfirmResponse(false, confirmedCountAfter);
@@ -183,6 +207,17 @@ public class PartyMemberService {
 
     private void validateNotFinished(MealParty party) {
         if (party.isFinished()) {
+            throw new BusinessException(ErrorCode.PARTY_FINISHED);
+        }
+    }
+
+    /**
+     * 식사 완료 + 기준 시간 경과 확인 (참여하기·참석 확정용, 2026-11-25 T6 P1)
+     * 스케줄러는 5분마다 돌기 때문에, 기준 시간이 지난 뒤 FINISHED가 되기 전 잠깐 동안 참여·확정되는 것을 막는다.
+     */
+    private void validateNotFinished(MealParty party, LocalDateTime now) {
+        validateNotFinished(party);
+        if (PartyTimePolicy.isMealTimePassed(party.getPartyDate(), party.getBaseTime(), now)) {
             throw new BusinessException(ErrorCode.PARTY_FINISHED);
         }
     }

@@ -1,0 +1,223 @@
+/*
+ * admin.css — 관리자 화면 (A, 2026-11-24 A3). 색·간격은 tokens.css 변수만 쓴다.
+ * 탭 모양은 마이페이지 탭과 같게 맞췄다.
+ */
+
+.admin-page {
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-12);
+}
+
+/* ---------- 탭 ---------- */
+.admin-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.admin-tabs[hidden] {
+  display: none;
+}
+
+.admin-tab {
+  flex: 0 0 auto;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-text-sub);
+  font: inherit;
+  font-size: var(--font-size-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-tab:hover {
+  color: var(--color-text);
+}
+
+.admin-tab.is-selected {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.admin-panel {
+  padding-top: var(--space-5);
+}
+
+/* ---------- 도구 줄 (필터·검색·날짜) ---------- */
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.admin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.admin-search {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+
+.admin-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.admin-note {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 목록 ---------- */
+.admin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.admin-item.is-hidden,
+.admin-item.is-done {
+  background: var(--color-surface);
+}
+
+.admin-item__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-item__title {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.admin-item__title a {
+  color: var(--color-text);
+}
+
+.admin-item__title a:hover {
+  color: var(--color-primary);
+}
+
+.admin-item__content {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-item__meta {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.admin-item__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-select {
+  width: auto;
+  min-width: 120px;
+}
+
+.admin-badge {
+  vertical-align: middle;
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+}
+
+.admin-badge--hidden {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.admin-badge--warn {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.admin-badge--done {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+/* ---------- 구내식당 메뉴 ---------- */
+.admin-menus {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.admin-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.admin-menu__label {
+  font-weight: var(--font-weight-bold);
+}
+
+.admin-menu__count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.admin-menu__input {
+  resize: vertical;
+}
+
+.admin-menu .btn {
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .admin-tab {
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .admin-item {
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-1);
+  }
+
+  .admin-item__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .admin-menus {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-search {
+    max-width: none;
+  }
+}

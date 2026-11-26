@@ -4,26 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>식당 목록 | 슥밥</title>
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="/css/app-header.css">
+  <link rel="stylesheet" href="/css/footer.css">
+  <link rel="stylesheet" href="/css/ui.css">
+  <link rel="stylesheet" href="/css/map-kit.css">
   <link rel="stylesheet" href="/css/restaurant-list.css">
 </head>
 <body>
-  <!-- 임시 헤더: 공통 헤더가 확정되면 교체 -->
-  <header class="app-header">
-    <div class="app-header__inner">
-      <a class="app-header__logo" href="/">슥밥</a>
-      <nav class="app-header__nav" aria-label="주 메뉴">
-        <a class="app-header__link" href="/">구내식당</a>
-        <a class="app-header__link is-active" href="/restaurant-list.html" aria-current="page">식당</a>
-        <a class="app-header__link" href="/party-list.html">식사팟</a>
-        <a class="app-header__link" href="#">랭킹</a>
-      </nav>
-    </div>
-  </header>
+  <!-- 공통 헤더: js/components/app-header.js가 그린다 -->
+  <header id="app-header" class="app-header" data-layout="wide"></header>
 
-  <main class="restaurant-page">
+  <!-- data-view: 좁은 화면(900px 이하)에서 목록(list)과 지도(map) 중 무엇을 보여 줄지. 넓은 화면은 둘 다 (2026-11-25) -->
+  <main class="restaurant-page" id="restaurant-page" data-view="list">
     <!-- 왼쪽: 검색·필터·목록 -->
     <section class="restaurant-panel" aria-labelledby="page-title">
       <div class="restaurant-panel__head">
@@ -38,28 +34,50 @@
         <button class="btn" type="submit">검색</button>
       </form>
 
-      <div id="category-chips" class="restaurant-chips" role="group" aria-label="카테고리"></div>
+      <div id="category-chips" class="restaurant-chips chip-tips" role="group" aria-label="카테고리"></div>
+      <!-- 고른 카테고리의 음식 예시 (터치 화면에서도 보이게, 2026-11-24) -->
+      <p id="category-hint" class="text-muted restaurant-category-hint" aria-live="polite"></p>
 
-      <p id="result-summary" class="text-muted restaurant-summary" aria-live="polite"></p>
+      <!-- 결과 수 + 정렬 (2026-11-24: 가까운 순 / 따봉 순, 기준은 회사) -->
+      <div class="restaurant-summary-row">
+        <p id="result-summary" class="text-muted restaurant-summary" aria-live="polite"></p>
+        <div id="sort-toggle" class="restaurant-sort" role="group" aria-label="정렬">
+          <button type="button" class="restaurant-sort__btn" data-sort="distance" aria-pressed="true">가까운 순</button>
+          <button type="button" class="restaurant-sort__btn" data-sort="thumbs" aria-pressed="false">따봉 순</button>
+        </div>
+      </div>
 
       <!-- 목록 / 로딩 / 빈 상태 / 오류가 이 안에 그려진다 -->
       <div id="restaurant-result"></div>
     </section>
 
-    <!-- 오른쪽: 지도 (F-17 네이버 지도 작업 때 연결) -->
+    <!-- 오른쪽: 네이버 지도 (restaurant-map.js가 채운다) -->
     <section class="restaurant-map" aria-label="식당 지도">
-      <div class="restaurant-map__placeholder">
-        <p class="state__title">지도 준비 중</p>
-        <p class="state__desc">네이버 지도는 다음 작업에서 연결됩니다.</p>
-      </div>
+      <div id="restaurant-map" class="restaurant-map__canvas"></div>
     </section>
   </main>
 
+  <!-- 공통 푸터: js/components/app-footer.js가 그린다 -->
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <!-- 좁은 화면에서만 보이는 [지도 보기]/[목록 보기] 전환 버튼 (restaurant-list.js가 글자·아이콘을 바꾼다)
+       main 밖에 둔다: main에 걸린 등장 애니메이션(transform) 때문에 안에 두면 화면 아래에 고정되지 않는다 -->
+  <button id="view-toggle" class="restaurant-view-toggle" type="button" aria-controls="restaurant-page">지도 보기</button>
+
+  <!-- 지도 키 (Git 제외 파일). 없으면 지도 자리에 안내만 나오고 목록은 그대로 동작한다 -->
+  <script src="/js/config.js"></script>
   <script src="/js/api/client.js"></script>
   <script src="/js/utils.js"></script>
+  <script src="/js/api/auth.js"></script>
   <!-- 백엔드 없이 확인하려면 아래 목업 줄의 주석을 푼다 -->
   <!-- <script src="/js/api/mock/restaurant.mock.js"></script> -->
   <script src="/js/api/restaurant.js"></script>
+  <script src="/js/components/brand.js"></script>
+  <script src="/js/components/ui.js"></script>
+  <script src="/js/components/app-header.js"></script>
+  <script src="/js/components/app-footer.js"></script>
+  <script src="/js/components/map-kit.js"></script>
+  <script src="/js/pages/restaurant-map.js"></script>
   <script src="/js/pages/restaurant-list.js"></script>
 </body>
 </html>

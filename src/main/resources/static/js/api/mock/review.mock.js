@@ -70,12 +70,18 @@
       throw api.mockError(400, 'INVALID_TAG', '선택할 수 없는 태그입니다.');
     }
 
+    const image = body.image instanceof File && body.image.size > 0 ? body.image : null;
+    if (image && (!['image/jpeg', 'image/png'].includes(image.type) || image.size > 5 * 1024 * 1024)) {
+      throw api.mockError(400, 'INVALID_IMAGE', 'jpg·png 형식, 5MB 이하 사진만 올릴 수 있습니다.');
+    }
+
     const review = {
       reviewId: nextReviewId++,
       nickname: MY_NICKNAME,
       content,
       tags: tagIds.map((id) => TAG_NAMES[id]),
-      imageUrl: null,
+      // 목업은 파일을 저장하지 않으므로 브라우저 안에서만 보이는 임시 주소를 쓴다 (새로고침하면 사라짐)
+      imageUrl: image ? URL.createObjectURL(image) : null,
       createdAt: new Date().toISOString().slice(0, 19),
     };
     (reviews[params.restaurantId] = reviews[params.restaurantId] || []).push(review);

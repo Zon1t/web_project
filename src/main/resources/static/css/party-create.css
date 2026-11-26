@@ -1,0 +1,245 @@
+/*
+ * party-create.css — S-08 식사팟 만들기 (A)
+ * 색·간격·글꼴은 tokens.css 변수만 쓴다. 버튼·입력·뱃지는 base.css(B)의 것을 쓴다.
+ */
+
+.party-create-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 640px;
+}
+
+.party-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.party-form__required {
+  color: var(--color-danger);
+}
+
+.party-form__fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.party-form__fieldset legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+/* ---------- 식당 ---------- */
+.party-form__selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* .btn·.badge의 display가 hidden 속성을 덮어쓰지 않도록 (고정 식당이면 [다른 식당 고르기]를 숨긴다) */
+.party-form__selected[hidden],
+.party-form__search[hidden],
+.party-form__options[hidden],
+.party-form__selected > [hidden] {
+  display: none;
+}
+
+.party-form__selected-name {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.party-form__selected .btn--text {
+  margin-left: auto;
+  height: 36px;
+  padding: 0 var(--space-3);
+}
+
+.party-form__search {
+  position: relative;
+}
+
+.party-form__options {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.party-form__option {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  align-items: center;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.party-form__option:hover,
+.party-form__option.is-active {
+  background: var(--color-surface-hover);
+}
+
+.party-form__option-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 검색 결과가 없을 때: [식당 등록하고 이어서 만들기] (T2) */
+.party-form__register {
+  height: 36px;
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 공개 범위: 비공개 체크 (2026-11-25) ---------- */
+.party-form__private {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.party-form__private:has(input:checked) {
+  border-color: var(--color-primary);
+}
+
+.party-form__private input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.party-form__private-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 끼니 토글 ---------- */
+.party-form__toggle {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.party-form__toggle-btn {
+  flex: 1;
+  height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.party-form__toggle-btn:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.party-form__toggle-btn[aria-pressed="true"] {
+  border: 2px solid var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);   /* 연파랑 바탕 위 글자 대비 */
+  font-weight: var(--font-weight-bold);
+}
+
+.party-form__toggle-btn:disabled {
+  border-color: var(--color-border-light);
+  background: var(--color-surface);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.party-form__time {
+  max-width: 200px;
+}
+
+/* ---------- 정원 −/+ ---------- */
+.party-form__stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.party-form__step {
+  width: var(--control-height);
+  padding: 0;
+  font-size: var(--font-size-lg);
+}
+
+.party-form__step-value {
+  min-width: 56px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+/* ---------- 버튼 ---------- */
+#form-message:empty {
+  display: none;
+}
+
+.party-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.party-form__actions .btn--primary {
+  min-width: 120px;
+}
+
+@media (max-width: 640px) {
+  .party-form__actions .btn {
+    flex: 1;
+  }
+}
+
+/* 찾는 식당이 없나요? [식당 등록하기] (2026-11-25) */
+.party-form__register-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--font-size-sm);
+}
+
+.party-form__register-hint[hidden] {
+  display: none;
+}
+
+.party-form__register-link {
+  padding: 0 var(--space-1);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}

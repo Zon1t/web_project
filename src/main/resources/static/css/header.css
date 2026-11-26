@@ -1,40 +1,78 @@
 /*
- * header.css — 임시 공통 헤더 (B)
+ * header.css — 공통 헤더: 틀·로고·GNB (B, 2026-11-20 개편)
  *
- * 공통 헤더(닉네임·로그아웃 포함)는 팀 논의 후 확정한다.
- * 확정되면 이 파일과 각 HTML의 <header class="app-header"> 부분을 교체한다.
+ * 헤더 HTML은 js/components/app-header.js가 그린다. 화면에는 자리만 둔다.
+ *   <header id="app-header" class="app-header"></header>
+ * 사용 방법은 app-header.js 맨 위 주석 참고.
+ * 오른쪽 사용자 메뉴(아바타·드롭다운) 스타일은 app-header.css.
  */
+
+/* ---------- 로고 (헤더·푸터 공통) ---------- */
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.brand-logo__mark {
+  width: 1.3em;
+  height: 1.3em;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.brand-logo__accent {
+  color: var(--color-primary);
+}
+
+.brand-logo--sm {
+  font-size: var(--font-size-lg);
+}
+
+/* ---------- 헤더 틀 ---------- */
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   height: var(--header-height);
   border-bottom: 1px solid var(--color-border-light);
   background: var(--color-bg);
 }
 
+/* 본문(.container)과 같은 폭·여백으로 맞춘다 */
 .app-header__inner {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-10);
+  max-width: var(--content-max-width);
   height: 100%;
-  padding: 0 var(--space-12);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
 }
 
-.app-header__logo {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-}
+/* 2026-11-23: 지도 화면(data-layout="wide")도 헤더는 다른 화면과 같은 폭·위치로 통일.
+   본문만 전체 폭을 쓰고, 헤더 안쪽은 .app-header__inner 기본값을 그대로 쓴다. */
 
+/* ---------- GNB ---------- */
 .app-header__nav {
   display: flex;
-  gap: var(--space-8);
+  align-self: stretch;
+  gap: var(--space-6);
   font-size: var(--font-size-md);
 }
 
 .app-header__link {
+  position: relative;
+  display: flex;
+  align-items: center;
   color: var(--color-text-sub);
+  white-space: nowrap;
 }
 
 .app-header__link:hover {
@@ -46,14 +84,66 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* 선택된 메뉴: 헤더 아래 선에 맞춘 파란 막대 */
+.app-header__link.is-active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-primary);
+}
+
+/* ---------- 좁은 화면 ---------- */
 @media (max-width: 640px) {
   .app-header__inner {
-    gap: var(--space-5);
+    gap: var(--space-4);
     padding: 0 var(--space-4);
   }
 
+  .app-header .brand-logo__text {
+    display: none;   /* 좁은 화면에서는 심볼만 */
+  }
+
+  /* 메뉴가 넘치면 가로로 밀어서 본다 */
   .app-header__nav {
+    flex: 1;
+    min-width: 0;
     gap: var(--space-4);
+    overflow-x: auto;
     font-size: var(--font-size-sm);
+    scrollbar-width: none;
+  }
+
+  .app-header__nav::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 아주 좁은 화면(휴대폰): 메뉴 다섯 개가 한 줄에 들어가도록 간격을 더 줄인다 */
+@media (max-width: 420px) {
+  .app-header__inner {
+    gap: var(--space-3);
+    padding: 0 var(--space-3);
+  }
+
+  .app-header__nav {
+    gap: var(--space-3);
+  }
+}
+
+/* 360~380px 폰(갤럭시 등): 글자·간격을 조금 더 줄여 '마이페이지'까지 한 줄에 다 보이게 (2026-11-24)
+   이보다 좁으면 기존처럼 가로로 밀어서 본다 */
+@media (max-width: 380px) {
+  .app-header__inner {
+    gap: var(--space-2);
+  }
+
+  .app-header__nav {
+    gap: 10px;
+    font-size: 13px;
+    letter-spacing: -0.02em;
   }
 }

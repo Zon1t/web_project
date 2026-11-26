@@ -3,12 +3,12 @@
  *
  * 주소: /restaurant-detail.html?id=12
  *
- * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 네이버 지도 링크,
+ * 만든 것: 식당 정보(이름·카테고리·주소·태그 TOP 3·따봉·관심·리뷰 수), 작은 지도(map-kit.js)·네이버 지도 링크,
  *          [관심] 등록·해제, [식사팟 만들기] 이동, 로딩 / 없는 식당 / 오류 화면
- * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js (이 파일보다 먼저 불러온다)
+ * 리뷰 작성·목록·삭제는 restaurant-detail-reviews.js, 수정 제안 입력 창은 restaurant-detail-suggestion.js
+ * (둘 다 이 파일보다 먼저 불러온다)
  * 나중에 붙일 것
  *   - 리뷰 사진             → feature/review-image
- *   - 식당 정보 수정 제안   → feature/restaurant-suggestion
  */
 (function () {
   'use strict';
@@ -18,6 +18,8 @@
 
   const root = document.getElementById('detail-root');
   const restaurantId = new URLSearchParams(location.search).get('id');
+  // 지도 화면 안의 상세 카드(iframe, ?embed=1)에서는 옆에 큰 지도가 있으니 작은 지도를 그리지 않는다
+  const isEmbed = document.documentElement.classList.contains('is-embed');
 
   /* ---------- 시작 ---------- */
 
@@ -27,6 +29,7 @@
   root.addEventListener('click', (event) => {
     if (event.target.closest('[data-action="retry"]')) loadDetail();
     if (event.target.closest('[data-action="toggle-interest"]')) toggleInterest();
+    if (event.target.closest('[data-action="open-suggestion"]')) restaurantSuggestion.open(restaurantId);
   });
 
   // id가 숫자가 아니면 서버에 묻지 않고 바로 '없는 식당' 화면
@@ -67,6 +70,7 @@
         : await restaurantApi.addInterest(restaurantId);
       interest.interested = result.interested;
       interest.count = result.interestCount;
+      showInterestFeedback(result.interested);
     } catch (err) {
       if (err.statusCode === 401) return; // client.js가 로그인 화면으로 이동시킨다
       if (err.error === 'ALREADY_INTERESTED' || err.error === 'INTEREST_NOT_FOUND') {
@@ -78,6 +82,18 @@
     } finally {
       interest.pending = false;
       renderInterest();
+    }
+  }
+
+  // 관심을 바꾼 뒤 짧은 피드백: 담으면 하트가 숑숑 + 버튼 통통, 빼면 토스트만 (C, 2026-11-24)
+  function showInterestFeedback(interested) {
+    const button = document.getElementById('interest-button');
+    if (interested) {
+      ui.burst(button, { icon: 'heart' });
+      ui.pop(button);
+      ui.toast('관심 식당에 담았어요');
+    } else {
+      ui.toast('관심 식당에서 뺐어요');
     }
   }
 
@@ -117,7 +133,11 @@
   function renderDetail(d) {
     root.innerHTML =
       '<section id="info-section" class="detail-info" aria-labelledby="restaurant-name"></section>' +
-      '<section id="review-section" class="detail-reviews" aria-labelledby="review-title"></section>';
+      '<section id="review-section" class="detail-reviews" aria-labelledby="review-title"></section>' +
+      // 식당 정보 수정 제안: 누르면 입력 창 (restaurant-detail-suggestion.js)
+      '<p class="detail-suggestion">' +
+      '<button type="button" class="detail-suggestion__link" data-action="open-suggestion">식당 정보 수정 제안</button>' +
+      '</p>';
 
     renderInfo(d);
 
@@ -142,20 +162,34 @@
     interest.interested = d.interested;
     interest.count = d.interestCount;
 
+    // 작은 지도는 리뷰가 바뀌어 다시 그릴 때마다 새로 만들지 않도록, 이미 있으면 떼어 두었다가 다시 붙인다
+    const keptMap = document.getElementById('detail-mini-map');
+    const showMap = !isEmbed && typeof d.lat === 'number' && typeof d.lng === 'number';
+
     document.getElementById('info-section').innerHTML =
+      // 머리: 식당 아바타 + 이름 + 카테고리·주소 (2026-11-20 개편)
+      '<div class="detail-hero">' +
+      ui.avatar(d.cafeteria ? 'CAFETERIA' : d.category, 64) +
+      '<div class="detail-hero__text">' +
       '<div class="detail-info__title-row">' +
       '<h1 id="restaurant-name" class="detail-info__name">' + esc(d.name) + '</h1>' +
       '<span class="badge detail-info__category">' + esc(CATEGORY_LABELS[d.category] || d.category) + '</span>' +
       '</div>' +
-      (d.address ? '<p class="detail-info__address">' + esc(d.address) + '</p>' : '') +
-      renderTopTags(d.topTags) +
-      '<div class="detail-stats">' +
-      '<span class="detail-stats__item">' + utils.thumbsUpIcon() +
-      '따봉 <strong>' + d.thumbsCount30d + '</strong> <span class="text-muted">(최근 30일)</span></span>' +
-      '<span class="detail-stats__item">관심 <strong id="interest-count">' + d.interestCount + '</strong></span>' +
-      '<span class="detail-stats__item">리뷰 <strong>' + d.reviewCount + '</strong></span>' +
+      (d.address ? '<p class="detail-info__address">' + ui.icon('pin', 16) + esc(d.address) + '</p>' : '') +
       '</div>' +
-      renderMapLink(d.mapUrl) +
+      '</div>' +
+      // 작은 지도 (2026-11-23, js/components/map-kit.js). [네이버 지도에서 보기]는 지도 오른쪽 아래에 들어간다
+      (showMap ? '<div id="detail-mini-map-slot"></div>' : '') +
+      // 숫자 타일
+      '<div class="detail-stats">' +
+      // 카페·베이커리는 따봉 칸을 빼고 관심·리뷰만 (2026-11-25)
+      (d.category === 'CAFE' ? '' :
+        '<div class="detail-stat detail-stat--thumbs"><span class="detail-stat__label">' + ui.icon('thumbs', 16) + '따봉 (최근 30일)</span><strong>' + d.thumbsCount30d + '</strong></div>') +
+      '<div class="detail-stat"><span class="detail-stat__label">관심</span><strong id="interest-count">' + d.interestCount + '</strong></div>' +
+      '<div class="detail-stat"><span class="detail-stat__label">리뷰</span><strong>' + d.reviewCount + '</strong></div>' +
+      '</div>' +
+      renderTopTags(d.topTags) +
+      (showMap ? '' : renderMapLink(d.mapUrl)) +   // 지도가 없을 때만 따로 링크
       '<div class="detail-actions">' +
       // 관심: 누를 때마다 등록 ↔ 해제. 상태는 aria-pressed와 채워진 하트로 표시
       '<button type="button" id="interest-button" class="btn interest-button" data-action="toggle-interest" aria-pressed="false">' +
@@ -169,21 +203,47 @@
       '</div>' +
       '<p id="interest-message" class="field__message field__message--error detail-interest-message" role="alert"></p>';
 
+    if (showMap) renderMiniMap(d, keptMap);
     renderInterest();
   }
 
+  /** 많이 선택된 태그 TOP 3: 막대그래프 (가장 많은 태그 = 100%) */
   function renderTopTags(tags) {
     if (!tags || tags.length === 0) return ''; // 선택된 태그가 없으면 줄 자체를 숨긴다
+    const max = Math.max.apply(null, tags.map((t) => t.count)) || 1;
     return (
       '<div class="detail-tags">' +
-      '<span class="detail-tags__label">많이 선택된 태그</span>' +
-      tags
-        .map((tag) =>
-          '<span class="detail-tag">#' + esc(tag.name) +
-          '<span class="detail-tag__count">' + tag.count + '</span></span>')
-        .join('') +
+      '<p class="detail-tags__label">이 식당을 이렇게 말해요</p>' +
+      '<ul class="detail-tagbars">' +
+      tags.map((tag) =>
+        '<li class="detail-tagbar">' +
+        '<span class="detail-tagbar__name">#' + esc(tag.name) + '</span>' +
+        '<span class="detail-tagbar__track"><span style="width:' + Math.round((tag.count / max) * 100) + '%"></span></span>' +
+        '<span class="detail-tagbar__count">' + tag.count + '</span>' +
+        '</li>').join('') +
+      '</ul>' +
       '</div>'
     );
+  }
+
+  // 작은 지도를 자리(#detail-mini-map-slot)에 넣는다. 이미 그린 지도가 있으면 그것을 다시 붙인다.
+  function renderMiniMap(d, keptMap) {
+    const slot = document.getElementById('detail-mini-map-slot');
+    if (keptMap) {
+      slot.replaceWith(keptMap);
+      return;
+    }
+    const el = document.createElement('div');
+    el.id = 'detail-mini-map';
+    el.className = 'detail-mini-map';
+    if (window.mapKit && window.mapKit.mini(el, d)) slot.replaceWith(el);
+    else slot.replaceWith(htmlToNode(renderMapLink(d.mapUrl)));   // 혹시 못 그리면 링크만
+  }
+
+  function htmlToNode(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    return template.content;
   }
 
   // 네이버 지도 링크는 새 탭으로. http(s) 주소가 아니면 링크를 만들지 않는다.
@@ -196,18 +256,14 @@
   }
 
   function showLoading() {
-    root.innerHTML =
-      '<div class="state state--loading">' +
-      '<span class="spinner" aria-hidden="true"></span>' +
-      '<p class="state__desc">식당 정보를 불러오는 중…</p>' +
-      '</div>';
+    root.innerHTML = ui.skeleton('card', 2);
   }
 
   function showNotFound() {
-    document.title = '식당을 찾을 수 없습니다 | 슥밥';
+    document.title = '식당을 찾을 수 없어요 | 슥밥';
     root.innerHTML =
       '<div class="state state--empty">' +
-      '<p class="state__title">식당을 찾을 수 없습니다</p>' +
+      '<p class="state__title">식당을 찾을 수 없어요</p>' +
       '<p class="state__desc">주소가 올바른지 확인해 주세요.</p>' +
       '<a class="btn" href="/restaurant-list.html">식당 목록으로</a>' +
       '</div>';
@@ -216,7 +272,7 @@
   function showError(message) {
     root.innerHTML =
       '<div class="state state--error">' +
-      '<p class="state__title">식당 정보를 불러오지 못했습니다</p>' +
+      '<p class="state__title">식당 정보를 불러오지 못했어요</p>' +
       '<p class="state__desc">' + esc(message) + '</p>' +
       '<button type="button" class="btn" data-action="retry">다시 시도</button>' +
       '</div>';

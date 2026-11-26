@@ -14,7 +14,8 @@
     '<path d="M12 23 Q15 14.5 24 14.5 Q33 14.5 36 23 Z" fill="currentColor" opacity=".45"/>' +
     '<path d="M7 23 H41 A17 16 0 0 1 7 23 Z" fill="currentColor"/>' +
     '<rect x="18" y="39.5" width="12" height="3.5" rx="1.75" fill="currentColor"/>' +
-    '<g transform="rotate(38 36 12)">' +
+    // 숟가락: 머리가 밥 쪽으로 오게 위아래 뒤집음 (2026-11-26, 밥을 뜨는 모양)
+    '<g transform="rotate(180 36 13.5) rotate(38 36 12)">' +
     '<ellipse cx="36" cy="8.5" rx="4" ry="5.6" fill="currentColor"/>' +
     '<rect x="34.6" y="12" width="2.8" height="11" rx="1.4" fill="currentColor"/>' +
     '</g>';

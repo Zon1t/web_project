@@ -22,9 +22,10 @@ Oracle XE 11g 기준. 테이블은 JPA가 만들지 않으므로(`ddl-auto: none
 | 10 | `10_email_login.sql` | 회사 이메일 필수(T3): 닉네임 12자(36 CHAR), 더미·시연 계정 이메일 채우기 | **모든 DB** (08_account_admin 다음에. 새 코드로 서버 띄우기 전에 필수) |
 | 11 | `11_private_party.sql` | 비공개 식사팟(T4): MEAL_PARTY에 PRIVATE_YN·INVITE_CODE 추가 | **기존 DB만** (새로 만들면 01에 포함. 새 코드로 서버 띄우기 전에 필수) |
 | - | `11_private_party_rollback.sql` | 11_private_party 되돌리기 (컬럼 삭제) | 되돌릴 때만 |
-| ★ | `demo_reset.sql` | 위 00 → 05, 08 두 개, 10을 한 번에 실행 (전체 초기화, 11은 01에 포함) | **발표 당일 아침·리허설 직후** |
+| 12 | `12_official_names.sql` | 식당 이름을 네이버 공식 이름으로 (지점명만 붙는 30곳, 지도 URL로 찾음) | **모든 DB** (05 다음, 맨 마지막에) |
+| ★ | `demo_reset.sql` | 위 00 → 05, 08 두 개, 10, 12를 한 번에 실행 (전체 초기화, 11은 01에 포함) | **발표 당일 아침·리허설 직후** |
 
-> 이미 쓰던 DB에 최신 변경만 반영할 때: `07` → `06` → `08_cafe_data` → `08_account_admin` → `10_email_login` → `11_private_party` 순서로 실행하면 된다. 모두 여러 번 실행해도 결과가 같다.
+> 이미 쓰던 DB에 최신 변경만 반영할 때: `07` → `06` → `08_cafe_data` → `08_account_admin` → `10_email_login` → `11_private_party` → `12_official_names` 순서로 실행하면 된다. 모두 여러 번 실행해도 결과가 같다.
 
 ## SQL Developer에서 실행하는 법
 

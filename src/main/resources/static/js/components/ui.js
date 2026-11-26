@@ -103,7 +103,7 @@
 
   // 각 일러스트는 160×120 상자. 그림자 타원 + 오브젝트. 그라데이션은 오브젝트 안의 명암에만 쓴다.
   const ILLUSTS = {
-    bowl:
+    bowl:   // 숟가락은 로고처럼 머리가 밥 쪽으로 (2026-11-26)
       '<defs><linearGradient id="ib-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b8ff0"/><stop offset="1" stop-color="#2d6cdf"/></linearGradient>' +
       '<linearGradient id="ib-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9eef6"/></linearGradient></defs>' +
       '<ellipse cx="80" cy="108" rx="46" ry="6" fill="#1b2430" opacity=".08"/>' +
@@ -112,7 +112,7 @@
       '<path d="M32 58h96c0 26-21 42-48 42S32 84 32 58z" fill="url(#ib-b)"/>' +
       '<path d="M40 64h80" stroke="#ffffff" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>' +
       '<rect x="64" y="98" width="32" height="7" rx="3.5" fill="#2459bd"/>' +
-      '<g transform="rotate(32 120 32)"><ellipse cx="120" cy="22" rx="8" ry="11" fill="#e8772e"/><rect x="117.5" y="31" width="5" height="26" rx="2.5" fill="#e8772e"/></g>',
+      '<g transform="rotate(180 120 34) rotate(32 120 32)"><ellipse cx="120" cy="22" rx="8" ry="11" fill="#e8772e"/><rect x="117.5" y="31" width="5" height="26" rx="2.5" fill="#e8772e"/></g>',
     trophy:
       '<defs><linearGradient id="it-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#f0a33a"/></linearGradient></defs>' +
       '<ellipse cx="80" cy="110" rx="40" ry="6" fill="#1b2430" opacity=".08"/>' +

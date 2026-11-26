@@ -18,6 +18,20 @@ import java.util.List;
 public interface PartyChatRepository extends JpaRepository<PartyChat, Long> {
 
     /**
+     * 안 읽은 메시지 수 (헤더 종 '새 메시지' 알림, 2026-11-26)
+     * 다른 사람이 보낸 일반 메시지(TEXT)만, afterId보다 크고 since(포함, DATE라 초 단위) 이후에 온 것만 센다.
+     */
+    @Query("select count(c) from PartyChat c where c.party.partyId = :partyId and c.messageType = :type "
+            + "and c.member.memberId <> :memberId and c.chatId > :afterId and c.createdAt >= :since")
+    long countUnread(@Param("partyId") Long partyId, @Param("memberId") Long memberId,
+                     @Param("type") com.sseukbap.party.entity.MessageType type,
+                     @Param("afterId") Long afterId, @Param("since") java.time.LocalDateTime since);
+
+    /** 이 팟의 마지막 메시지 번호 (없으면 null) */
+    @Query("select max(c.chatId) from PartyChat c where c.party.partyId = :partyId")
+    Long findLastChatId(@Param("partyId") Long partyId);
+
+    /**
      * 폴링용: afterId보다 큰 메시지만 오래된 순으로 (처음 조회는 afterId = 0)
      * 시스템 메시지는 작성자가 없으므로 left join으로 가져온다.
      */

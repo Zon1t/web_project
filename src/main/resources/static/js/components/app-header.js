@@ -94,7 +94,7 @@
   let resolveMe;
   const meReady = new Promise((resolve) => { resolveMe = resolve; });
   const CHAT_SEEN_KEY_PREFIX = 'sseukbap.chatSeen.';   // + memberId → { 팟번호: 마지막으로 본 메시지 번호 }
-  const CHAT_POLL_MS = 30000;
+  const CHAT_POLL_MS = 15000;
   let loadSeq = 0;            // 늦게 온 이전 응답이 새 응답을 덮지 않게
   let doneMessage = '';       // 따봉을 남긴 직후 패널 위에 잠깐 보여 줄 문구
   let lastPanelHtml = '';     // 같은 내용이면 다시 그리지 않는다 (포커스가 튀지 않게)
@@ -139,6 +139,13 @@
   setInterval(() => {
     if (document.visibilityState === 'visible') loadNotices();
   }, CHAT_POLL_MS);
+  // 바로 다시 세는 경우 (2026-11-26): 뒤로가기로 예전 화면이 그대로 돌아왔을 때,
+  // 숨어 있던 탭이 다시 보일 때, 다른 탭에서 대화를 읽었을 때
+  global.addEventListener('pageshow', (event) => { if (event.persisted) loadNotices(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadNotices(); });
+  global.addEventListener('storage', (event) => {
+    if (myMemberId && event.key === CHAT_SEEN_KEY_PREFIX + myMemberId) loadNotices();
+  });
 
   /*
    * 식사팟 대화 읽음 기록 (2026-11-26). 식사팟 상세가 대화를 보여 줄 때 부른다.
@@ -295,6 +302,12 @@
     const items = await global.api.post('/parties/my/unread-chats', { seen });
     // 지금 보고 있는 식사팟의 대화는 알리지 않는다 (상세 화면이 바로 읽음 처리한다)
     const openPartyId = currentPath === '/party-detail.html' ? new URLSearchParams(location.search).get('partyId') : null;
+    // 지금 열어 둔 대화방은 여기서도 읽음으로 기록한다 (상세 화면 스크립트가 옛 버전으로 캐시돼 있어도 다시 뜨지 않게)
+    const open = (items || []).find((item) => String(item.partyId) === String(openPartyId));
+    if (open && open.lastChatId && (Number(seen[open.partyId]) || 0) < open.lastChatId) {
+      seen[open.partyId] = open.lastChatId;
+      writeSeen(seen);
+    }
     return (items || []).filter((item) => String(item.partyId) !== String(openPartyId));
   }
 

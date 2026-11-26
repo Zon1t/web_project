@@ -692,3 +692,18 @@
 .review-form-panel .textarea {
   background: var(--color-bg);
 }
+
+/* 리뷰 목록만 따로 스크롤 (2026-11-26): 리뷰가 많아도 페이지가 끝없이 길어지지 않게 */
+#review-list-area {
+  max-height: 560px;
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* 목록 끝에서 페이지 전체가 같이 스크롤되지 않게 */
+  padding-right: var(--space-1);
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 768px) {
+  #review-list-area {
+    max-height: 70vh;
+  }
+}

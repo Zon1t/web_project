@@ -710,6 +710,8 @@
 
     chatBody.insertAdjacentHTML('beforeend', chats.map(renderChat).join(''));
     chat.lastId = Math.max(chat.lastId, ...chats.map((c) => c.chatId));
+    // 본 메시지까지 읽음 처리 → 헤더 종의 '새 메시지'에서 빠진다 (app-header.js, 2026-11-26)
+    if (window.chatSeen) window.chatSeen.mark(partyId, chat.lastId);
 
     if (isFirst || nearBottom || chats.some((c) => c.mine)) {
       chatBody.scrollTop = chatBody.scrollHeight;

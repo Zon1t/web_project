@@ -90,7 +90,6 @@
       }
 
       renderBanner(items[0]);
-      partyApi.guardCreateButtons(bannerEl);   // 지금 끼니에 이미 참여 중이면 막는다 (2026-11-25)
       body.innerHTML = podiumHtml(items.slice(0, PODIUM)) + listHtml(items.slice(PODIUM), items[0].thumbsCount30d);
       fillTags(items, seq);
     } catch (err) {
@@ -179,7 +178,7 @@
       '<span class="rk-dot" aria-hidden="true">·</span><span>리뷰 ' + top.reviewCount + '</span></p>' +
       '<p class="rk-tags rk-banner__tags" data-tags-for="' + top.restaurantId + '"></p>' +
       '<div class="rk-banner__actions">' +
-      '<a class="btn btn--primary" data-create-party href="' + partyApi.createUrl(top.restaurantId) + '">' + ui.icon('plus', 18) + '이 식당으로 식사팟 만들기</a>' +
+      '<a class="btn btn--primary" href="' + partyApi.createUrl(top.restaurantId) + '">' + ui.icon('plus', 18) + '이 식당으로 식사팟 만들기</a>' +
       '<a class="btn" href="' + DETAIL_URL + encodeURIComponent(top.restaurantId) + '">식당 보기</a>' +
       '</div>' +
       '</div>' +

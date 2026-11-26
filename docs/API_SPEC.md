@@ -168,7 +168,7 @@
 | 식사 완료 처리 | 5분마다 | 기준 시간이 지난 팟을 FINISHED로 변경, 시스템 메시지 '식사가 끝났어요' 생성 |
 | 대화 기록 삭제 | 매일 00:00 | 전날까지 FINISHED·DELETED된 팟의 PARTY_CHAT 삭제 (팟·참여 이력은 유지) |
 
-### 전체 API 목록 (60개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API·프로필 카드 API 추가)
+### 전체 API 목록 (61개, 11/23 알림 API 추가, 11/24 계정 설정·찾기·탈퇴 API 7개·관리자 API 8개 추가, 11/25 비공개 식사팟 초대 코드 API·프로필 카드 API 추가, 11/26 대화 새 메시지 API 추가)
 
 | 담당 | 메서드 | URI | 이름 |
 | --- | --- | --- | --- |
@@ -211,6 +211,7 @@
 | A | GET | `/api/parties/list` | 식사팟 목록 조회 |
 | A | GET | `/api/parties/my/today` | 내가 참여 중인 식사팟 조회 (오늘 ~ 14일 후) |
 | A | GET | `/api/parties/my/action-pending` | 내가 할 일이 있는 식사팟 조회 (알림, 11/23 추가) |
+| C | POST | `/api/parties/my/unread-chats` | 식사팟 대화 새 메시지 수 (알림, 11/26 추가) |
 | A | GET | `/api/parties/my/thumbs-pending` | 따봉 요청 대상 조회 |
 | A | GET | `/api/parties/{partyId}` | 식사팟 상세 조회 |
 | A | DELETE | `/api/parties/{partyId}` | 식사팟 삭제 (방장) |
@@ -2040,6 +2041,47 @@ null
 | 404 | PARTY_NOT_FOUND | 식사팟을 찾을 수 없습니다. | 없는 partyId |
 | 404 | PARTY_DELETED | 삭제된 식사팟입니다. | 이미 DELETED |
 | 409 | PARTY_FINISHED | 식사가 완료된 식사팟입니다. | FINISHED |
+
+---
+
+### POST /api/parties/my/unread-chats — 식사팟 대화 새 메시지 수 (알림)
+
+> 2026-11-26 추가 (C). 헤더 종 알림에 '세종원 · 오늘 점심 식사팟 · 새 메시지 3개'를 보여 준다.
+
+**요구사항**: 내가 참여 중인 식사팟(오늘 ~ 14일 후, 삭제·식사 완료 제외)마다 안 읽은 메시지 수를 돌려준다. 읽은 위치는 DB에 두지 않고 **브라우저가 기억한 값**을 Body로 받는다. (그래서 조회지만 POST) 다른 사람이 보낸 일반 메시지(TEXT)만 세고, 시스템 메시지와 내 메시지는 세지 않는다. 화면은 30초마다, 그리고 화면으로 돌아올 때 부른다.
+
+**Request — Body** (선택)
+```json
+{
+  "seen": { "31": 105, "32": 0 }
+}
+```
+
+| 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| seen | object | X | { 팟번호: 그 팟에서 마지막으로 본 chatId }. 없는 팟은 내가 참여한 뒤(JOINED_AT 이후)에 온 메시지를 센다 |
+
+**시스템 처리**
+1. 로그인 회원의 PARTY_MEMBER 중 party_date가 오늘 ~ 14일 후이고 status가 DELETED·FINISHED가 아닌 팟을 조회한다.
+2. 팟마다 MSG_TYPE = TEXT, 작성자 ≠ 나, chatId > seen 값(없으면 0), CREATED_AT ≥ (seen이 없으면 JOINED_AT) 인 메시지 수를 센다.
+3. 1개 이상인 팟만 날짜·기준 시간 순으로 반환한다.
+
+**Response 200 (data)**
+```json
+[
+  {
+    "partyId": 31,
+    "restaurantName": "세종원 군자본점",
+    "partyDate": "2026-11-26",
+    "mealType": "LUNCH",
+    "unreadCount": 3,
+    "lastChatId": 108
+  }
+]
+```
+- lastChatId: 그 팟의 마지막 메시지 번호. 상세 화면에서 대화를 보면 브라우저가 seen에 저장한다.
+
+**오류**: 공통 오류(401, 500) 외 없음
 
 ---
 

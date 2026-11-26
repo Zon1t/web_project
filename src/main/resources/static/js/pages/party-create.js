@@ -100,6 +100,7 @@
   initDate();
   initRestaurant();
   restoreDraft();
+  pickFreeSlot();
 
   /* ---------- 식당 ---------- */
 
@@ -405,6 +406,46 @@
     setMessage(timeMessage, '', TIME_HINT);
     updateSubmit();
     checkMealTaken();
+  }
+
+  /**
+   * 처음 고른 날짜·끼니에 이미 내 식사팟이 있으면 비어 있는 다음 끼니로 바꿔 준다 (2026-11-26)
+   * 예: 오늘 점심 참여 중 → 오늘 저녁, 오늘 저녁도 참여 중 → 내일 점심 … (2주 안, 남은 시간이 있는 끼니만)
+   * 사용자가 직접 고른 뒤에는 바꾸지 않고 checkMealTaken이 안내만 한다.
+   */
+  async function pickFreeSlot() {
+    const startDate = state.partyDate;
+    const startMeal = state.mealType;
+    let mine;
+    try {
+      mine = await api.get('/users/me/parties');
+    } catch (err) {
+      return;   // 확인을 못 하면 그대로 둔다 (서버가 다시 막는다)
+    }
+    // 그 사이 사용자가 날짜·끼니를 바꿨으면 손대지 않는다
+    if (state.partyDate !== startDate || state.mealType !== startMeal) return;
+    const taken = new Set((mine || [])
+      .filter((p) => p.status !== 'DELETED')
+      .map((p) => p.partyDate + '|' + p.mealType));
+    if (!taken.has(startDate + '|' + startMeal)) return;
+
+    const meals = ['LUNCH', 'DINNER'];
+    for (let day = 0; day <= partyApi.MAX_DAYS_AHEAD; day++) {
+      const date = partyApi.addDays(startDate, day);
+      if (!partyApi.isSelectableDate(date)) break;
+      for (const meal of meals) {
+        if (day === 0 && meals.indexOf(meal) <= meals.indexOf(startMeal)) continue;
+        if (taken.has(date + '|' + meal) || availableTimes(meal, date).length === 0) continue;
+        if (date !== state.partyDate) {
+          state.picker.setValue(date);
+          selectDate(date);
+        }
+        selectMealType(meal);
+        ui.toast(partyApi.shortDateLabel(startDate) + ' ' + partyApi.MEAL_TYPE_LABELS[startMeal] + '은 이미 참여 중이라 ' +
+          partyApi.shortDateLabel(date) + ' ' + partyApi.MEAL_TYPE_LABELS[meal] + '으로 골랐어요.');
+        return;
+      }
+    }
   }
 
   /**

@@ -187,6 +187,7 @@
     // 리뷰를 올린 뒤: 토스트 + 맨 위 내 리뷰를 잠깐 강조 (C, 2026-11-24)
     function showCreatedFeedback() {
       global.ui.toast('리뷰를 남겼어요. 고마워요!');
+      els.listArea.scrollTop = 0;   // 리뷰 목록이 따로 스크롤되므로 맨 위(새 리뷰)로 (2026-11-26)
       const mine = els.listArea.querySelector('.review-item.is-mine');
       if (mine) {
         mine.classList.add('is-new');

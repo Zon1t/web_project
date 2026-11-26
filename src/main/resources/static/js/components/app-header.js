@@ -89,6 +89,12 @@
   const noticeBadge = header.querySelector('.app-header__badge');
   let pendingThumbs = null;   // 따봉 요청 대상 1건 또는 null
   let actionItems = [];       // 할 일 목록 (일정 정하기 / 참석 확정)
+  let chatItems = [];         // 새 메시지가 온 식사팟 [{partyId, restaurantName, partyDate, mealType, unreadCount, lastChatId}] (2026-11-26)
+  let myMemberId = null;      // 읽은 위치를 회원별로 기억하려고 (/api/auth/me)
+  let resolveMe;
+  const meReady = new Promise((resolve) => { resolveMe = resolve; });
+  const CHAT_SEEN_KEY_PREFIX = 'sseukbap.chatSeen.';   // + memberId → { 팟번호: 마지막으로 본 메시지 번호 }
+  const CHAT_POLL_MS = 30000;
   let loadSeq = 0;            // 늦게 온 이전 응답이 새 응답을 덮지 않게
   let doneMessage = '';       // 따봉을 남긴 직후 패널 위에 잠깐 보여 줄 문구
   let lastPanelHtml = '';     // 같은 내용이면 다시 그리지 않는다 (포커스가 튀지 않게)
@@ -129,6 +135,30 @@
 
   showUser();
   loadNotices();
+  // 새 메시지는 30초마다 다시 센다 (화면이 보일 때만)
+  setInterval(() => {
+    if (document.visibilityState === 'visible') loadNotices();
+  }, CHAT_POLL_MS);
+
+  /*
+   * 식사팟 대화 읽음 기록 (2026-11-26). 식사팟 상세가 대화를 보여 줄 때 부른다.
+   *   chatSeen.mark(partyId, lastChatId)
+   * 브라우저에 회원별로 저장하고, 헤더의 새 메시지 알림을 다시 센다.
+   */
+  let markTimer = null;
+  global.chatSeen = {
+    async mark(partyId, chatId) {
+      if (!partyId || !chatId) return;
+      await meReady;
+      if (!myMemberId) return;
+      const seen = readSeen();
+      if ((seen[partyId] || 0) >= chatId) return;
+      seen[partyId] = chatId;
+      writeSeen(seen);
+      clearTimeout(markTimer);
+      markTimer = setTimeout(loadNotices, 300);
+    },
+  };
   document.addEventListener('sseukbap:nickname-changed', (event) => setUser(event.detail && event.detail.nickname));
 
   /* ---------- 그리기 ---------- */
@@ -169,11 +199,14 @@
   async function showUser() {
     try {
       const me = await global.authApi.me();   // 401이면 client.js가 로그인 화면으로 이동
+      myMemberId = me.memberId;
+      resolveMe();
       setUser(me.nickname);
       if (me.admin) addAdminMenu();             // 관리자에게만 '관리자' 항목 (2026-11-24 A3)
       userArea.classList.add('is-ready');
     } catch (err) {
       // 401은 이동 처리됨. 그 외 오류면 닉네임 없이 메뉴만 쓸 수 있게 둔다.
+      resolveMe();
       avatar.textContent = '?';
       userButton.setAttribute('aria-label', '내 메뉴');
       userArea.classList.add('is-ready');
@@ -241,30 +274,67 @@
   // 할 일과 따봉을 따로 불러온다. 한쪽이 실패해도 다른 쪽은 보여 준다. (401은 client.js가 로그인 화면으로)
   async function loadNotices() {
     const seq = ++loadSeq;
-    const [actions, thumbs] = await Promise.allSettled([
+    const [actions, thumbs, chats] = await Promise.allSettled([
       global.api.get('/parties/my/action-pending'),
       global.api.get('/parties/my/thumbs-pending'),
+      loadUnreadChats(),
     ]);
     if (seq !== loadSeq) return;
     actionItems = actions.status === 'fulfilled' && Array.isArray(actions.value) ? actions.value : [];
+    chatItems = chats.status === 'fulfilled' && Array.isArray(chats.value) ? chats.value : [];
     pendingThumbs = thumbs.status === 'fulfilled' ? thumbs.value || null : null;
     updateBadge();
     if (!noticePanel.hidden) renderNotice();
   }
 
-  // 종 배지: 할 일 수 + 따봉(오늘 [다음에]를 안 눌렀으면 1)
+  /** 새 메시지 수 (POST /api/parties/my/unread-chats, 읽은 위치는 브라우저가 기억) */
+  async function loadUnreadChats() {
+    await meReady;
+    if (!myMemberId) return [];
+    const seen = readSeen();
+    const items = await global.api.post('/parties/my/unread-chats', { seen });
+    // 지금 보고 있는 식사팟의 대화는 알리지 않는다 (상세 화면이 바로 읽음 처리한다)
+    const openPartyId = currentPath === '/party-detail.html' ? new URLSearchParams(location.search).get('partyId') : null;
+    return (items || []).filter((item) => String(item.partyId) !== String(openPartyId));
+  }
+
+  function readSeen() {
+    try {
+      return JSON.parse(global.localStorage.getItem(CHAT_SEEN_KEY_PREFIX + myMemberId) || '{}') || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeSeen(seen) {
+    try {
+      // 오래된 팟은 지운다 (최근 50개만)
+      const entries = Object.entries(seen).sort((a, b) => Number(b[0]) - Number(a[0])).slice(0, 50);
+      global.localStorage.setItem(CHAT_SEEN_KEY_PREFIX + myMemberId, JSON.stringify(Object.fromEntries(entries)));
+    } catch (e) {
+      // 저장 못 해도 다음에 다시 센다
+    }
+  }
+
+  // 종 배지: 할 일 수 + 새 메시지가 온 식사팟 수 + 따봉(오늘 [다음에]를 안 눌렀으면 1)
   function updateBadge() {
-    const count = actionItems.length + (pendingThumbs && !isSnoozedToday() ? 1 : 0);
+    const count = actionItems.length + chatItems.length + (pendingThumbs && !isSnoozedToday() ? 1 : 0);
     noticeBadge.hidden = count === 0;
     noticeBadge.textContent = count > 9 ? '9+' : String(count);
     noticeButton.setAttribute('aria-label', count === 0 ? '알림' : '알림 ' + count + '개');
   }
 
   function renderNotice() {
-    const total = actionItems.length + (pendingThumbs ? 1 : 0);
-    const both = actionItems.length > 0 && pendingThumbs;
+    const total = actionItems.length + chatItems.length + (pendingThumbs ? 1 : 0);
+    // 종류가 두 가지 이상이면 구역 제목을 붙인다
+    const both = [actionItems.length > 0, chatItems.length > 0, !!pendingThumbs].filter(Boolean).length > 1;
     let body = '';
 
+    if (chatItems.length > 0) {
+      body +=
+        (both ? '<p class="app-header__panel-section">새 메시지</p>' : '') +
+        '<ul class="app-header__actions">' + chatItems.map(chatItemHtml).join('') + '</ul>';
+    }
     if (actionItems.length > 0) {
       body +=
         (both ? '<p class="app-header__panel-section">할 일</p>' : '') +
@@ -318,8 +388,24 @@
       '</a></li>';
   }
 
+  // 새 메시지 한 줄: '세종원 · 오늘 점심 식사팟에 새 메시지 3개', 누르면 그 식사팟 상세(대화)로 (2026-11-26)
+  function chatItemHtml(item) {
+    const count = item.unreadCount > 99 ? '99+' : String(item.unreadCount);
+    const when = actionDateLabel(item.partyDate) + ' ' + (MEAL_LABELS[item.mealType] || '');
+    return '<li>' +
+      '<a class="app-header__action" href="/party-detail.html?partyId=' + encodeURIComponent(item.partyId) + '">' +
+      '<span class="app-header__action-icon app-header__action-icon--chat" aria-hidden="true">' + actionIcon('chat') + '</span>' +
+      '<span class="app-header__action-text">' +
+      '<span class="app-header__action-title">새 메시지 ' + esc(count) + '개</span>' +
+      '<span class="app-header__action-meta">' + esc((item.restaurantName + ' · ' + when.trim() + ' 식사팟').replace(/\s+/g, ' ')) + '</span>' +
+      '</span>' +
+      '<svg class="app-header__action-arrow" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</a></li>';
+  }
+
   function actionIcon(name) {
     const paths = {
+      chat: '<path d="M4 5h16v11H9l-5 4z"/>',
       calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
       check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     };
